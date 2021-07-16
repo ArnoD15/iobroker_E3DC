@@ -53,7 +53,6 @@
                     Nur noch ein Korrekturfaktor in %, um die berechnende Prognosewerte anzugleichen.
                     Script optimiert und aufgeräumt. Neue State Struktur erstellt, um das Ganze übersichtlicher zu gestalten.
                     Diagramm wird jetzt bei Änderungen der PV-Leistung regelmäßig aktualisiert. Error Handling optimiert.
- 
 ******************************************************************************************/
 //++++++++++++++++++++++++++++++++++  USER ANPASSUNGEN ++++++++++++++++++++++++++++++++++
 
