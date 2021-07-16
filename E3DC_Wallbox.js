@@ -7,7 +7,6 @@
     Version: 0.2.0  Das Laden der Batterie vom E-Auto kann jetzt auf eine einstellbaren SoC Wert in Vis begrenzt werden.
                     Wenn der aktuelle SoC Wert nicht ausgelesen werden kann, dann bei const sID_Autobatterie_SoC = '' eintragen.
                     Es wird dann vom Script diese Funktion ignoriert.                    
-
 ******************************************************************************************/
 //++++++++++++++++++++++++++++++++++  USER ANPASSUNGEN ++++++++++++++++++++++++++++++++++
 const MinLadestromAuto_A = 6                // minimaler Ladestrom in A der das Fahrzeug benötigt um zu Laden. (Darf nicht unterschritten werden)
