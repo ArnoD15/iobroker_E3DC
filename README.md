@@ -25,5 +25,5 @@ verbunden sein.
 
 <h3>iobroker VIS View E3DC-Uebersicht</h3>
 <p>Datei für iobroker VIS Views Import </p>
-![alt text](https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/iobroker VIS View E3DC-Uebersicht.png?raw=true)
+![Test Bild](./E3DC_Uebersicht.png?raw=true)
 
