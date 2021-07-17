@@ -23,7 +23,10 @@ verbunden sein.
 <li>Bei Firmware-Updates das Datum des Updates und die alte Versionsnummer speichern<br>Autor: stevie77</li><br>
 </ul>
 
-<h3>iobroker VIS View E3DC-Uebersicht</h3>
-<p>Datei für iobroker VIS Views Import </p>
-![Test Bild](./E3DC_Uebersicht.png?raw=true)
+<h3>iobroker VIS View E3DC-Uebersicht.js</h3>
+<p>View Import Datei für iobroker VIS</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/E3DC_Uebersicht.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/E3DC_Uebersicht.png" alt="VIS View E3DC Uebersicht" style="max-width:100%;"></a></p>
 
+<h3>iobroker VIS View E3DC-Control.js</h3>
+<p>View Import Datei für iobroker VIS</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/E3DC_Control.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/E3DC_Control.png" alt="VIS View E3DC-Control" style="max-width:100%;"></a></p>
