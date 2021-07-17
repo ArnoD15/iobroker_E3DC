@@ -22,3 +22,8 @@ verbunden sein.
 <li>E3DC dynamische Autonomiezeitberechnung V0.0.8<br>Autor: Smartboard</li><br>
 <li>Bei Firmware-Updates das Datum des Updates und die alte Versionsnummer speichern<br>Autor: stevie77</li><br>
 </ul>
+
+<h3>iobroker VIS View E3DC-Uebersicht</h3>
+<p>Datei für iobroker VIS Views Import </p>
+![GitHub Logo](/images/iobroker VIS View E3DC-Uebersicht.png)
+
