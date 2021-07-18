@@ -63,12 +63,12 @@
 //++++++++++++++++++++++++++++++++++  USER ANPASSUNGEN ++++++++++++++++++++++++++++++++++
 
 //****************************** Einstellungen E3DC-Control *****************************
-const sServerIP = "";              				// IP Adresse vom E3DC
+const sServerIP = "";							// IP Adresse vom E3DC
 const sServerPort = "5033";                     // Server Port
-const sE3dcUser = ""; 							// E3DC User
+const sE3dcUser = "";							// E3DC User
 const sE3dcPasswort = "";          				// E3DC Passwort um sich einzuloggen bei der Website
-const sAesPasswort = "";                 		// E3DC AES Passwort neu zu vergebendes PW am E3DC
-const sWurzelzaehler = "0";                     // 0= interneraZaehler 6 = externer Zaehler 
+const sAesPasswort = "";						// E3DC AES Passwort neu zu vergebendes PW am E3DC
+const sWurzelzaehler = "0";						// 0= interneraZaehler 6 = externer Zaehler 
 const sExt1 = "false";                          // true, wenn ein externer Zaehler genutzt wird
 const sExt2 = "false";                          // true, wenn ein externer Zaehler genutzt wird
 const sPfadE3DC = "/home/iobroker/E3DC-Control/e3dc.config.txt" // Pfad zur e3dc.config.txt. User iobroker muss Zugriffsrechte haben.
