@@ -1,4 +1,10 @@
 /*****************************************************************************************
+ Version: 0.2.27    Beim Umschalten zwischen Proplanta und Forecast wurde das Diagramm nicht bzw. nur verzögert aktualisiert. 
+                    Durch die Verzögerung ist beim schnellen Umschalten auch nicht mit den richtigen Werten gerechnet worden,
+                    so das eine falsche Einstellung angewählt wurde. 
+                    Bei Anwahl Automatik wird jetzt der State EinstellungAnwahl auf 0 gesetzt, um bei einer manuellen Anwahl
+                    der Einstellung (Werte im Bereich 1-5) im Skript, das als Änderung erkannt wird.
+ Version: 0.2.26    Update Function createUserStates auf Version: 1.2 (20 October 2020) von Mic (ioBroker) | Mic-M (github) 
  Version: 0.2.25    Beim Abrufen der Wetterdaten Forecast, wurden die letzten Werte vorher nicht gelöscht.
 					Wenn aus irgendeinem Grund keine neuen Daten abgerufen werden konnten, wurde mit den alten Werten gerechnet.
  Version: 0.2.24    Regelzeitraum Start, Ende und Ladezeitende werden jetzt nach der Formel von Eberhard richtig berechnet.
@@ -429,9 +435,25 @@ if (typeof country != 'string' || typeof country == 'undefined') {console.error(
 
 function main()
 {
-    let GlobalstrahlungHeute,GlobalstrahlungMorgen,Bedeckungsgrad12,Bedeckungsgrad15,Ueberschuss,UnloadSoC,AktSpeicherSoC;
-    let DatumAk = new Date();
-	let Einstellung_alt = getState(sID_Einstellung).val;    
+    
+    // Berechnug der Regelzeiten aktualisieren
+    MEZ_Regelzeiten();
+    
+    //Prognosen in kWh umrechen
+    Prognosen_kWh_Berechnen();
+    
+    // Diagramm verzögert aktualisieren
+    setTimeout(function(){makeJson();},300);
+    
+    // Anwahl Einstellungen verzögert aktualisieren
+    setTimeout(function(){Auswertung();},1000);
+}
+
+function Auswertung()
+{
+    let Ueberschuss,Bedeckungsgrad12,Bedeckungsgrad15,UnloadSoC,AktSpeicherSoC;
+    let Einstellung_alt = getState(sID_Einstellung).val;    
+    
     //Prüfen ob State existiert, sonst error Meldung und Variable null zuweisen
     if (existsState(sID_Batterie_SOC)){
          AktSpeicherSoC = getState(sID_Batterie_SOC).val;
@@ -439,11 +461,6 @@ function main()
         log('State sBatterie_SOC ist nicht vorhanden','error');
         AktSpeicherSoC = null;
     }
-    // Berechnug der Regelzeiten aktualisieren
-    MEZ_Regelzeiten();
-    
-    //Prognosen in kWh umrechen
-    Prognosen_kWh_Berechnen();
     
     // Überschuss PV-Leistung berechnen
     Ueberschuss = Ueberschuss_Prozent();
@@ -451,10 +468,8 @@ function main()
       log('Überschuss PV-Leistung konnte nicht berechnet werden. Ueberschuss='+Ueberschuss,'error');  
       return  
     }
-    // Diagramm aktualisieren
-    //makeJson();
-    setTimeout(function(){makeJson();},100);
-
+        
+    // Bewölkung für weitere Entscheidung ermitteln
     Bedeckungsgrad12 = getState(instanz + PfadEbene1 + PfadEbene2[3] + 'Bewoelkungsgrad_12').val;
     Bedeckungsgrad15 = getState(instanz + PfadEbene1 + PfadEbene2[3] + 'Bewoelkungsgrad_15').val;
     if (LogAusgabe){log('Bewölkungsgrad 12 Uhr Proplanta '+Bedeckungsgrad12);}
@@ -465,8 +480,7 @@ function main()
       return  
     }
     
-    // UnloadSoC kann nur berechnet werden wenn GlobalstrahlungHeute und AktSpeicherSoC vorhanden sind
-    // UnloadSoC wird aktuell nicht verwendet
+    // UnloadSoC berechnen (UnloadSoC wird aktuell mur bei Einstellung 2 verwendet)
     if (AktSpeicherSoC != null && Ueberschuss != null){
         UnloadSoC = AktSpeicherSoC-Ueberschuss;
 	    if (LogAusgabe){log('Berechneter Unload SoC ist = '+UnloadSoC);}
@@ -474,7 +488,8 @@ function main()
 	    if (UnloadSoC < nMinUnloadSoC){UnloadSoC = nMinUnloadSoC;}
     }
     
-    // 1 Prognose PV-Leistung geringer als benötigter Eigenverbrauch, Überschuss zu 100% in Batterie speichern
+    // Einstellung 1
+    // Prognose PV-Leistung geringer als benötigter Eigenverbrauch, Überschuss zu 100% in Batterie speichern
 	if ((Ueberschuss === 0 && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===1))
 	{
 		if (LogAusgabe){log('Einstellung 1 aktiv');}
@@ -485,8 +500,10 @@ function main()
             setTimeout(e3dcConfigRead, 1500);
         }
 	}	
-	// 2 Prognose PV-Leistung höher als benötigter Eigenverbrauch,Batterie laden und Überschuss ins Netz einspeisen.
-	// keine Bewölkung > 87% 
+	
+    // Einstellung 2
+    // Prognose PV-Leistung höher als benötigter Eigenverbrauch,Batterie laden und Überschuss ins Netz einspeisen
+    // und keine Bewölkung > 87% 
 	if ((Ueberschuss > 0 && Bedeckungsgrad12 < 90 && Bedeckungsgrad15 < 90 && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===2))
     {
 		if (LogAusgabe){log('Einstellung 2 aktiv');}
@@ -505,7 +522,9 @@ function main()
 		    setTimeout(e3dcConfigRead, 1500);
         }
 	}	
-	// 3 Prognose PV-Leistung höher als benötigter Eigenverbrauch,Batterie laden und Überschuss ins Netz einspeisen.
+	
+    // Einstellung 3
+    // Prognose PV-Leistung höher als benötigter Eigenverbrauch,Batterie laden und Überschuss ins Netz einspeisen.
 	// ab 12:00 - 18:00 Uhr Bewölkung > 87%
 	if ((Ueberschuss > 0 && Bedeckungsgrad12>=90 && Bedeckungsgrad15>=90 && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===3))
 	{
@@ -517,7 +536,9 @@ function main()
 		    setTimeout(e3dcConfigRead, 1500);
         }
 	}	
-	// 4 Prognose PV-Leistung höher als benötigter Eigenverbrauch,Batterie laden und Überschuss ins Netz einspeisen.
+	
+    // Einstellung 4
+    // Prognose PV-Leistung höher als benötigter Eigenverbrauch,Batterie laden und Überschuss ins Netz einspeisen.
 	// ab 12:00 - 15:00 Uhr Bewölkung > 87%
 	if ((Ueberschuss > 0 && Bedeckungsgrad12 >= 90 && Bedeckungsgrad15 < 90 && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===4))
 	{
@@ -529,7 +550,9 @@ function main()
 		    setTimeout(e3dcConfigRead, 1500);
         }
     }
-	// 5Prognose PV-Leistung höher als benötigter Eigenverbrauch,Batterie laden und Überschuss ins Netz einspeisen.
+	
+    // Einstellung 5
+    // Prognose PV-Leistung höher als benötigter Eigenverbrauch,Batterie laden und Überschuss ins Netz einspeisen.
 	// ab 15:00 - 18:00 Uhr Bewölkung > 87%
 	if ((Ueberschuss > 0 && Bedeckungsgrad12<90 && Bedeckungsgrad15>=90 && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===5))
     {
@@ -541,6 +564,7 @@ function main()
 		    setTimeout(e3dcConfigRead, 1500);
         }
 	}
+    
 }
 
 // Die Funktion rechnet die Prognosewerte Proplanta und Forecast in kWh um und Speichert 
@@ -675,7 +699,7 @@ function Prognosen_kWh_Berechnen()
     if (Tag2!= 1){setState(instanz + PfadEbene1 + PfadEbene2[2] + 'PrognoseAuto_kWh_'+Tag2_0, Prognose_kWh_Tag2);}
     if (Tag3!= 1){setState(instanz + PfadEbene1 + PfadEbene2[2] + 'PrognoseAuto_kWh_'+Tag3_0, Prognose_kWh_Tag3);}
     if (LogAusgabe){log('Prognose_kWh_heute für Berechnung = '+Prognose_kWh_heute);}
-
+    
 }; 
 
 
@@ -683,6 +707,7 @@ function Prognosen_kWh_Berechnen()
 // nach Abzug von Eigenverbrauch und Ladekapazität des Batteriespeicher.
 function Ueberschuss_Prozent()
 {
+    log('Start Ueberschuss_Prozent');
     let Ueberschuss_Prozent = 0,Ueberschuss_kWh = 0,FreieKapBatterie_kWh = 0;
     let Rest_Eigenverbrauch_kWh = getState(sIDEigenverbrauchTag).val;
 	let nEigenverbrauchTag = getState(sIDEigenverbrauchTag).val;
@@ -709,10 +734,12 @@ function Ueberschuss_Prozent()
 	    if (LogAusgabe){log('FreieKapBatterie_kWh = '+FreieKapBatterie_kWh);}
         if (LogAusgabe){log('Ueberschuss in kWh = '+Ueberschuss_kWh);}
         if (LogAusgabe){log('Ueberschuss in Prozent = '+Ueberschuss_Prozent);}
+        log('ende Ueberschuss_Prozent');
         return round(Ueberschuss_Prozent, 0);
     
     }else{
         if (DebugAusgabe){log('PrognoseBerechnung_kWh_heute Variable hat keinen Wert');}
+        log('ende Ueberschuss_Prozent null');
         return null
     }
 }
@@ -838,8 +865,7 @@ function makeJson(){
             }
         ]
     }
-    setState(instanz + PfadEbene1 + PfadEbene2[2] + 'HistoryJSON_'+MM,JSON.stringify(chart), true);
-    
+    setState(instanz + PfadEbene1 + PfadEbene2[2] + 'HistoryJSON_'+MM,JSON.stringify(chart),true);
     if (DebugAusgabe){log('JSON History ertellt');}
 }
 
@@ -1135,7 +1161,7 @@ function InterrogateProplanta(AnzWiederholungen) {
         setState(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_2', result[18].slice(0, 11));
         setState(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_3', result[19].slice(0, 11));
         setState(instanz + PfadEbene1 + PfadEbene2[3]+'NaesteAktualisierung',result[60].slice(64, 69).replace(".",":"));
-        setTimeout(function(){main();},5000);//Zeit geben bevor main ausgeführt wird
+        main();
     }
 }
 
@@ -1199,7 +1225,7 @@ function getCurrentDate(date) {
 
  // Create states under 0_userdata.0 or javascript.x
  // Autor:Mic (ioBroker) | Mic-M (github)
- // Version: 1.1 (26 January 2020)
+ // Version: 1.2 (20 October 2020)
 function createUserStates(where, force, statesToCreate, callback = undefined) {
  
     const WARN = false; // Only for 0_userdata.0: Throws warning in log, if state is already existing and force=false. Default is false, so no warning in log, if state exists.
@@ -1249,7 +1275,7 @@ function createUserStates(where, force, statesToCreate, callback = undefined) {
         statesToCreate.forEach(function(loopParam) {
             counter += 1;
             if (DebugAusgabe) log ('[Debug] Currently processing following state: [' + loopParam[0] + ']');
-            if( ($(loopParam[0]).length > 0) && (existsState(loopParam[0])) ) { 
+            if( ($(loopParam[0]).length > 0) && (existsState(loopParam[0])) ) { // Workaround due to https://github.com/ioBroker/ioBroker.javascript/issues/478
                 // State is existing.
                 if (WARN && !force) log('State [' + loopParam[0] + '] is already existing and will no longer be created.', 'warn');
                 if (!WARN && DebugAusgabe) log('[Debug] State [' + loopParam[0] + '] is already existing. Option force (=overwrite) is set to [' + force + '].');
@@ -1262,6 +1288,8 @@ function createUserStates(where, force, statesToCreate, callback = undefined) {
                         if (typeof callback === 'function') { // execute if a function was provided to parameter callback
                             if (DebugAusgabe) log('[Debug] An optional callback function was provided, which we are going to execute now.');
                             return callback();
+                        } else {  // no callback, return anyway
+                            return;
                         }
                     } else {
                         // We need to go out and continue with next element in loop.
@@ -1337,7 +1365,7 @@ function SummePvLeistung(){
 	setState(instanz + PfadEbene1 + PfadEbene2[2] + 'IstPvLeistung_kWh_'+ TagHeute_0, IstPvLeistung_kWh);
     setState(instanz + PfadEbene1 + PfadEbene2[1] + 'IstSummePvLeistung_kWh', IstPvLeistung_kWh);
     
-    makeJson();
+    setTimeout(function(){makeJson();},300);
 };
 
 // Methode zum addieren/subtrahieren einer Menge an Minuten auf eine Uhrzeit
@@ -1401,7 +1429,7 @@ function SheduleForecast(){
 	        i--;
 	        if ( i < 1 ) {
                 clearInterval(TimerForecast);
-                setTimeout(function(){main();},5000);//Zeit geben bevor main ausgeführt wird
+                main();
             }
         }
     });
@@ -1589,6 +1617,7 @@ on({id: sID_Automatik}, function (obj){
 	 AutomatikAnwahl = getState(obj.id).val;
      if(AutomatikAnwahl) {
         if (LogAusgabe){log('Automatik gestartet');}
+        setState(sID_EinstellungAnwahl,0);
         main();
     }else{
         if (LogAusgabe){log('Automatik gestoppt');}
@@ -1673,9 +1702,11 @@ on({id: sID_PrognoseAnwahl, change: "ne"}, function(obj) {
 // Bei Betättigung der Button Einstellung 1-5 in VIS jeweilige Einstellung laden und automatik ausschalten
 on({id: sID_EinstellungAnwahl, change: "ne"}, function (obj){
     EinstellungAnwahl = getState(obj.id).val
-    setState(sID_Automatik,false,true);
-    if(LogAusgabe)log("Trigger manuelle Programmvorwahl");
-    setTimeout(function(){main();},1000);//Automatik Abwahl Zeit geben bevor main ausgeführt wird
+    if (EinstellungAnwahl !=0){
+        setState(sID_Automatik,false,true);
+        if(LogAusgabe)log("Trigger manuelle Programmvorwahl");
+        main();
+    }
 });
 
 
@@ -1690,7 +1721,7 @@ if (existsState(sID_PVErtragLM1)){
 
 
 //Diagramm für stevie77 um 22 Uhr aktualisieren
-schedule({hour: 22, minute: 1}, function(){makeJson();});
+schedule({hour: 22, minute: 1}, function(){setTimeout(function(){makeJson();},300);});
 
 // jeden Monat am 1 History Daten Tag aktuelles Monat Löschen
 schedule("0 0 1 * *", function() {
