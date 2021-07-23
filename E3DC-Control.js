@@ -1,4 +1,6 @@
 /*****************************************************************************************
+ Version: 0.2.28    Nach Abruf der Wetterdaten wird der Main() Funktion um 5000 ms verzögert aufgerufen, weil sonst die neuen Werte noch nicht gespeichert wurden.
+                    Die Main() Funktion wurde beim Programmstart zweimal aufgerufen.
  Version: 0.2.27    Beim Umschalten zwischen Proplanta und Forecast wurde das Diagramm nicht bzw. nur verzögert aktualisiert. 
                     Durch die Verzögerung ist beim schnellen Umschalten auch nicht mit den richtigen Werten gerechnet worden,
                     so das eine falsche Einstellung angewählt wurde. 
@@ -365,12 +367,8 @@ createUserStates(instanz, false, statesToCreate, function(){
     EinstellungAnwahl = getState(sID_EinstellungAnwahl).val
     Wh_Leistungsmesser0();
     Wh_Leistungsmesser1();
-    // Daten Proplanta einmal beim Programmstart aktualisieren
-    InterrogateProplanta(2);
-    // Regelmässige Aktualisierung Daten Proplanta beim Programmstart starten
-    ScheduleProplanta();
     // Daten Forecast beim Programmstart aktualisieren
-    // Werte für jede Dachfläche im Abstand von 5 sek. abrufen und erst danach die function main()
+    // Werte für jede Dachfläche im Abstand von 5 sek. abrufen
    
     let i = nDachflaechen;
     // Alte Forecast Werte Löschen vor Aktualisierung
@@ -384,11 +382,13 @@ createUserStates(instanz, false, statesToCreate, function(){
 	    i--;
 	    if ( i < 1 ) {
         clearInterval(TimerForecast);
-        setTimeout(function(){main();},5000);//Zeit geben bevor main ausgeführt wird
-    }
+    }    
 }
-    
-    
+
+// Daten Proplanta einmal beim Programmstart aktualisieren
+InterrogateProplanta(2);
+// Regelmässige Aktualisierung Daten Proplanta beim Programmstart starten
+ScheduleProplanta();    
 // Stündliche Aktualisierung Daten Forecast beim Programmstart starten
 SheduleForecast();
 
@@ -440,10 +440,10 @@ function main()
     MEZ_Regelzeiten();
     
     //Prognosen in kWh umrechen
-    Prognosen_kWh_Berechnen();
+    setTimeout(function(){Prognosen_kWh_Berechnen();},300);
     
     // Diagramm verzögert aktualisieren
-    setTimeout(function(){makeJson();},300);
+    setTimeout(function(){makeJson();},600);
     
     // Anwahl Einstellungen verzögert aktualisieren
     setTimeout(function(){Auswertung();},1000);
@@ -1161,7 +1161,7 @@ function InterrogateProplanta(AnzWiederholungen) {
         setState(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_2', result[18].slice(0, 11));
         setState(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_3', result[19].slice(0, 11));
         setState(instanz + PfadEbene1 + PfadEbene2[3]+'NaesteAktualisierung',result[60].slice(64, 69).replace(".",":"));
-        main();
+        setTimeout(function(){main();},12000); //Zeit wird benötigt um alle Werte abzurufen und sicher zu speichern bevor main ausgeführt wird
     }
 }
 
@@ -1429,7 +1429,7 @@ function SheduleForecast(){
 	        i--;
 	        if ( i < 1 ) {
                 clearInterval(TimerForecast);
-                main();
+                setTimeout(function(){main();},5000); //Zeit wird benötigt bevor main ausgeführt wird
             }
         }
     });
@@ -1596,7 +1596,7 @@ on(sID_PvLeistungLM0_W, function(obj) {
 		merker0 = false;
 		count0 ++
 		Summe0 = Summe0 + Leistung;
-		if(DebugAusgabe)log(['Summe: ' + Summe0, ' Zaehler: '+count0, ' Addition: + ' +Leistung ].join(''));
+		//if(DebugAusgabe)log(['Summe: ' + Summe0, ' Zaehler: '+count0, ' Addition: + ' +Leistung ].join(''));
     }
 });
  
@@ -1608,7 +1608,7 @@ on(sID_PvLeistungLM1_W, function(obj) {
 		merker1 = false;
 		count1 ++
 		Summe1 = Summe1 + Leistung;
-		if(DebugAusgabe)log(['Summe: ' + Summe1, ' Zaehler: '+count1, ' Addition: + ' +Leistung ].join(''));
+		//if(DebugAusgabe)log(['Summe: ' + Summe1, ' Zaehler: '+count1, ' Addition: + ' +Leistung ].join(''));
     }
 });
 
