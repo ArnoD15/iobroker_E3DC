@@ -1,5 +1,5 @@
 /*****************************************************************************************
- Version: 0.2.28    Nach Abruf der Wetterdaten wird der Main() Funktion um 5000 ms verzögert aufgerufen, weil sonst die neuen Werte noch nicht gespeichert wurden.
+ Version: 0.2.28    Nach Abruf der Wetterdaten wird die Main() Funktion um 12000 ms verzögert aufgerufen, weil sonst die neuen Werte noch nicht gespeichert wurden.
                     Die Main() Funktion wurde beim Programmstart zweimal aufgerufen.
  Version: 0.2.27    Beim Umschalten zwischen Proplanta und Forecast wurde das Diagramm nicht bzw. nur verzögert aktualisiert. 
                     Durch die Verzögerung ist beim schnellen Umschalten auch nicht mit den richtigen Werten gerechnet worden,
