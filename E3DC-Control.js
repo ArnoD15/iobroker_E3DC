@@ -1,4 +1,5 @@
 /*****************************************************************************************
+ Version: 0.2.29    kleinere Optimierungen im Skript
  Version: 0.2.28    Nach Abruf der Wetterdaten wird die Main() Funktion um 12000 ms verzögert aufgerufen, weil sonst die neuen Werte noch nicht gespeichert wurden.
                     Die Main() Funktion wurde beim Programmstart zweimal aufgerufen.
  Version: 0.2.27    Beim Umschalten zwischen Proplanta und Forecast wurde das Diagramm nicht bzw. nur verzögert aktualisiert. 
@@ -435,23 +436,26 @@ if (typeof country != 'string' || typeof country == 'undefined') {console.error(
 
 function main()
 {
-    
     // Berechnug der Regelzeiten aktualisieren
     MEZ_Regelzeiten();
     
     //Prognosen in kWh umrechen
-    setTimeout(function(){Prognosen_kWh_Berechnen();},300);
+    Prognosen_kWh_Berechnen();
     
-    // Diagramm verzögert aktualisieren
-    setTimeout(function(){makeJson();},600);
+    // Diagramm aktualisieren
+    setTimeout(function(){makeJson();},300); //verzögerung asyncron min. 300 ms erforderlich;
+        
+    // Überschuss PV-Leistung berechnen
+    let UeberschussPrognoseProzent = Ueberschuss_Prozent();
     
-    // Anwahl Einstellungen verzögert aktualisieren
-    setTimeout(function(){Auswertung();},1000);
+    // Einstellungen 1-5 je nach Überschuss PV Leistung Wetterprognose und Bewölkung anwählen 
+    Einstellung(UeberschussPrognoseProzent);
 }
 
-function Auswertung()
+// Einstellungen 1-5 je nach Überschuss PV Leistung Wetterprognose und Bewölkung anwählen 
+function Einstellung(UeberschussPrognoseProzent)
 {
-    let Ueberschuss,Bedeckungsgrad12,Bedeckungsgrad15,UnloadSoC,AktSpeicherSoC;
+    let Bedeckungsgrad12,Bedeckungsgrad15,UnloadSoC,AktSpeicherSoC;
     let Einstellung_alt = getState(sID_Einstellung).val;    
     
     //Prüfen ob State existiert, sonst error Meldung und Variable null zuweisen
@@ -461,11 +465,9 @@ function Auswertung()
         log('State sBatterie_SOC ist nicht vorhanden','error');
         AktSpeicherSoC = null;
     }
-    
-    // Überschuss PV-Leistung berechnen
-    Ueberschuss = Ueberschuss_Prozent();
-    if (Ueberschuss== null){
-      log('Überschuss PV-Leistung konnte nicht berechnet werden. Ueberschuss='+Ueberschuss,'error');  
+        
+    if (UeberschussPrognoseProzent== null){
+      log('Überschuss PV-Leistung konnte nicht berechnet werden. Ueberschuss='+UeberschussPrognoseProzent,'error');  
       return  
     }
         
@@ -481,8 +483,8 @@ function Auswertung()
     }
     
     // UnloadSoC berechnen (UnloadSoC wird aktuell mur bei Einstellung 2 verwendet)
-    if (AktSpeicherSoC != null && Ueberschuss != null){
-        UnloadSoC = AktSpeicherSoC-Ueberschuss;
+    if (AktSpeicherSoC != null && UeberschussPrognoseProzent != null){
+        UnloadSoC = AktSpeicherSoC-UeberschussPrognoseProzent;
 	    if (LogAusgabe){log('Berechneter Unload SoC ist = '+UnloadSoC);}
         if (UnloadSoC<0){UnloadSoC=0;}
 	    if (UnloadSoC < nMinUnloadSoC){UnloadSoC = nMinUnloadSoC;}
@@ -490,7 +492,7 @@ function Auswertung()
     
     // Einstellung 1
     // Prognose PV-Leistung geringer als benötigter Eigenverbrauch, Überschuss zu 100% in Batterie speichern
-	if ((Ueberschuss === 0 && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===1))
+	if ((UeberschussPrognoseProzent === 0 && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===1))
 	{
 		if (LogAusgabe){log('Einstellung 1 aktiv');}
         if(Einstellung_alt != 1){
@@ -504,7 +506,7 @@ function Auswertung()
     // Einstellung 2
     // Prognose PV-Leistung höher als benötigter Eigenverbrauch,Batterie laden und Überschuss ins Netz einspeisen
     // und keine Bewölkung > 87% 
-	if ((Ueberschuss > 0 && Bedeckungsgrad12 < 90 && Bedeckungsgrad15 < 90 && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===2))
+	if ((UeberschussPrognoseProzent > 0 && Bedeckungsgrad12 < 90 && Bedeckungsgrad15 < 90 && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===2))
     {
 		if (LogAusgabe){log('Einstellung 2 aktiv');}
         if(Einstellung_alt != 2){
@@ -526,7 +528,7 @@ function Auswertung()
     // Einstellung 3
     // Prognose PV-Leistung höher als benötigter Eigenverbrauch,Batterie laden und Überschuss ins Netz einspeisen.
 	// ab 12:00 - 18:00 Uhr Bewölkung > 87%
-	if ((Ueberschuss > 0 && Bedeckungsgrad12>=90 && Bedeckungsgrad15>=90 && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===3))
+	if ((UeberschussPrognoseProzent > 0 && Bedeckungsgrad12>=90 && Bedeckungsgrad15>=90 && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===3))
 	{
 		if (LogAusgabe){log('Einstellung 3 aktiv');}
         if(Einstellung_alt != 3){
@@ -540,7 +542,7 @@ function Auswertung()
     // Einstellung 4
     // Prognose PV-Leistung höher als benötigter Eigenverbrauch,Batterie laden und Überschuss ins Netz einspeisen.
 	// ab 12:00 - 15:00 Uhr Bewölkung > 87%
-	if ((Ueberschuss > 0 && Bedeckungsgrad12 >= 90 && Bedeckungsgrad15 < 90 && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===4))
+	if ((UeberschussPrognoseProzent > 0 && Bedeckungsgrad12 >= 90 && Bedeckungsgrad15 < 90 && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===4))
 	{
 		if (LogAusgabe){log('Einstellung 4 aktiv');}
         if(Einstellung_alt != 4){
@@ -554,7 +556,7 @@ function Auswertung()
     // Einstellung 5
     // Prognose PV-Leistung höher als benötigter Eigenverbrauch,Batterie laden und Überschuss ins Netz einspeisen.
 	// ab 15:00 - 18:00 Uhr Bewölkung > 87%
-	if ((Ueberschuss > 0 && Bedeckungsgrad12<90 && Bedeckungsgrad15>=90 && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===5))
+	if ((UeberschussPrognoseProzent > 0 && Bedeckungsgrad12<90 && Bedeckungsgrad15>=90 && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===5))
     {
         if (LogAusgabe){log('Einstellung 5 aktiv');}
         if(Einstellung_alt != 5){
@@ -1161,7 +1163,7 @@ function InterrogateProplanta(AnzWiederholungen) {
         setState(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_2', result[18].slice(0, 11));
         setState(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_3', result[19].slice(0, 11));
         setState(instanz + PfadEbene1 + PfadEbene2[3]+'NaesteAktualisierung',result[60].slice(64, 69).replace(".",":"));
-        setTimeout(function(){main();},12000); //Zeit wird benötigt um alle Werte abzurufen und sicher zu speichern bevor main ausgeführt wird
+        setTimeout(function(){main();},12000); //Zeit wird benötigt um alle Werte sicher zu speichern bevor main ausgeführt wird
     }
 }
 
