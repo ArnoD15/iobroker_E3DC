@@ -1,0 +1,71 @@
+_address	name	description	unit	type	len	factor	offset	formula	role	room	poll	wp	cw	isScale
+40001	Magic_Byte	ModBus ID		uint16be	1	1	0		value		true	false	false	
+40002	Modbus_Firmware	Modbus-Firmware-Version		uint16be	1	1	0		value		true	false	false	
+40003	Anzahl_Register	Anzahl unterstützter Register		uint16be	1	1	0		value		true	false	false	
+40004	Hersteller	Hersteller		string	16	1	0		value		true	false	false	
+40020	Modell	Modell		string	16	1	0		value		true	false	false	
+40036	Seriennummer	Seriennummer		string	16	1	0		value		true	false	false	
+40052	Firmware	Firmware-Release		string	16	1	0		value		true	false	false	
+40068	PV_Leistung	Photovoltaik-Leistung in Watt	W	int32sw	2	1	0		value		true	false	false	
+40070	Batterie_Leistung	Batterie-Leistung in Watt	W	int32sw	2	1	0		value		true	false	false	
+40072	Hausverbrauch_Leistung	Hausverbrauchs-Leistung in Watt	W	int32sw	2	1	0		value		true	false	false	
+40074	Netz_Leistung	Leistung am Netzübergabepunkt	W	int32sw	2	1	0		value		true	false	false	
+40076	Zusaetzliche_Einspeiser_Leistung	Leistung aller zusätzlichen Einspeiser in Watt	W	int32sw	2	1	0		value		true	false	false	
+40078	Wallbox_Leistung	Leistung der Wallbox in Watt	W	int32sw	2	1	0		value		true	false	false	
+40080	Wallbox_genutzte_Solarleistung	Solarleistung, die von der Wallbox genutzt wird in Watt	W	int32sw	2	1	0		value		true	false	false	
+40082	Autarkie_Eigenverbrauch	Autarkie und Eigenverbrauch		uint16be	1	1	0		value		true	false	false	
+40083	Batterie_SOC	Batterie-SOC in Prozent	%	uint16be	1	1	0		value		true	false	false	
+40084	Emergency_Power_Status	Emergency-Power Status		uint16be	1	1	0		value		true	false	false	
+40085	EMS_Status	EMS-Status		uint16be	1	1	0		value		true	false	false	
+40086	EMS Remote Control	EMS Remote Control		int16be	1	1	0		value		true	false	false	
+40087	EMS CTRL	EMS CTRL		uint16be	1	1	0		value		true	false	false	
+40088	WallBox_0_CTRL	WallBox_0_CTRL		uint16be	1	1	0		value		true	false	false	
+40089	WallBox_1_CTRL	WallBox_1_CTRL		uint16be	1	1	0		value		true	false	false	
+40090	WallBox_2_CTRL	WallBox_2_CTRL		uint16be	1	1	0		value		true	false	false	
+40091	WallBox_3_CTRL	WallBox_3_CTRL		uint16be	1	1	0		value		true	false	false	
+40092	WallBox_4_CTRL	WallBox_4_CTRL		uint16be	1	1	0		value		true	false	false	
+40093	WallBox_5_CTRL	WallBox_5_CTRL		uint16be	1	1	0		value		true	false	false	
+40094	WallBox_6_CTRL	WallBox_6_CTRL		uint16be	1	1	0		value		true	false	false	
+40095	WallBox_7_CTRL	WallBox_7_CTRL		uint16be	1	1	0		value		true	false	false	
+40096	DC_String_1_Voltage	Spannung in Volt (String 1)	V	uint16be	1	1	0		value		true	false	false	
+40097	DC_String_2_Voltage	Spannung in Volt (String 2)	V	uint16be	1	1	0		value		true	false	false	
+40098	DC_String_3_Voltage	Spannung in Volt (String 3)	V	uint16be	1	1	0		value		true	false	false	
+40099	DC_String_1_Current	Strom in Ampere (String 1)	A	uint16be	1	1	0		value		true	false	false	
+40100	DC_String_2_Current	Strom in Ampere (String 2)	A	uint16be	1	1	0		value		true	false	false	
+40101	DC_String_3_Current	Strom in Ampere (String 3)	A	uint16be	1	1	0		value		true	false	false	
+40102	DC_String_1_Power	Leistung in Watt (String 1)	W	uint16be	1	1	0		value		true	false	false	
+40103	DC_String_2_Power	Leistung in Watt (String 2)	W	uint16be	1	1	0		value		true	false	false	
+40104	DC_String_3_Power	Leistung in Watt (String 3)	W	uint16be	1	1	0		value		true	false	false	
+40105	Leistungsmesser_0	Leistungsmesser 0		uint16be	1	1	0		value		true	false	false	
+40106	Leistungsmesser_0_L1	Leistungsmesser 0 - Phase 1	W	int16be	1	1	0		value		true	false	false	
+40107	Leistungsmesser_0_L2	Leistungsmesser 0 - Phase 2	W	int16be	1	1	0		value		true	false	false	
+40108	Leistungsmesser_0_L3	Leistungsmesser 0 - Phase 3	W	int16be	1	1	0		value		true	false	false	
+40109	Leistungsmesser_1	Leistungsmesser 1		uint16be	1	1	0		value		true	false	false	
+40110	Leistungsmesser_1_L1	Leistungsmesser 1 - Phase 1	W	int16be	1	1	0		value		true	false	false	
+40111	Leistungsmesser_1_L2	Leistungsmesser 1 - Phase 2	W	int16be	1	1	0		value		true	false	false	
+40112	Leistungsmesser_1_L3	Leistungsmesser 1 - Phase 3	W	int16be	1	1	0		value		true	false	false	
+40113	Leistungsmesser_2	Leistungsmesser 2		uint16be	1	1	0		value		true	false	false	
+40114	Leistungsmesser_2_L1	Leistungsmesser 2 - Phase 1	W	int16be	1	1	0		value		true	false	false	
+40115	Leistungsmesser_2_L2	Leistungsmesser 2 - Phase 2	W	int16be	1	1	0		value		true	false	false	
+40116	Leistungsmesser_2_L3	Leistungsmesser 2 - Phase 3	W	int16be	1	1	0		value		true	false	false	
+40117	Leistungsmesser_3	Leistungsmesser 3		uint16be	1	1	0		value		true	false	false	
+40118	Leistungsmesser_3_L1	Leistungsmesser 3 - Phase 1	W	int16be	1	1	0		value		true	false	false	
+40119	Leistungsmesser_3_L2	Leistungsmesser 3 - Phase 2	W	int16be	1	1	0		value		true	false	false	
+40120	Leistungsmesser_3_L3	Leistungsmesser 3 - Phase 3	W	int16be	1	1	0		value		true	false	false	
+40121	Leistungsmesser_4	Leistungsmesser 4		uint16be	1	1	0		value		true	false	false	
+40122	Leistungsmesser_4_L1	Leistungsmesser 4 - Phase 1	W	int16be	1	1	0		value		true	false	false	
+40123	Leistungsmesser_4_L2	Leistungsmesser 4 - Phase 2	W	int16be	1	1	0		value		true	false	false	
+40124	Leistungsmesser_4_L3	Leistungsmesser 4 - Phase 3	W	int16be	1	1	0		value		true	false	false	
+40125	Leistungsmesser_5	Leistungsmesser 5		uint16be	1	1	0		value		true	false	false	
+40126	Leistungsmesser_5_L1	Leistungsmesser 5 - Phase 1	W	int16be	1	1	0		value		true	false	false	
+40127	Leistungsmesser_5_L2	Leistungsmesser 5 - Phase 2	W	int16be	1	1	0		value		true	false	false	
+40128	Leistungsmesser_5_L3	Leistungsmesser 5 - Phase 3	W	int16be	1	1	0		value		true	false	false	
+40129	Leistungsmesser_6	Leistungsmesser 6		uint16be	1	1	0		value		true	false	false	
+40130	Leistungsmesser_6_L1	Leistungsmesser 6 - Phase 1	W	int16be	1	1	0		value		true	false	false	
+40131	Leistungsmesser_6_L2	Leistungsmesser 6 - Phase 2	W	int16be	1	1	0		value		true	false	false	
+40132	Leistungsmesser_6_L3	Leistungsmesser 6 - Phase 3	W	int16be	1	1	0		value		true	false	false	
+40133	Leistungsmesser_7	Leistungsmesser 7		uint16be	1	1	0		value		true	false	false	
+40134	Leistungsmesser_7_L1	Leistungsmesser 7 - Phase 1	W	int16be	1	1	0		value		true	false	false	
+40135	Leistungsmesser_7_L2	Leistungsmesser 7 - Phase 2	W	int16be	1	1	0		value		true	false	false	
+40136	Leistungsmesser_7_L3	Leistungsmesser 7 - Phase 3	W	int16be	1	1	0		value		true	false	false	
+40137	SG_Ready_Status	SG Ready-Status		uint16be	1	1	0		value		true	false	false	
