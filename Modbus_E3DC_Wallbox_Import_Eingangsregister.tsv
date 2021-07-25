@@ -1,0 +1,16 @@
+_address	name	description	unit	type	len	factor	offset	formula	role	room	cw	isScale
+100	status	Lademodus nach IEC 61851-1		uint16be	1	1	0		value		false	false
+101	Proximity_Ladestrom	Stromtragfähigkeit Ladekabel	A	uint16be	1	1	0		value			
+102	ladedauer	Ladedauer	sek	uint16be	1	1	0		value		false	false
+107	Fehlercodes1	Fehlercodes1		uint16be	1	1	0		value			
+108	L1_Spannung	L1 Spannung	V	uint16be	1	1	0		value			
+110	L2_Spannung	L2 Spannung	V	uint16be	1	1	0		value			
+112	L3_Spannung	L3 Spannung	V	uint16be	1	1	0		value			
+114	L1_Strom	L1 Strom	A	uint16be	1	1	0		value			
+116	L2_Strom	L2 Strom	A	uint16be	1	1	0		value			
+118	L3_Strom	L3 Strom	A	uint16be	1	1	0		value			
+120	Leistung_aktuell	aktuelle Ladeleistung	W	uint16be	1	1	0		value		false	false
+128	total_kwh	Gesamtzaehler kWh	kWh	uint16be	1	1	0		value			
+132	aktuell_kwh	Aktueller Ladevorgang	kWh	uint16be	1	1	0		value			
+134	Netzfrequenz	Anzeige Energiemessgerät Netzfrequenz	Hz	uint16be	1	1	0		value			
+155	Fehlercodes2	Fehlercodes2		uint16be	1	1	0		value			

@@ -1,0 +1,2 @@
+_address	name	description	formula	role	room	poll	wp	cw	isScale
+468	Ladevorgang_pausieren	Ladevorgang pausieren / starten		state		true	false	false	false

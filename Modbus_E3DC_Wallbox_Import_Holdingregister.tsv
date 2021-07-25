@@ -1,0 +1,5 @@
+_address	name	description	unit	type	len	factor	offset	formula	role	room	poll	wp	cw	isScale
+300	Eingestellter_Ladestrom	Eingestellter Ladestrom E-Auto (PWMSignal)	A	uint16be	1	0.1	0		value		true	false	false	
+528	Vorgabe_Ladestrom	Vorgabe Ladestrom Wallbox	A	uint16be	1	0.1	0		value		true	false	false	false
+521	Definition_Eingang_EN	Definition Eingang EN		uint16be	1	1	0		value		true	false	false	
+522	Definition_Eingang_ML	Definition Eingang ML		uint16be	1	1	0		value		true	false	false	

@@ -1,0 +1,7 @@
+_address	name	description	formula	role	room	cw	isScale
+204	Ausgang_ER	Fehler oder Ladestation nicht verfügbar		value			
+205	Ausgang_LR	Verriegelung ist aktiv		value			
+206	Ausgang_VR	Ladevorgang kann stattfinden		value			
+207	Ausgang_CR	Ladevorgang seitens der Ladesteuerung freigegeben		value			
+201	Eingang_EN	Schlüsselschalter Wallbox 1 = true 0 = false		value			
+202	Eingang_ML	Schlüsselschalter Wallbox 1 = true 0 = false		value			
