@@ -1,4 +1,5 @@
 /*****************************************************************************************
+ Version: 0.2.30    alle Main() aufrufe verzögert asyncron ausgeführt.
  Version: 0.2.29    kleinere Optimierungen im Skript
  Version: 0.2.28    Nach Abruf der Wetterdaten wird die Main() Funktion um 12000 ms verzögert aufgerufen, weil sonst die neuen Werte noch nicht gespeichert wurden.
                     Die Main() Funktion wurde beim Programmstart zweimal aufgerufen.
@@ -1620,7 +1621,7 @@ on({id: sID_Automatik}, function (obj){
      if(AutomatikAnwahl) {
         if (LogAusgabe){log('Automatik gestartet');}
         setState(sID_EinstellungAnwahl,0);
-        main();
+        setTimeout(function(){main();},100); //Zeit wird benötigt bevor main ausgeführt wird
     }else{
         if (LogAusgabe){log('Automatik gestoppt');}
     }
@@ -1629,7 +1630,7 @@ on({id: sID_Automatik}, function (obj){
 // Bei Änderung Eigenverbrauch soll der Überschuss neu berechnet werden.
 on({id: sIDEigenverbrauchTag}, function (obj){
 	if (LogAusgabe){log('Wert Eigenverbrauch wurde auf '+getState(obj.id).val+' kWh geändert');}
-    main();
+    setTimeout(function(){main();},100); //Zeit wird benötigt bevor main ausgeführt wird
 });  
 
 
@@ -1698,7 +1699,7 @@ on({id: sID_PrognoseAnwahl, change: "ne"}, function(obj) {
     if(LogAusgabe && PrognoseAnwahl == 0){log("Proplanta und Forecast angewählt")};
     if(LogAusgabe && PrognoseAnwahl == 1){log("Proplanta angewählt")};
     if(LogAusgabe && PrognoseAnwahl == 2){log("Forecast angewählt")};
-    main();
+    setTimeout(function(){main();},100); //Zeit wird benötigt bevor main ausgeführt wird
 });
 
 // Bei Betättigung der Button Einstellung 1-5 in VIS jeweilige Einstellung laden und automatik ausschalten
@@ -1707,7 +1708,7 @@ on({id: sID_EinstellungAnwahl, change: "ne"}, function (obj){
     if (EinstellungAnwahl !=0){
         setState(sID_Automatik,false,true);
         if(LogAusgabe)log("Trigger manuelle Programmvorwahl");
-        main();
+        setTimeout(function(){main();},100); //Zeit wird benötigt bevor main ausgeführt wird
     }
 });
 
