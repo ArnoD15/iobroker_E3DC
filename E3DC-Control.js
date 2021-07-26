@@ -1,5 +1,5 @@
 /*****************************************************************************************
- Version: 0.2.30    alle Main() aufrufe verzögert asyncron ausgeführt.
+ Version: 0.2.30    Alle main() Aufrufe werden jetzt verzögert asynchron aufgerufen.
  Version: 0.2.29    kleinere Optimierungen im Skript
  Version: 0.2.28    Nach Abruf der Wetterdaten wird die Main() Funktion um 12000 ms verzögert aufgerufen, weil sonst die neuen Werte noch nicht gespeichert wurden.
                     Die Main() Funktion wurde beim Programmstart zweimal aufgerufen.
