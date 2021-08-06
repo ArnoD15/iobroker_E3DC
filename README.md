@@ -8,6 +8,10 @@ beim Überschreiten der 70% Einspeisegrenze zu verhindern.
 Das Script erweitert die Funktion von E3DC-Control um eine Wetterprognose, mit der 5 verschiedene Einstellungen je nach Wetter aufgerufen werden können.
 <p>Weitere Informationen im iobroker Forum: https://forum.iobroker.net/topic/32976/e3dc-hauskraftwerk-steuern</p>
 
+
+[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/donate?hosted_button_id=NP79Z9RV8AP32) 
+
+
 <h3>E3DC_Wallbox</h3>
 Script zum Steuern der Wallbox easy connect mit Mode 3-Ladekabel (3-phasig) fest angeschlagen mit Ladestecker Typ 2 von E3DC. Die Wallbox muss über Modbus
 verbunden sein.
