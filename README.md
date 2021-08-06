@@ -9,7 +9,7 @@ Das Script erweitert die Funktion von E3DC-Control um eine Wetterprognose, mit d
 <p>Weitere Informationen im iobroker Forum: https://forum.iobroker.net/topic/32976/e3dc-hauskraftwerk-steuern</p>
 
 
-[![paypal](https://www.paypalobjects.com/en_US/DK/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate?hosted_button_id=NP79Z9RV8AP32) 
+[![paypal](https://www.paypalobjects.com/en_US/DK/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate?hosted_button_id=JWM2WUT7ZACVL) 
 
 
 <h3>E3DC_Wallbox</h3>
