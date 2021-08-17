@@ -1,4 +1,7 @@
 /*****************************************************************************************
+ Version: 0.3.0     Neue Auswahl für "PrognoseAnwahl" hinzugefügt. Wenn beide Prognosen verwendet werden, kann jetzt nach max., min. oder Durchschnitt die Prognose
+                    berechnet werden. 
+                    Beide Berechnung nach min. Wert = 0 / nur Proplanta = 1 / nur Forecast = 2 / Beide Berechnung nach max. Wert = 3 / Beide Berechnung nach Ø Wert = 4
  Version: 0.2.30    Alle main() Aufrufe werden jetzt verzögert asynchron aufgerufen.
  Version: 0.2.29    kleinere Optimierungen im Skript
  Version: 0.2.28    Nach Abruf der Wetterdaten wird die Main() Funktion um 12000 ms verzögert aufgerufen, weil sonst die neuen Werte noch nicht gespeichert wurden.
@@ -302,7 +305,7 @@ let statesToCreate = [
 [PfadEbene1 + PfadEbene2[1] + 'Ladeende_MEZ', {'def':'00.00', 'name':'Ladeende MEZ', 'type':'string', 'role':'string', 'desc':'Ladeende MEZ Zeit', 'unit':'Uhr'}],
 [PfadEbene1 + PfadEbene2[1] + 'IstPvErtragLM0_kWh', {'def':0, 'name':'kWh Leistungsmesser 0 ' , 'type':'number', 'role':'value', 'unit':'kWh'}],
 [PfadEbene1 + PfadEbene2[1] + 'IstPvErtragLM1_kWh', {'def':0, 'name':'kWh Leistungsmesser 1 ' , 'type':'number', 'role':'value', 'unit':'kWh'}],
-[PfadEbene1 + PfadEbene2[1] + 'PrognoseAnwahl', {'def':0, 'name':'Proplanta und Forecast = 0 nur Proplanta=1 nur Forecast=2' , 'type':'number', 'role':'value'}],
+[PfadEbene1 + PfadEbene2[1] + 'PrognoseAnwahl', {'def':0, 'name':'Beide Berechnung nach min. Wert = 0 nur Proplanta=1 nur Forecast=2 Beide Berechnung nach max. Wert=3 Beide Berechnung nach Ø Wert=4' , 'type':'number', 'role':'value'}],
 [PfadEbene1 + PfadEbene2[2] + 'HistoryJSON', {'def':'[]', 'name':'JSON für materialdesign json chart' ,'type':'string'}],
 [PfadEbene1 + PfadEbene2[2] + 'HistorySelect', {'def':1, 'name':'Select Menü für materialdesign json chart' ,'type':'number'}],
 [PfadEbene1 + PfadEbene2[3] + 'PrognoseProp_kWh_heute', {'def':0, 'name':'Tagesprognose Tag1 Proplanta' , 'type':'number', 'role':'value', 'unit':'kWh'}],
@@ -641,7 +644,7 @@ function Prognosen_kWh_Berechnen()
     if (LogAusgabe){log('Prognose Forecast in kWh = '+ PrognoseForecas_kWh_heute);}
     if (LogAusgabe){log('Prognose Proplanta in kWh = '+ PrognoseProplanta_kWh_Tag0);}
 
-    // Für die Berechnung wird die niedrigere Prognose verwendet die nicht == 0 ist
+    // Berechnung der Prognose nach Einstellung PrognoseAnwahl
     if (PrognoseForecas_kWh_heute == 0 && PrognoseProplanta_kWh_Tag0 == 0){
         if (LogAusgabe){log('Prognose für heute konnte nicht abgerufen werden')};
         return null
@@ -655,6 +658,17 @@ function Prognosen_kWh_Berechnen()
             if (PrognoseProplanta_kWh_Tag0 > PrognoseForecas_kWh_heute){
                 Prognose_kWh_heute = PrognoseForecas_kWh_heute;
             }
+        }
+        if (PrognoseForecas_kWh_heute != 0 && PrognoseProplanta_kWh_Tag0 != 0 && PrognoseAnwahl == 3) {
+            if (PrognoseForecas_kWh_heute < PrognoseProplanta_kWh_Tag0) {
+                Prognose_kWh_heute = PrognoseProplanta_kWh_Tag0;
+            }
+            if (PrognoseProplanta_kWh_Tag0 < PrognoseForecas_kWh_heute){
+                Prognose_kWh_heute = PrognoseForecas_kWh_heute;
+            }
+        }
+        if (PrognoseForecas_kWh_heute != 0 && PrognoseProplanta_kWh_Tag0 != 0 && PrognoseAnwahl == 4) {
+            Prognose_kWh_heute = (PrognoseProplanta_kWh_Tag0+PrognoseForecas_kWh_heute)/2;
         }
     }   
     if (PrognoseForecas_kWh_morgen == 0 && PrognoseProplanta_kWh_Tag1 == 0){
@@ -670,6 +684,17 @@ function Prognosen_kWh_Berechnen()
             if (PrognoseProplanta_kWh_Tag1 > PrognoseForecas_kWh_morgen){
                 Prognose_kWh_Tag1 = PrognoseForecas_kWh_morgen;
             }
+        }
+        if (PrognoseForecas_kWh_morgen != 0 && PrognoseProplanta_kWh_Tag1 != 0 && PrognoseAnwahl == 3) {
+            if (PrognoseForecas_kWh_morgen < PrognoseProplanta_kWh_Tag1) {
+                Prognose_kWh_Tag1 = PrognoseProplanta_kWh_Tag1;
+            }
+            if (PrognoseProplanta_kWh_Tag1 < PrognoseForecas_kWh_morgen){
+                Prognose_kWh_Tag1 = PrognoseForecas_kWh_morgen;
+            }
+        }
+        if (PrognoseForecas_kWh_morgen != 0 && PrognoseProplanta_kWh_Tag1 != 0 && PrognoseAnwahl == 4) {
+            Prognose_kWh_Tag1 = (PrognoseProplanta_kWh_Tag1+PrognoseForecas_kWh_morgen)/2;
         }
     } 
     
@@ -1432,7 +1457,7 @@ function SheduleForecast(){
 	        i--;
 	        if ( i < 1 ) {
                 clearInterval(TimerForecast);
-                setTimeout(function(){main();},5000); //Zeit wird benötigt bevor main ausgeführt wird
+                setTimeout(function(){main();},1000); //Zeit wird benötigt bevor main ausgeführt wird
             }
         }
     });
@@ -1693,13 +1718,19 @@ on({id: instanz + PfadEbene1 + PfadEbene2[3] + 'NaesteAktualisierung', change: "
     }
 });
 
-// Bei Änderung der PrognoseAnwahl, Einstellung 0-2 in VIS, jeweilige Prognose abrufen
+// Bei Änderung der PrognoseAnwahl, Einstellung 0-4 in VIS, jeweilige Prognose abrufen
 on({id: sID_PrognoseAnwahl, change: "ne"}, function(obj) {
     PrognoseAnwahl = getState(obj.id).val
-    if(LogAusgabe && PrognoseAnwahl == 0){log("Proplanta und Forecast angewählt")};
-    if(LogAusgabe && PrognoseAnwahl == 1){log("Proplanta angewählt")};
-    if(LogAusgabe && PrognoseAnwahl == 2){log("Forecast angewählt")};
-    setTimeout(function(){main();},100); //Zeit wird benötigt bevor main ausgeführt wird
+    if (PrognoseAnwahl <= 4){
+        if(LogAusgabe && PrognoseAnwahl == 0){log("Proplanta u. Forecast angewählt, Berechnung nach min. Wert")};
+        if(LogAusgabe && PrognoseAnwahl == 1){log("Proplanta angewählt")};
+        if(LogAusgabe && PrognoseAnwahl == 2){log("Forecast angewählt")};
+        if(LogAusgabe && PrognoseAnwahl == 3){log("Proplanta u. Forecast angewählt, Berechnung nach max. Wert")};
+        if(LogAusgabe && PrognoseAnwahl == 4){log("Proplanta u. Forecast angewählt, Berechnung nach Ø Wert")};
+        setTimeout(function(){main();},100); //Zeit wird benötigt bevor main ausgeführt wird
+    }else{
+        log('Falscher Wert State PrognoseAnwahl','warn');
+    }
 });
 
 // Bei Betättigung der Button Einstellung 1-5 in VIS jeweilige Einstellung laden und automatik ausschalten
