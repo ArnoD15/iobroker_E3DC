@@ -1,4 +1,5 @@
 /*****************************************************************************************
+ Version: 0.3.1     Überprüfung ob die serverseitige Bearbeitung Proplanta oder Forecast erfolgreich war eingefügt.
  Version: 0.3.0     Neue Auswahl für "PrognoseAnwahl" hinzugefügt. Wenn beide Prognosen verwendet werden, kann jetzt nach max., min. oder Durchschnitt die Prognose
                     berechnet werden. 
                     Beide Berechnung nach min. Wert = 0 / nur Proplanta = 1 / nur Forecast = 2 / Beide Berechnung nach max. Wert = 3 / Beide Berechnung nach Ø Wert = 4
@@ -230,14 +231,13 @@ const DebugAusgabe = false                        // Debug Ausgabe im LOG zur Fe
 const fs = require('fs');       
 // @ts-ignore
 const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
+let xhr = new XMLHttpRequest();
 // @ts-ignore
 const dst = require('is-it-bst');
 let AutomatikAnwahl,ZeitAnwahl_MEZ_MESZ,EinstellungAnwahl,PrognoseAnwahl;
 let sWrleistung,sHtmin,sHtsockel,sHton,sHtoff,sHtsat,sHtsun,sDebug,sWallbox,sWBmode,sWBminLade,sPeakshave;
-let xhr = new XMLHttpRequest();
 let count0 = 0, count1 = 0, Summe0 = 0, Summe1 = 0, Timer0 = null, Timer1 = null,Timer2 = null,Timer3 = null, merker0 = false, merker1 = false;
 let TimerForecast;
-let xhrProplanta = new XMLHttpRequest();
 let baseUrls = {
         "de" : "https://www.proplanta.de/Wetter/profi-wetter.php?SITEID=60&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=",
         "at" : "https://www.proplanta.de/Wetter-Oesterreich/profi-wetter-at.php?SITEID=70&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=",
@@ -1051,10 +1051,9 @@ function InterrogateForecast(DachFl,AnzWiederholungen)
     //wird aufgerufen wenn xhr.send erfolgreich abgeschlossen wurde
 	xhr.onload = function (){
         let Response1,Response2;
-	    log('Rueckmeldung :' + xhr.responseText)
-        const obj = JSON.parse(xhr.responseText);
-        if (obj.result != null){
-            
+	    if (xhr.status >= 200 && xhr.status < 300) {
+            log('Rueckmeldung :' + xhr.responseText)
+            const obj = JSON.parse(xhr.responseText);
             if (DachFl > 0 && DachFl <= 5 ){
 		        Response1 = obj.result[getCurrentDate()];
 		        Response2 = obj.result[nextDayDate()];
@@ -1068,7 +1067,7 @@ function InterrogateForecast(DachFl,AnzWiederholungen)
                 }
             }
         }else{
-            log('Es konnten keine Daten von Forecast abgerufen werden  '+obj.result,'warn');    
+            log('Es konnten keine Daten von Forecast abgerufen werden  Status:'+xhr.statusText+' Rückmeldung'+xhr.responseText,'warn');    
         }
 	}
 }
@@ -1099,97 +1098,100 @@ function InterrogateProplanta(AnzWiederholungen) {
         setState(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_2', 200);  
         setState(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_3', 200);
         try {
-            xhrProplanta.abort();
-            xhrProplanta.open("GET",baseurl, true);
-		    xhrProplanta.responseType = "text";
-		    xhrProplanta.send();
+            xhr.abort();
+            xhr.open("GET",baseurl, true);
+		    xhr.responseType = "text";
+		    xhr.send();
 	    }
   
         catch(Fehler){
-            xhrProplanta.abort();
+            xhr.abort();
             log ('Catch in der function InterrogateProplanta aktiv. Fehler = '+Fehler, 'warn')
         }
     }
     //wird aufgerufen wenn xhrProplanta.send erfolgreich abgeschlossen wurde
-	xhrProplanta.onload = function () 
-	{
-        // nicht benötigte HTML Daten löschen
-        let Data = xhrProplanta.responseText
+	xhr.onload = function (){
+        if (xhr.status >= 200 && xhr.status < 300) {
+            // nicht benötigte HTML Daten löschen
+            let Data = xhr.responseText
         
-        //Alles bis max. Temperatur löschen
-        let idx = Data.indexOf('<tr id="TMAX" class="">');
-        Data = Data.replace(Data.substring(0, idx), "");
+            //Alles bis max. Temperatur löschen
+            let idx = Data.indexOf('<tr id="TMAX" class="">');
+            Data = Data.replace(Data.substring(0, idx), "");
         
-        // Von min. Temp. der darauf folgenden Nacht bis Globalstrahlung löschen
-        let idx1 = Data.indexOf('<tr id="NMIN" class="">');
-        let idx2 = Data.indexOf('Globalstrahlung');
-        Data = Data.replace(Data.substring(idx1, idx2), "");
+            // Von min. Temp. der darauf folgenden Nacht bis Globalstrahlung löschen
+            let idx1 = Data.indexOf('<tr id="NMIN" class="">');
+            let idx2 = Data.indexOf('Globalstrahlung');
+            Data = Data.replace(Data.substring(idx1, idx2), "");
         
-        // Von Wetterzustand bis Bedeckungsgrad löschen
-        idx1 = Data.indexOf('<tr id="WETTERZUSTAND">');
-        idx2 = Data.indexOf('<tr id="BEDECKUNGSGRAD">');
-        Data = Data.replace(Data.substring(idx1, idx2), "");
+            // Von Wetterzustand bis Bedeckungsgrad löschen
+            idx1 = Data.indexOf('<tr id="WETTERZUSTAND">');
+            idx2 = Data.indexOf('<tr id="BEDECKUNGSGRAD">');
+            Data = Data.replace(Data.substring(idx1, idx2), "");
         
-        // Von Windrichtungkompass bis letzte Aktualisierung löschen
-        idx1 = Data.indexOf('<tr class="WINDRICHTUNGKOMPASS">');
-        idx2 = Data.indexOf('letzte');
-        Data = Data.replace(Data.substring(idx1, idx2), "");
+            // Von Windrichtungkompass bis letzte Aktualisierung löschen
+            idx1 = Data.indexOf('<tr class="WINDRICHTUNGKOMPASS">');
+            idx2 = Data.indexOf('letzte');
+            Data = Data.replace(Data.substring(idx1, idx2), "");
         
-        // Nach der letzten Uhrzeit "letzte Aktualisierung" bis zum Ende löschen
-        idx = Data.indexOf('Uhr');
-        Data = Data.replace(Data.substring(idx+45, Data.length), "");
+            // Nach der letzten Uhrzeit "letzte Aktualisierung" bis zum Ende löschen
+            idx = Data.indexOf('Uhr');
+            Data = Data.replace(Data.substring(idx+45, Data.length), "");
         
-        // HTML Tags löschen und Daten bereinigen
-        Data=HTML_CleanUp(Data);
+            // HTML Tags löschen und Daten bereinigen
+            Data=HTML_CleanUp(Data);
 
-        // Array aus restlichen Daten erstellen     
-        let SrtingSplit = Data.split('|');
+            // Array aus restlichen Daten erstellen     
+            let SrtingSplit = Data.split('|');
 
-        // Alle Werte löschen die leer sind       
-        let result = SrtingSplit.filter(function(e){ return e.replace(/(\r\n|\n|\r)/gm,"")});
+            // Alle Werte löschen die leer sind       
+            let result = SrtingSplit.filter(function(e){ return e.replace(/(\r\n|\n|\r)/gm,"")});
         
-        // Restlichen Werte die nicht benötigt werden entfernen
-        result.splice(5,5)
-        result.splice(10,5)
-        result.splice(15,2)
-        result.splice(60,2)
-        if (DebugAusgabe){
-            for (let i in result) {
-                log("i ="+i+' Wert=' + result[i]);
-            }
-        } 
-        // Prüfen ob Globalstrahlung für heute in eine Zahl umgewandelt werden kann,wenn nicht noch mal nach 1 min. abrufen
-        if (isNaN(parseFloat(result[11]))){
-            setState(instanz + PfadEbene1 + PfadEbene2[3]+'Globalstrahlung_Tag_0', 0);
-            xhr.abort();
-            if (AnzWiederholungen>0){
-                setTimeout(function(){InterrogateProplanta(AnzWiederholungen-1);},60000);
-            }
+            // Restlichen Werte die nicht benötigt werden entfernen
+            result.splice(5,5)
+            result.splice(10,5)
+            result.splice(15,2)
+            result.splice(60,2)
+            if (DebugAusgabe){
+                for (let i in result) {
+                    log("i ="+i+' Wert=' + result[i]);
+                }
+            } 
+            // Prüfen ob Globalstrahlung für heute in eine Zahl umgewandelt werden kann,wenn nicht noch mal nach 1 min. abrufen
+            if (isNaN(parseFloat(result[11]))){
+                setState(instanz + PfadEbene1 + PfadEbene2[3]+'Globalstrahlung_Tag_0', 0);
+                xhr.abort();
+                if (AnzWiederholungen>0){
+                    setTimeout(function(){InterrogateProplanta(AnzWiederholungen-1);},60000);
+                }
+            }else{
+                setState(instanz + PfadEbene1 + PfadEbene2[3]+'Globalstrahlung_Tag_0', parseFloat(result[11]));
+            } 
+            // Prüfen ob Werte in eine Zahl umgewandelt werden können,wenn nicht 0 zuweisen     
+            if (isNaN(parseFloat(result[12]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Globalstrahlung_Tag_1', 0);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Globalstrahlung_Tag_1', parseFloat(result[12]));}      
+            if (isNaN(parseFloat(result[13]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Globalstrahlung_Tag_2', 0);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Globalstrahlung_Tag_2', parseFloat(result[13]));}      
+            if (isNaN(parseFloat(result[14]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Globalstrahlung_Tag_3', 0);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Globalstrahlung_Tag_3', parseFloat(result[14]));}      
+            if (isNaN(parseFloat(result[41]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_12', 200);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_12', parseFloat(result[41]));}      
+            if (isNaN(parseFloat(result[46]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_15', 200);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_15', parseFloat(result[46]));}      
+            if (isNaN(parseFloat(result[1]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_0', 200);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_0', parseFloat(result[1]));}      
+            if (isNaN(parseFloat(result[2]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_1', 200);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_1', parseFloat(result[2]));}      
+            if (isNaN(parseFloat(result[3]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_2', 200);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_2', parseFloat(result[3]));}      
+            if (isNaN(parseFloat(result[4]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_3', 200);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_3', parseFloat(result[4]));}      
+            if (isNaN(parseFloat(result[6]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_0', 200);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_0', parseFloat(result[6]));}      
+            if (isNaN(parseFloat(result[7]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_1', 200);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_1', parseFloat(result[7]));}      
+            if (isNaN(parseFloat(result[8]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_2', 200);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_2', parseFloat(result[8]));}      
+            if (isNaN(parseFloat(result[9]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_3', 200);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_3', parseFloat(result[9]));}      
+        
+
+            setState(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_0', result[16].slice(0, 11));
+            setState(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_1', result[17].slice(0, 11));
+            setState(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_2', result[18].slice(0, 11));
+            setState(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_3', result[19].slice(0, 11));
+            setState(instanz + PfadEbene1 + PfadEbene2[3]+'NaesteAktualisierung',result[60].slice(64, 69).replace(".",":"));
+            setTimeout(function(){main();},12000); //Zeit wird benötigt um alle Werte sicher zu speichern bevor main ausgeführt wird
         }else{
-            setState(instanz + PfadEbene1 + PfadEbene2[3]+'Globalstrahlung_Tag_0', parseFloat(result[11]));
-        } 
-        // Prüfen ob Werte in eine Zahl umgewandelt werden können,wenn nicht 0 zuweisen     
-        if (isNaN(parseFloat(result[12]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Globalstrahlung_Tag_1', 0);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Globalstrahlung_Tag_1', parseFloat(result[12]));}      
-        if (isNaN(parseFloat(result[13]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Globalstrahlung_Tag_2', 0);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Globalstrahlung_Tag_2', parseFloat(result[13]));}      
-        if (isNaN(parseFloat(result[14]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Globalstrahlung_Tag_3', 0);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Globalstrahlung_Tag_3', parseFloat(result[14]));}      
-        if (isNaN(parseFloat(result[41]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_12', 200);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_12', parseFloat(result[41]));}      
-        if (isNaN(parseFloat(result[46]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_15', 200);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_15', parseFloat(result[46]));}      
-        if (isNaN(parseFloat(result[1]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_0', 200);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_0', parseFloat(result[1]));}      
-        if (isNaN(parseFloat(result[2]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_1', 200);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_1', parseFloat(result[2]));}      
-        if (isNaN(parseFloat(result[3]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_2', 200);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_2', parseFloat(result[3]));}      
-        if (isNaN(parseFloat(result[4]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_3', 200);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_3', parseFloat(result[4]));}      
-        if (isNaN(parseFloat(result[6]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_0', 200);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_0', parseFloat(result[6]));}      
-        if (isNaN(parseFloat(result[7]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_1', 200);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_1', parseFloat(result[7]));}      
-        if (isNaN(parseFloat(result[8]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_2', 200);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_2', parseFloat(result[8]));}      
-        if (isNaN(parseFloat(result[9]))){setState(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_3', 200);}else{setState(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_3', parseFloat(result[9]));}      
-        
-
-        setState(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_0', result[16].slice(0, 11));
-        setState(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_1', result[17].slice(0, 11));
-        setState(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_2', result[18].slice(0, 11));
-        setState(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_3', result[19].slice(0, 11));
-        setState(instanz + PfadEbene1 + PfadEbene2[3]+'NaesteAktualisierung',result[60].slice(64, 69).replace(".",":"));
-        setTimeout(function(){main();},12000); //Zeit wird benötigt um alle Werte sicher zu speichern bevor main ausgeführt wird
+            log('Es konnten keine Daten von Proplanta abgerufen werden  Status:'+xhr.statusText+' Rückmeldung'+xhr.responseText,'warn');    
+        }
     }
 }
 
