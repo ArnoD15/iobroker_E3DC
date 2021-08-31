@@ -1,72 +1,10 @@
 /*****************************************************************************************
+ Version: 0.3.2     XMLHttpRequest Fehler bei langsamen Verbindungen korrigiert und Warnung bei Timeout eingefügt.
+                    Prognosewerte Forecast werden nur noch Täglich auf 0 gesetzt. Skript aufgeräumt und optimiert
  Version: 0.3.1     Überprüfung ob die serverseitige Bearbeitung Proplanta oder Forecast erfolgreich war eingefügt.
  Version: 0.3.0     Neue Auswahl für "PrognoseAnwahl" hinzugefügt. Wenn beide Prognosen verwendet werden, kann jetzt nach max., min. oder Durchschnitt die Prognose
                     berechnet werden. 
                     Beide Berechnung nach min. Wert = 0 / nur Proplanta = 1 / nur Forecast = 2 / Beide Berechnung nach max. Wert = 3 / Beide Berechnung nach Ø Wert = 4
- Version: 0.2.30    Alle main() Aufrufe werden jetzt verzögert asynchron aufgerufen.
- Version: 0.2.29    kleinere Optimierungen im Skript
- Version: 0.2.28    Nach Abruf der Wetterdaten wird die Main() Funktion um 12000 ms verzögert aufgerufen, weil sonst die neuen Werte noch nicht gespeichert wurden.
-                    Die Main() Funktion wurde beim Programmstart zweimal aufgerufen.
- Version: 0.2.27    Beim Umschalten zwischen Proplanta und Forecast wurde das Diagramm nicht bzw. nur verzögert aktualisiert. 
-                    Durch die Verzögerung ist beim schnellen Umschalten auch nicht mit den richtigen Werten gerechnet worden,
-                    so das eine falsche Einstellung angewählt wurde. 
-                    Bei Anwahl Automatik wird jetzt der State EinstellungAnwahl auf 0 gesetzt, um bei einer manuellen Anwahl
-                    der Einstellung (Werte im Bereich 1-5) im Skript, das als Änderung erkannt wird.
- Version: 0.2.26    Update Function createUserStates auf Version: 1.2 (20 October 2020) von Mic (ioBroker) | Mic-M (github) 
- Version: 0.2.25    Beim Abrufen der Wetterdaten Forecast, wurden die letzten Werte vorher nicht gelöscht.
-					Wenn aus irgendeinem Grund keine neuen Daten abgerufen werden konnten, wurde mit den alten Werten gerechnet.
- Version: 0.2.24    Regelzeitraum Start, Ende und Ladezeitende werden jetzt nach der Formel von Eberhard richtig berechnet.
- Version: 0.2.23    Fehler behoben das die History Sicherungsdatei keine Werte gespeichert wurden und das falsche Monat eingelesen wurde.  
-                    Die History Sicherungsdatei wird jetz nicht jedesmal neu erstellt sondern nur eine neue Zeile mit jeweiligem Datum eingefügt.
-                    Die Anzeige PV-Leistung Prognose in VIS wird jetzt automatisch auf das aktuelle Monat umgestellt.
-                    Danke an @smartboart.
- Version: 0.2.22    Fehler manuelles Umschalten der Einstellungen ohne Internetverbindung nicht möglich korrigiert 
- Version: 0.2.21    Fehler beim Speichern History JSON korrigiert wo es möglich war das der aktuelle Monat mit falschen Daten überschrieben wurde.
-                    Neue Funktion von smartboat, Daten der json zusätzlich in eine Datei schreiben hinzugefügt.
- Version: 0.2.20    Fehler in der Zeitberechnung RB,RE,LE korrigiert.
- Version: 0.2.19    Zeitberechnung Ladeende an E3DC-Control Ver. 28.11.28.0 angepasst
- Version: 0.2.18    Parameter Wallbox (true,false) kann in Vis eingestellt werden. Es sind auch Änderungen in VIS erforderlich.
- Version: 0.2.17    Neue E3DC-Control Version von Eberhard, die Parameter "wbminlade" und "wbmode" integriert. Es sind auch Änderungen in VIS erforderlich,
-                    um diese in Vis zu ändern. 
- Version: 0.2.16    Problem dass bei Prognoseanwahl Änderung Proplanta Forcast oder beide die json nicht gleich aktualisiert wird behoben.Danke an smartboart.
- Version: 0.2.15    Es können jetzt für 5 verschiedene Dachflächen die Prognosewerte von Forecast abgerufen werden.
- Version: 0.2.14    Fehler in der Function Prognosen_kWh_Berechnen() korrigiert.Verzögerung für Aufruf der Function InterrogateForecast(). Danke an michael74.
- Version: 0.2.13    Neuer State EigenverbrauchTag um den Eigenverbrauch aus VIS oder anderem Script variabel anpassen zu können.
-                    Hinweis von smartboart, Verzögerung beim schreiben der e3dc-config.txt umgesetzt
- Version: 0.2.12    Neuer State "PrognoseAnwahl" hinzugefügt. Es kann jetzt in VIS ausgewählt werden, welche Prognose für die Berechnung verwendet wird.
-                    0= Proplanta u. Forecast 1=Proplanta 2=Forecast.
- Version: 0.2.11    Es wird geprüft ob die neue Einstellung ungleich der bereits angewählten Einstellung ist.
-                    Dadurch wird ein unnötiges Speichern der e3dc-config.txt verhindert, wenn sich an der Einstellung nichts ändert.
-                    Letzte Abfrage der Prognosedaten auf 10:20 Uhr geändert.
- Version: 0.2.10    Forecast Daten werden jede Stunde von 4:10 Uhr bis 15:20 aktualisiert.
-					Fehler in der function Ueberschuss_Prozent() behoben, die zu einer falschen Berechnung vom Eigenverbrauch geführt hat.
- Version: 0.2.09    PV Ertragszähler von smartboart integriert.Adapter SourceAnalytix wird nicht mehr benötigt.
- Version: 0.2.08    Wenn von Proplanta keine Werte bei der ersten Abfrage kommen, wird diese zweimal wiederholt.
- Version: 0.2.07    Umschaltung MEZ oder MESZ wird automatisch ausgeführt.Man kann aber immer noch manuell umschalten.
-                    Verzögerung beim Aufruf der main() function nach manueller Amwahl der Einstellungen 1-5.
-                    Es muss das NPM-Module "is-it-bst" in der Javascript Instanz installiert werden.
- Version: 0.2.06    Regelzeitraum Start, Ende und Ladezeitende werden jetzt nach der Formel von Eberhard berechnet und je nach Einstellung in MEZ oder MESZ
-                    in VIS angezeigt. Es wird die Systemzeit vom IoBroker verwendet, da ich über Modbus keine Zeit vom E3DC bekomme.
-                    Wenn diese beiden Zeiten nicht synchron sind, stimmen die Zeiten natürlich nicht. Die manuelle Anwahl der 5 Einstellungen ist jetzt möglich,
-                    Danke an @smartboart für seine Vorarbeit.
- Version: 0.2.05    Zeiten werden in MEZ umgerechnet und in eigenen States gespeichert:'Winterminimum_MEZ','Sommermaximum_MEZ','Sommerladeende_MEZ'
-                    'HTon_MEZ','HToff_MEZ'.
-                    Fehler in der PrognoseBerechnung_kWh_heute korrigiert, durch die laufende Neuberechnung muss
-                    die bereits produzierte PV-Leistung von der Prognose Tag abgezogen werden und das Gleiche bei nEigenverbrauchTag in kWh.
-                    nKorrFaktor geändert, es wird jetzt der % Wert angegeben um den die Prognose reduziert werden soll.
- Version: 0.2.04    Nach der aktualisierung Proplanta wird die Function main() aufgerufen und neu berechnet
- Version: 0.2.03    Proplanta URL für Ländercode de,at, ch, fr, it hinzugefügt mit neuer constante country in den User Einstellungen.
- Version: 0.2.02    Neuer State NaesteAktualisierung hinzugefügt.Von der Webseite Proplanta wird die Zeit "nächste Aktualisierung" gespeichert.
-                    Die Daten von Proplanta werden 10 min. nach der Aktualisierung der Webseite automatisch abgerufen.
- Version: 0.2.01    Diagramm wird um 22:00 Uhr noch mal aktualisiert, Unload kann im Automatik Betrieb über Variable nMinUnloadSoC begrenzt werden,
-                    oder mit nMinUnloadSoC=100 deaktiviert werden. Kleinere Fehler behoben.
- Version: 0.2.00    ACHTUNG !! Anpassungen in VIS erforderlich, da sich States geändert haben.
-                    Abfrage Globalstrahlung von Proplanta integriert. Typescript Proplanta wird nicht mehr benötigt.
-                    Bei der Prognose Proplanta wird jetzt Vorschau für vier Tage im Diagramm angezeigt.
-                    Neuer State für die Summe von Leistungsmesser 0 und Leistungsmesser 1, um diesen in Vis anzuzeigen.
-                    Nur noch ein Korrekturfaktor in %, um die berechnende Prognosewerte anzugleichen.
-                    Script optimiert und aufgeräumt. Neue State Struktur erstellt, um das Ganze übersichtlicher zu gestalten.
-                    Diagramm wird jetzt bei Änderungen der PV-Leistung regelmäßig aktualisiert. Error Handling optimiert.
 ******************************************************************************************/
 //++++++++++++++++++++++++++++++++++  USER ANPASSUNGEN ++++++++++++++++++++++++++++++++++
 
@@ -216,13 +154,48 @@ let instanz = '0_userdata.0.';
 // Pfad innerhalb der Instanz
 let PfadEbene1 = 'E3DC-Control.';
 let PfadEbene2 = ['Parameter.', 'Allgemein.', 'History.', 'Proplanta.', 'Forecast.']
-const LogAusgabe = true                           // Zusätzliche LOG Ausgaben 
+const LogAusgabe = false                           // Zusätzliche LOG Ausgaben 
 const DebugAusgabe = false                        // Debug Ausgabe im LOG zur Fehlersuche
-//---------------------------------------------------------------------------------------
-//+++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++
-//---------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------
+//++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN ++++++++++++++++++++++++++++++++++++++
+//---------------------------------------------------------------------------------------------------
 
+//***************************************************************************************************
+//*********************************** User Eingaben prüfen ******************************************
+//***************************************************************************************************
 
+if ((typeof sServerIP != "string") || (typeof sServerIP == "undefined")){console.error("sServerIP muss als String eingegeben werden");}
+if ((typeof sServerPort != "string") || (typeof sServerPort == "undefined")){console.error("sServerPort muss als String eingegeben werden");}
+if ((typeof sE3dcUser != "string") || (typeof sE3dcUser == "undefined")){console.error("sE3dcUser muss als String eingegeben werden");}
+if ((typeof sE3dcPasswort != "string") || (typeof sE3dcPasswort == "undefined")){console.error("sE3dcPasswort muss als String eingegeben werden");}
+if ((typeof sAesPasswort != "string") || (typeof sAesPasswort == "undefined")){console.error("sAesPasswort muss als String eingegeben werden");}
+if ((typeof sWurzelzaehler != "string") || (typeof sWurzelzaehler == "undefined")){console.error("sWurzelzaehler muss als String eingegeben werden");}
+if ((typeof sExt1 != "string") || (typeof sExt1 == "undefined")){console.error("sExt1 muss als String eingegeben werden");}
+if ((typeof sExt2 != "string") || (typeof sExt2 == "undefined")){console.error("sExt2 muss als String eingegeben werden");}
+if ((typeof sPfadE3DC != "string") || (typeof sPfadE3DC == "undefined")){console.error("PfadE3DC muss als String eingegeben werden");}
+if ((typeof nDachflaechen != "number") || (typeof nDachflaechen == undefined)){console.error("Dachflächen muss als Number eingegeben werden");}
+if (((typeof nLatitude != "number") || (typeof nLatitude == undefined))&& nDachflaechen != 0 ) {console.error("Latitude muss als Number eingegeben werden");}
+if (((typeof nLongitude != "number") || (typeof nLongitude == undefined))&& nDachflaechen != 0 ){console.error("Longitude muss als Number eingegeben werden");}
+if (((typeof nDeclination[1] != "number") || (typeof nDeclination[1] == undefined))&& nDachflaechen != 0 ){console.error("Declination1 muss als Number eingegeben werden");}
+if (((typeof nDeclination[2] != "number") || (typeof nDeclination[2] == undefined))&& nDachflaechen != 0 ){console.error("Declination2 muss als Number eingegeben werden");}
+if (((typeof nDeclination[3] != "number") || (typeof nDeclination[3] == undefined))&& nDachflaechen != 0 ){console.error("Declination3 muss als Number eingegeben werden");}
+if (((typeof nDeclination[4] != "number") || (typeof nDeclination[4] == undefined))&& nDachflaechen != 0 ){console.error("Declination4 muss als Number eingegeben werden");}
+if (((typeof nDeclination[5] != "number") || (typeof nDeclination[5] == undefined))&& nDachflaechen != 0 ){console.error("Declination5 muss als Number eingegeben werden");}
+if (((typeof nAzimuth[1] != "number") || (typeof nAzimuth[1] == undefined))&& nDachflaechen != 0 ){console.error("Azimuth1 muss als Number eingegeben werden");}
+if (((typeof nAzimuth[2] != "number") || (typeof nAzimuth[2] == undefined))&& nDachflaechen != 0 ){console.error("Azimuth2 muss als Number eingegeben werden");}
+if (((typeof nAzimuth[3] != "number") || (typeof nAzimuth[3] == undefined))&& nDachflaechen != 0 ){console.error("Azimuth3 muss als Number eingegeben werden");}
+if (((typeof nAzimuth[4] != "number") || (typeof nAzimuth[4] == undefined))&& nDachflaechen != 0 ){console.error("Azimuth4 muss als Number eingegeben werden");}
+if (((typeof nAzimuth[5] != "number") || (typeof nAzimuth[5] == undefined))&& nDachflaechen != 0 ){console.error("Azimuth5 muss als Number eingegeben werden");}
+if (((typeof nPower_kWp[1] != "number") || (typeof nPower_kWp[1] == undefined))&& nDachflaechen != 0 ){console.error("Power_kWp1 muss als Number eingegeben werden");}
+if (((typeof nPower_kWp[2] != "number") || (typeof nPower_kWp[2] == undefined))&& nDachflaechen != 0 ){console.error("Power_kWp2 muss als Number eingegeben werden");}
+if (((typeof nPower_kWp[3] != "number") || (typeof nPower_kWp[3] == undefined))&& nDachflaechen != 0 ){console.error("Power_kWp3 muss als Number eingegeben werden");}
+if (((typeof nPower_kWp[4] != "number") || (typeof nPower_kWp[4] == undefined))&& nDachflaechen != 0 ){console.error("Power_kWp4 muss als Number eingegeben werden");}
+if (((typeof nPower_kWp[5] != "number") || (typeof nPower_kWp[5] == undefined))&& nDachflaechen != 0 ){console.error("Power_kWp5 muss als Number eingegeben werden");}
+if ((typeof nModulFlaeche != "number") || (typeof nModulFlaeche == undefined)){console.error("nModulFlaeche muss als Number eingegeben werden");}
+if ((typeof nWirkungsgradModule != "number") || (typeof nWirkungsgradModule == undefined)){console.error("nWirkungsgradModule muss als Number eingegeben werden");}
+if ((typeof nSpeicherMax_kWh != "number") || (typeof nSpeicherMax_kWh == undefined)){console.error("nSpeicherMax_kWh muss als Number eingegeben werden");}
+if ((typeof nMinUnloadSoC != "number") || (typeof nMinUnloadSoC == undefined)){console.error("nMinUnloadSoC muss als Zahl, Type Number eingegeben werden");}
+if (typeof country != 'string' || typeof country == 'undefined') {console.error('country muss als String eingegeben werden');}
 
 //***************************************************************************************************
 //************************************ Deklaration Variablen ****************************************
@@ -234,18 +207,19 @@ const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 let xhr = new XMLHttpRequest();
 // @ts-ignore
 const dst = require('is-it-bst');
-let AutomatikAnwahl,ZeitAnwahl_MEZ_MESZ,EinstellungAnwahl,PrognoseAnwahl;
+let AutomatikAnwahl,ZeitAnwahl_MEZ_MESZ,EinstellungAnwahl,PrognoseAnwahl,count0 = 0, count1 = 0, Summe0 = 0, Summe1 = 0;
 let sWrleistung,sHtmin,sHtsockel,sHton,sHtoff,sHtsat,sHtsun,sDebug,sWallbox,sWBmode,sWBminLade,sPeakshave;
-let count0 = 0, count1 = 0, Summe0 = 0, Summe1 = 0, Timer0 = null, Timer1 = null,Timer2 = null,Timer3 = null, merker0 = false, merker1 = false;
-let TimerForecast;
+let Timer0 = null, Timer1 = null,Timer2 = null,Timer3 = null,TimerForecast1= null,TimerForecast2= null;
 let baseUrls = {
-        "de" : "https://www.proplanta.de/Wetter/profi-wetter.php?SITEID=60&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=",
-        "at" : "https://www.proplanta.de/Wetter-Oesterreich/profi-wetter-at.php?SITEID=70&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=",
-        "ch" : "https://www.proplanta.de/Wetter-Schweiz/profi-wetter-ch.php?SITEID=80&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=",
-        "fr" : "https://www.proplanta.de/Wetter-Frankreich/profi-wetter-fr.php?SITEID=50&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter-Frankreich&wT=",
-        "it" : "https://www.proplanta.de/Wetter-Italien/profi-wetter-it.php?SITEID=40&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter-Italien&wT=",
-    };
+    "de" : "https://www.proplanta.de/Wetter/profi-wetter.php?SITEID=60&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=",
+    "at" : "https://www.proplanta.de/Wetter-Oesterreich/profi-wetter-at.php?SITEID=70&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=",
+    "ch" : "https://www.proplanta.de/Wetter-Schweiz/profi-wetter-ch.php?SITEID=80&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=",
+    "fr" : "https://www.proplanta.de/Wetter-Frankreich/profi-wetter-fr.php?SITEID=50&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter-Frankreich&wT=",
+    "it" : "https://www.proplanta.de/Wetter-Italien/profi-wetter-it.php?SITEID=40&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter-Italien&wT=",
+};
 let baseurl = baseUrls[country];
+
+
 const sID_Automatik = instanz + PfadEbene1 + PfadEbene2[1]+'Automatik';                     /* true = automatik false = manuell */
 const sID_Anwahl_MEZ_MESZ = instanz + PfadEbene1 + PfadEbene2[1] + 'Anwahl_MEZ_MESZ';       /* true = MESZ ,false = MEZ */
 const sID_EinstellungAnwahl = instanz + PfadEbene1 + PfadEbene2[1] + 'EinstellungAnwahl';   /* Einstellung 1-5 */
@@ -372,68 +346,13 @@ createUserStates(instanz, false, statesToCreate, function(){
     EinstellungAnwahl = getState(sID_EinstellungAnwahl).val
     Wh_Leistungsmesser0();
     Wh_Leistungsmesser1();
-    // Daten Forecast beim Programmstart aktualisieren
-    // Werte für jede Dachfläche im Abstand von 5 sek. abrufen
-   
-    let i = nDachflaechen;
-    // Alte Forecast Werte Löschen vor Aktualisierung
-    for (let i = 1; i <= 5; i++) {
-        setState(instanz + PfadEbene1 + PfadEbene2[4] + 'PrognoseFore_kWh_D'+ i +'_heute',0);
-        setState(instanz + PfadEbene1 + PfadEbene2[4] + 'PrognoseFore_kWh_D'+ i +'_morgen',0);
-    }
-    TimerForecast = setInterval(CallForecast, 5000);
-    function CallForecast() {
-	    InterrogateForecast (i,2); 
-	    i--;
-	    if ( i < 1 ) {
-        clearInterval(TimerForecast);
-    }    
-}
-
-// Daten Proplanta einmal beim Programmstart aktualisieren
-InterrogateProplanta(2);
-// Regelmässige Aktualisierung Daten Proplanta beim Programmstart starten
-ScheduleProplanta();    
-// Stündliche Aktualisierung Daten Forecast beim Programmstart starten
-SheduleForecast();
-
+    // Daten Proplanta einmal beim Programmstart aktualisieren
+    InterrogateProplanta(2);
+    // Regelmässige Aktualisierung Daten Proplanta beim Programmstart starten.
+    ScheduleProplanta();    
+    // Stündliche Aktualisierung Daten Forecast beim Programmstart starten und aktualisieren
+    SheduleForecast();
 });
-//***************************************************************************************************
-//*********************************** User Eingaben prüfen ******************************************
-//***************************************************************************************************
-
-if ((typeof sServerIP != "string") || (typeof sServerIP == "undefined")){console.error("sServerIP muss als String eingegeben werden");}
-if ((typeof sServerPort != "string") || (typeof sServerPort == "undefined")){console.error("sServerPort muss als String eingegeben werden");}
-if ((typeof sE3dcUser != "string") || (typeof sE3dcUser == "undefined")){console.error("sE3dcUser muss als String eingegeben werden");}
-if ((typeof sE3dcPasswort != "string") || (typeof sE3dcPasswort == "undefined")){console.error("sE3dcPasswort muss als String eingegeben werden");}
-if ((typeof sAesPasswort != "string") || (typeof sAesPasswort == "undefined")){console.error("sAesPasswort muss als String eingegeben werden");}
-if ((typeof sWurzelzaehler != "string") || (typeof sWurzelzaehler == "undefined")){console.error("sWurzelzaehler muss als String eingegeben werden");}
-if ((typeof sExt1 != "string") || (typeof sExt1 == "undefined")){console.error("sExt1 muss als String eingegeben werden");}
-if ((typeof sExt2 != "string") || (typeof sExt2 == "undefined")){console.error("sExt2 muss als String eingegeben werden");}
-if ((typeof sPfadE3DC != "string") || (typeof sPfadE3DC == "undefined")){console.error("PfadE3DC muss als String eingegeben werden");}
-if ((typeof nDachflaechen != "number") || (typeof nDachflaechen == undefined)){console.error("Dachflächen muss als Number eingegeben werden");}
-if (((typeof nLatitude != "number") || (typeof nLatitude == undefined))&& nDachflaechen != 0 ) {console.error("Latitude muss als Number eingegeben werden");}
-if (((typeof nLongitude != "number") || (typeof nLongitude == undefined))&& nDachflaechen != 0 ){console.error("Longitude muss als Number eingegeben werden");}
-if (((typeof nDeclination[1] != "number") || (typeof nDeclination[1] == undefined))&& nDachflaechen != 0 ){console.error("Declination1 muss als Number eingegeben werden");}
-if (((typeof nDeclination[2] != "number") || (typeof nDeclination[2] == undefined))&& nDachflaechen != 0 ){console.error("Declination2 muss als Number eingegeben werden");}
-if (((typeof nDeclination[3] != "number") || (typeof nDeclination[3] == undefined))&& nDachflaechen != 0 ){console.error("Declination3 muss als Number eingegeben werden");}
-if (((typeof nDeclination[4] != "number") || (typeof nDeclination[4] == undefined))&& nDachflaechen != 0 ){console.error("Declination4 muss als Number eingegeben werden");}
-if (((typeof nDeclination[5] != "number") || (typeof nDeclination[5] == undefined))&& nDachflaechen != 0 ){console.error("Declination5 muss als Number eingegeben werden");}
-if (((typeof nAzimuth[1] != "number") || (typeof nAzimuth[1] == undefined))&& nDachflaechen != 0 ){console.error("Azimuth1 muss als Number eingegeben werden");}
-if (((typeof nAzimuth[2] != "number") || (typeof nAzimuth[2] == undefined))&& nDachflaechen != 0 ){console.error("Azimuth2 muss als Number eingegeben werden");}
-if (((typeof nAzimuth[3] != "number") || (typeof nAzimuth[3] == undefined))&& nDachflaechen != 0 ){console.error("Azimuth3 muss als Number eingegeben werden");}
-if (((typeof nAzimuth[4] != "number") || (typeof nAzimuth[4] == undefined))&& nDachflaechen != 0 ){console.error("Azimuth4 muss als Number eingegeben werden");}
-if (((typeof nAzimuth[5] != "number") || (typeof nAzimuth[5] == undefined))&& nDachflaechen != 0 ){console.error("Azimuth5 muss als Number eingegeben werden");}
-if (((typeof nPower_kWp[1] != "number") || (typeof nPower_kWp[1] == undefined))&& nDachflaechen != 0 ){console.error("Power_kWp1 muss als Number eingegeben werden");}
-if (((typeof nPower_kWp[2] != "number") || (typeof nPower_kWp[2] == undefined))&& nDachflaechen != 0 ){console.error("Power_kWp2 muss als Number eingegeben werden");}
-if (((typeof nPower_kWp[3] != "number") || (typeof nPower_kWp[3] == undefined))&& nDachflaechen != 0 ){console.error("Power_kWp3 muss als Number eingegeben werden");}
-if (((typeof nPower_kWp[4] != "number") || (typeof nPower_kWp[4] == undefined))&& nDachflaechen != 0 ){console.error("Power_kWp4 muss als Number eingegeben werden");}
-if (((typeof nPower_kWp[5] != "number") || (typeof nPower_kWp[5] == undefined))&& nDachflaechen != 0 ){console.error("Power_kWp5 muss als Number eingegeben werden");}
-if ((typeof nModulFlaeche != "number") || (typeof nModulFlaeche == undefined)){console.error("nModulFlaeche muss als Number eingegeben werden");}
-if ((typeof nWirkungsgradModule != "number") || (typeof nWirkungsgradModule == undefined)){console.error("nWirkungsgradModule muss als Number eingegeben werden");}
-if ((typeof nSpeicherMax_kWh != "number") || (typeof nSpeicherMax_kWh == undefined)){console.error("nSpeicherMax_kWh muss als Number eingegeben werden");}
-if ((typeof nMinUnloadSoC != "number") || (typeof nMinUnloadSoC == undefined)){console.error("nMinUnloadSoC muss als Zahl, Type Number eingegeben werden");}
-if (typeof country != 'string' || typeof country == 'undefined') {console.error('country muss als String eingegeben werden');}
 //***************************************************************************************************
 //**************************************** Function Bereich *****************************************
 //***************************************************************************************************
@@ -586,7 +505,7 @@ function Prognosen_kWh_Berechnen()
     let Tag2 = DatumAk.getDate();
     DatumAk.setDate(Tag2 + 1);
     let Tag3 = DatumAk.getDate();
-
+    
     let Tag0_0 = zeroPad(Tag0,2);
     let Tag1_0 = zeroPad(Tag1,2);
     let Tag2_0 = zeroPad(Tag2,2);
@@ -735,22 +654,19 @@ function Prognosen_kWh_Berechnen()
 // nach Abzug von Eigenverbrauch und Ladekapazität des Batteriespeicher.
 function Ueberschuss_Prozent()
 {
-    log('Start Ueberschuss_Prozent');
     let Ueberschuss_Prozent = 0,Ueberschuss_kWh = 0,FreieKapBatterie_kWh = 0;
     let Rest_Eigenverbrauch_kWh = getState(sIDEigenverbrauchTag).val;
 	let nEigenverbrauchTag = getState(sIDEigenverbrauchTag).val;
     let Prognose_kWh = getState(instanz + PfadEbene1 + PfadEbene2[1] + 'PrognoseBerechnung_kWh_heute').val;
     let AktSpeicherSoC = getState(sID_Batterie_SOC).val;
-    var dStart = new Date(0, 0, 0, 6,0,0, 0);
-    var dAkt = new Date();
+    let dStart = new Date(0, 0, 0, 6,0,0, 0);
+    let dAkt = new Date();
      //Vom nEigenverbrauch Tag von 6:00 bis 19:00 Uhr bereits verbrauchte kWh abziehen
     if (toInt(dAkt.getHours()) < 19 && toInt(dAkt.getHours())>6){
         let Diff_Minuten = (dAkt.getMinutes()- dStart.getMinutes())+((dAkt.getHours()- dStart.getHours())*60)
         Rest_Eigenverbrauch_kWh = nEigenverbrauchTag-((nEigenverbrauchTag/780)*Diff_Minuten);
     }
 
-    var d = new Date(0, 0, 0, 6,0,0, 0);
-    let Minuten = d.getMinutes()
     FreieKapBatterie_kWh = Batterie_kWh(AktSpeicherSoC);
     if (Prognose_kWh != null){
         Ueberschuss_kWh =(Prognose_kWh - Rest_Eigenverbrauch_kWh)- FreieKapBatterie_kWh;
@@ -762,12 +678,10 @@ function Ueberschuss_Prozent()
 	    if (LogAusgabe){log('FreieKapBatterie_kWh = '+FreieKapBatterie_kWh);}
         if (LogAusgabe){log('Ueberschuss in kWh = '+Ueberschuss_kWh);}
         if (LogAusgabe){log('Ueberschuss in Prozent = '+Ueberschuss_Prozent);}
-        log('ende Ueberschuss_Prozent');
         return round(Ueberschuss_Prozent, 0);
     
     }else{
         if (DebugAusgabe){log('PrognoseBerechnung_kWh_heute Variable hat keinen Wert');}
-        log('ende Ueberschuss_Prozent null');
         return null
     }
 }
@@ -779,7 +693,7 @@ function makeJson(){
     let akkPV_Leistung, akkProgFore, akkProgProp, akkProgAuto;
     let date = new Date();
 	let mm = date.getMonth() + 1;
-    let MM = zeroPad(mm,2);
+    let mm0 = zeroPad(mm,2);
     for (let i = 1; i <= 31; i++) {
 	    let n= zeroPad(i,2);
         akkPV_Leistung = getState(instanz + PfadEbene1 + PfadEbene2[2] + 'IstPvLeistung_kWh_' + n).val
@@ -893,7 +807,7 @@ function makeJson(){
             }
         ]
     }
-    setState(instanz + PfadEbene1 + PfadEbene2[2] + 'HistoryJSON_'+MM,JSON.stringify(chart),true);
+    setState(instanz + PfadEbene1 + PfadEbene2[2] + 'HistoryJSON_'+mm0,JSON.stringify(chart),true);
     if (DebugAusgabe){log('JSON History ertellt');}
 }
 
@@ -969,10 +883,6 @@ function e3dcConfigWrite(i)
 // Einlesen der Werte e3dc.config.txt
 function e3dcConfigRead()  
 {
-    let Parameter = ['einspeiselimit','untererLadekorridor','obererLadekorridor',
-    'minimumLadeleistung','maximumLadeleistung','wrleistung','ladeschwelle','ladeende',
-    'ladeende2','winterminimum','sommermaximum','sommerladeende','speichergroesse','unload',
-    'htmin','htsockel','hton','htoff','htsat','htsun','debug','wallbox','wbmode','wbminlade','peakshave']
     let StateParameter = ['Einspeiselimit','UntererLadekorridor','ObererLadekorridor',
     'MinimumLadeleistung','MaximumLadeleistung','Wrleistung','Ladeschwelle','Ladeende',
     'Ladeende2','Winterminimum','Sommermaximum','Sommerladeende','Speichergroesse','Unload',
@@ -981,13 +891,14 @@ function e3dcConfigRead()
         if (err) throw err;
         data = data.replace(/\n/g, " ");
         data = data.replace("//", " ");
+        data = data.toLowerCase();
         let SrtingSplit = data.split(' ');
-        for (let i in Parameter) {
-            var idx = SrtingSplit.indexOf(Parameter[i]);
+        for (let i in StateParameter) {
+            var idx = SrtingSplit.indexOf(StateParameter[i].toLowerCase());
             if (idx != -1){            
                 setState(instanz + PfadEbene1 + PfadEbene2[0]+StateParameter[i], SrtingSplit[idx+2]);
             }else{
-                if (LogAusgabe){log('Parameter '+Parameter[i]+' wurde nicht gefunden')};
+                if (LogAusgabe){log('Parameter '+StateParameter[i]+' wurde nicht gefunden')};
             }
         }
         console.log('E3DC Config Datei eingelesen!');
@@ -1034,11 +945,11 @@ function StateRead()
 function InterrogateForecast(DachFl,AnzWiederholungen) 
 {
     try {
-        xhr.abort();
         if (DachFl > 0 && DachFl <= 5 ){
 			xhr.open("GET","https://api.forecast.solar/estimate/watthours/day/"+nLatitude+"/"+nLongitude+"/"+nDeclination[DachFl]+"/"+nAzimuth[DachFl]+"/"+nPower_kWp[DachFl], true);
 			xhr.responseType = "json";
-			xhr.send();
+			log('Datenabruf Forecast')
+            xhr.send();
         }
 		
 	}
@@ -1051,32 +962,33 @@ function InterrogateForecast(DachFl,AnzWiederholungen)
     //wird aufgerufen wenn xhr.send erfolgreich abgeschlossen wurde
 	xhr.onload = function (){
         let Response1,Response2;
-	    if (xhr.status >= 200 && xhr.status < 300) {
+	    if (xhr.status >= 200 && xhr.status < 206 && xhr.responseText != null && DachFl > 0 && DachFl <= 5) {
             log('Rueckmeldung :' + xhr.responseText)
             const obj = JSON.parse(xhr.responseText);
-            if (DachFl > 0 && DachFl <= 5 ){
-		        Response1 = obj.result[getCurrentDate()];
-		        Response2 = obj.result[nextDayDate()];
-                if (Response1 === undefined || Response2 === undefined){
-                    xhr.abort();
-                    if (AnzWiederholungen>0){InterrogateForecast(DachFl,AnzWiederholungen-1);}
-                }else{
-                    setState(instanz + PfadEbene1 + PfadEbene2[4] + 'PrognoseFore_kWh_D'+ DachFl +'_heute',Response1/1000);
-                    setState(instanz + PfadEbene1 + PfadEbene2[4] + 'PrognoseFore_kWh_D'+ DachFl +'_morgen',Response2/1000);
-                    log('Gespeichert wurde Dachfläche ='+DachFl+'/'+AnzWiederholungen+' : '+Response1+' :'+Response2);
-                }
+            Response1 = obj.result[getCurrentDate()];
+		    Response2 = obj.result[nextDayDate()];
+            if (Response1 === undefined || Response2 === undefined){
+                xhr.abort();
+                if (AnzWiederholungen>0){InterrogateForecast(DachFl,AnzWiederholungen-1);}
+            }else{
+                setState(instanz + PfadEbene1 + PfadEbene2[4] + 'PrognoseFore_kWh_D'+ DachFl +'_heute',Response1/1000);
+                setState(instanz + PfadEbene1 + PfadEbene2[4] + 'PrognoseFore_kWh_D'+ DachFl +'_morgen',Response2/1000);
+                log('Gespeichert wurde Dachfläche ='+DachFl+'/'+AnzWiederholungen+' : '+Response1+' :'+Response2);
             }
         }else{
-            log('Es konnten keine Daten von Forecast abgerufen werden  Status:'+xhr.statusText+' Rückmeldung'+xhr.responseText,'warn');    
+            log('Fehler beim Abruf der Daten von Forecast oder max. Anzahl Dachflächen überschritten  Status:'+xhr.statusText+' Rückmeldung'+xhr.responseText,'warn');    
         }
 	}
+    xhr.ontimeout = () => {
+        log('Abruf der Daten Forecast wurde mit Timeout beendet','warn')
+    };
 }
 
 // Prognose Proplanta Globalstrahlung abrufen.Wenn die Seite nicht erreichbar ist,
 // oder kein Wert nach der zweiten Abfrage zurückgegeben wird,ist der Rückgabewert=0.
 function InterrogateProplanta(AnzWiederholungen) {
     if (baseurl == null || typeof baseurl === undefined) {
-        log('flasche Länderbezeichnung!');
+        log('falsche Länderbezeichnung!');
     }else{
         baseurl = baseurl.replace(/#PLZ#/ig, ProplantaPlz).replace(/#ORT#/ig, ProplantaOrt);
         setState(instanz + PfadEbene1 + PfadEbene2[3]+'Globalstrahlung_Tag_0', 0);
@@ -1098,10 +1010,10 @@ function InterrogateProplanta(AnzWiederholungen) {
         setState(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_2', 200);  
         setState(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_3', 200);
         try {
-            xhr.abort();
             xhr.open("GET",baseurl, true);
 		    xhr.responseType = "text";
-		    xhr.send();
+		    log('Datenabruf Proplanta')
+            xhr.send();
 	    }
   
         catch(Fehler){
@@ -1111,7 +1023,7 @@ function InterrogateProplanta(AnzWiederholungen) {
     }
     //wird aufgerufen wenn xhrProplanta.send erfolgreich abgeschlossen wurde
 	xhr.onload = function (){
-        if (xhr.status >= 200 && xhr.status < 300) {
+        if (xhr.status >= 200 && xhr.status < 206 && xhr.responseText != null) {
             // nicht benötigte HTML Daten löschen
             let Data = xhr.responseText
         
@@ -1190,9 +1102,12 @@ function InterrogateProplanta(AnzWiederholungen) {
             setState(instanz + PfadEbene1 + PfadEbene2[3]+'NaesteAktualisierung',result[60].slice(64, 69).replace(".",":"));
             setTimeout(function(){main();},12000); //Zeit wird benötigt um alle Werte sicher zu speichern bevor main ausgeführt wird
         }else{
-            log('Es konnten keine Daten von Proplanta abgerufen werden  Status:'+xhr.statusText+' Rückmeldung'+xhr.responseText,'warn');    
+            log('Fehler beim Abruf der Daten von Proplanta  Status:'+xhr.statusText+' Rückmeldung'+xhr.responseText,'warn');    
         }
     }
+    xhr.ontimeout = () => {
+        log('Abruf der Daten Proplanta wurde mit Timeout beendet','warn')
+    };
 }
 
 // HTML Tags löschen und Daten bereinigen
@@ -1232,9 +1147,9 @@ function nextDayDate(nextDay) {
     let mm = nextDay.getMonth() + 1;
     let dd = nextDay.getDate();
     let yyyy = nextDay.getFullYear();
-    let MM = zeroPad(mm,2);
-    let DD = zeroPad(dd,2);
-    return yyyy + '-' + MM + '-' + DD;
+    let mm0 = zeroPad(mm,2);
+    let dd0 = zeroPad(dd,2);
+    return yyyy + '-' + mm0 + '-' + dd0;
 }
 
 
@@ -1247,9 +1162,9 @@ function getCurrentDate(date) {
 	let dd = today.getDate();
 	let mm = today.getMonth() + 1; //January is 0!
     let yyyy = today.getFullYear();
-	let DD = zeroPad(dd,2);
-    let MM = zeroPad(mm,2);
-    return yyyy + '-' + MM + '-' + DD;
+	let dd0 = zeroPad(dd,2);
+    let mm0 = zeroPad(mm,2);
+    return yyyy + '-' + mm0 + '-' + dd0;
 }
 
 
@@ -1443,26 +1358,44 @@ function ScheduleProplanta(){
     }
 }
 
-// Daten Forecast jede Stunde von 4:10 Uhr bis 10:20 aktualisieren
+// Daten Forecast beim Skript Start und jede Stunde von 4:10 Uhr bis 10:20 aktualisieren
 function SheduleForecast(){
+    let z = nDachflaechen;
+    // Alle 30 sec. die Funktion CallForecast() beim Skript Start aufrufen.Timer wird in der Funktion gelöscht.
+    if (!TimerForecast2 && !TimerForecast1){
+        TimerForecast1 = setInterval(CallForecast, 30000);
+        if (LogAusgabe){log('TimerForecast1 ist gestartet ID='+TimerForecast1);}
+    }
     if(Timer3){clearSchedule(Timer3)};
     Timer3 = schedule('{"time":{"start":"04:10","end":"10:20","mode":"hours","interval":1},"period":{"days":1}}', function(){
-        let i = nDachflaechen;
-        TimerForecast = setInterval(CallForecast, 5000);
-        for (let i = 1; i <= 5; i++) {
-            setState(instanz + PfadEbene1 + PfadEbene2[4] + 'PrognoseFore_kWh_D'+ i +'_heute',0);
-            setState(instanz + PfadEbene1 + PfadEbene2[4] + 'PrognoseFore_kWh_D'+ i +'_morgen',0);
-        }
-        function CallForecast() {
-	        log('*************************** Es wurde Dach '+i+' abgerufen **********************************');
-            InterrogateForecast (i,2);
-	        i--;
-	        if ( i < 1 ) {
-                clearInterval(TimerForecast);
-                setTimeout(function(){main();},1000); //Zeit wird benötigt bevor main ausgeführt wird
-            }
+        //Timer alle 30 sec. die Funktion CallForecast() aufrufen.Timer wird in der Funktion gelöscht.
+        if (!TimerForecast2 && !TimerForecast1){
+            TimerForecast2 = setInterval(CallForecast, 30000);
+            if (LogAusgabe){log('TimerForecast2 ist gestartet ID='+TimerForecast2);}
         }
     });
+    
+    function CallForecast() {
+	    //Wenn ein Timer bereits gestartet wurde muss der zweite beendet werden.
+        if (LogAusgabe){log('*************************** Es wird Dach '+z+' abgerufen **********************************');}
+        InterrogateForecast (z,2);
+	    z--;
+	    if ( z < 1 ) {
+            if(TimerForecast1){
+                clearInterval(TimerForecast1);
+                if (LogAusgabe){log('Timer1 wurde gestoppt ID='+TimerForecast1);}
+                TimerForecast1=null;
+            };
+            if(TimerForecast2){
+                clearInterval(TimerForecast2);
+                if (LogAusgabe){log('Timer2 wurde gestoppt ID='+TimerForecast2);}
+                TimerForecast2=null;
+            };
+            setTimeout(function(){main();},1000); //Zeit wird benötigt bevor main ausgeführt wird
+            z = nDachflaechen;
+        }
+    }
+
 }
 
 // Zeitformat UTC dezimal in MEZ Uhrzeit 
@@ -1552,11 +1485,11 @@ function MEZ_Regelzeiten(){
         setState(instanz + PfadEbene1 + PfadEbene2[1] + 'Ladeende_MEZ',addMinutes(tLadeende_Stunden+':'+tLadeende_Minuten,60));
     }
     
-    //if (DebugAusgabe){
+    if (LogAusgabe){
         log('RB = '+tRegelbeginn_Stunden+':'+tRegelbeginn_Minuten);
         log('RE = '+tRegelende_Stunden+':'+tRegelende_Minuten);
         log('LE = '+tLadeende_Stunden+':'+tLadeende_Minuten);
-    //}
+    }
 }
 
 // Leistungsmesser0 jede minute in W/h umrechen W = P*t
@@ -1579,8 +1512,8 @@ function Wh_Leistungsmesser0(){
 		}else{
 			if(count0===0 && Summe0 ===0){
 				clearSchedule(Timer0);
-				merker0 = true;
-				if(LogAusgabe)log('minütlicher Schedule gestoppt');
+				Timer0 = null;
+                if(DebugAusgabe)log('minütlicher Schedule gestoppt');
             }
         }  
     });
@@ -1606,8 +1539,8 @@ function Wh_Leistungsmesser1(){
 		}else{
 			if(count1===0 && Summe1 ===0){
 				clearSchedule(Timer1);
-				merker1 = true;
-				if(LogAusgabe)log('minütlicher Schedule gestoppt');
+				Timer1=null;
+                if(DebugAusgabe)log('minütlicher Schedule gestoppt');
             }
         }  
     });
@@ -1622,8 +1555,7 @@ function Wh_Leistungsmesser1(){
 on(sID_PvLeistungLM0_W, function(obj) {
     let Leistung = getState(obj.id).val;
     if(Leistung > 0){
-		if(merker0)Wh_Leistungsmesser0();
-		merker0 = false;
+		if(!Timer0)Wh_Leistungsmesser0();
 		count0 ++
 		Summe0 = Summe0 + Leistung;
 		//if(DebugAusgabe)log(['Summe: ' + Summe0, ' Zaehler: '+count0, ' Addition: + ' +Leistung ].join(''));
@@ -1634,8 +1566,7 @@ on(sID_PvLeistungLM0_W, function(obj) {
 on(sID_PvLeistungLM1_W, function(obj) {
     let Leistung = Math.abs(getState(obj.id).val);
     if(Leistung > 0){
-		if(merker1)Wh_Leistungsmesser1();
-		merker1 = false;
+		if(!Timer1)Wh_Leistungsmesser1();
 		count1 ++
 		Summe1 = Summe1 + Leistung;
 		//if(DebugAusgabe)log(['Summe: ' + Summe1, ' Zaehler: '+count1, ' Addition: + ' +Leistung ].join(''));
@@ -1781,5 +1712,10 @@ schedule("0 4 24-31 3,10 7", function() {
 schedule({hour: 0, minute: 1}, function () { 
 	setState(sID_PVErtragLM0,0,true);
 	setState(sID_PVErtragLM1,0,true);
-	if (LogAusgabe)log('Tagesertragswert auf 0 gesetzt');
+	// Alle Prognosewerte auf 0 setzen.
+    for (let i = 1; i <= 5; i++) {
+        setState(instanz + PfadEbene1 + PfadEbene2[4] + 'PrognoseFore_kWh_D'+ i +'_heute',0);
+        setState(instanz + PfadEbene1 + PfadEbene2[4] + 'PrognoseFore_kWh_D'+ i +'_morgen',0);
+    }
+    if (LogAusgabe)log('Tagesertragswert auf 0 gesetzt');
 });
