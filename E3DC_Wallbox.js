@@ -1,4 +1,7 @@
 /*****************************************************************************************
+    Version: 0.3.2  Fehler im Lademodus 4 behoben.
+                    Ladeleistung Wallbox beim Entladen der Speicherbatterie E3DC wird jetzt möglichst konstant gehalten.
+                    Max Nennleistung Wechselrichter beim Entladen der Speicherbatterie E3DC wird berücksichtigt. 
     Version: 0.3.1  Mehrere Fehler behoben.
                     Prüfung der User Eingaben beim Start.
                     Für jeden Lademodus eine eigene Haltezeit programmiert.
@@ -14,7 +17,7 @@
                     Es wird dann vom Script diese Funktion ignoriert. 
     Version: 0.1.1  Um beim Laden vom E-Auto nicht ständig zwischen Netzbezug und Einspeisung zu wechseln
                     wurde die Trägheitsreserve auf 1000 W erhöht.
-    Version: 0.1.0  Script zum steuern der Wallbox easy connect mit Mode 3-Ladekabel (3-phasig) 
+    Version: 0.1.0  Script zum Steuern der Wallbox easy connect mit mode 3-Ladekabel (3-phasig) 
                     fest angeschlagen mit Ladestecker Typ 2 von E3DC. Die Wallbox muss über Modbus 
                     verbunden sein.
 ******************************************************************************************/
@@ -30,6 +33,7 @@ let NettoStrompreis = 0.201                 // Strompreis für Berechnung
 const Schluesselschalter_Wallbox1_1 = 1     // Welcher Lademodus soll bei Schlüsselstellung 1 angewählt werden.
 const Schluesselschalter_Wallbox1_0 = 3     // Welcher Lademodus soll bei Schlüsselstellung 0 angewählt werden.
 let HTmin = 20                              // Wenn die Hausspeicher Batterie diesen SoC Wert in % erreicht wird das laden vom E-Auto gestoppt bzw. erst gestartet. 
+const MaxNennleistungWR = 12000             // Max Nennleistung Wechselrichter E3DC
 //**************************** Modul Modbus.0 E3DC Hauskraftwerk **************************
 const sID_PV_Leistung = 'modbus.0.holdingRegisters.40068_PV_Leistung';                		// Pfad State Modul ModBus 40068_PV_Leistung
 const sID_Eigenverbrauch = 'modbus.0.holdingRegisters.40072_Hausverbrauch_Leistung';             
@@ -73,6 +77,7 @@ if ((typeof Haltezeit4 != "number") || (typeof Haltezeit4 == undefined)){console
 if ((typeof NettoStrompreis != "number") || (typeof NettoStrompreis == undefined)){console.error("NettoStrompreis muss als Number eingegeben werden");}
 if ((typeof Schluesselschalter_Wallbox1_1 != "number") || (typeof Schluesselschalter_Wallbox1_1 == undefined)){console.error("Schluesselschalter_Wallbox1_1 muss als Number eingegeben werden");}
 if ((typeof Schluesselschalter_Wallbox1_0 != "number") || (typeof Schluesselschalter_Wallbox1_0 == undefined)){console.error("Schluesselschalter_Wallbox1_0 muss als Number eingegeben werden");}
+if ((typeof MaxNennleistungWR != "number") || (typeof MaxNennleistungWR == undefined)){console.error("MaxNennleistungWR muss als Number eingegeben werden");}
 
 const PruefeID = [sID_PV_Leistung,sID_Eigenverbrauch,sID_Netz_Leistung,sID_Batterie_Leistung,sID_Batterie_SoC,
 sID_WallboxLadeLeistung_1,sID_Ladevorgang_Pause_1,sID_Schluesselschalter_Wallbox_1,sID_Ladestrom_Wallbox_1,sID_Gesamtzaehler_Verbrauch_kWh_1,
@@ -101,8 +106,8 @@ let HaltezeitLaden = false;
 let HaltezeitLaden1 = null,HaltezeitLaden2 = null,HaltezeitLaden4 = null, timerPause1 = null, timerPause2 = null;
 let FahrzeugAngesteckt = false;
 let Automatik = false;
-let Autobatterie_SoC = 0;
-let AutoLadenBis_SoC = 100;
+let Autobatterie_SoC = 0, AutoLadenBis_SoC = 100;
+let Tendenz_i=0;
 let Lademodus,MinBatterieSoC;
 let iAutoLadestrom_A=6;
 /******************************************* benötigten STATE anlegen ******************************/
@@ -201,12 +206,12 @@ function Lademodus1(){
         // Prüfen ob Werte Netz oder Batterie negativ sind
         if (NetzLeistung_W < 0 && BatterieLeistung_W < 0){
             AutoLadeleistung_W = PV_Leistung_W-Hausverbrauch_W+BatterieLeistung_W-NetzLeistung_W;
-        }else if (NetzLeistung_W < 0 && BatterieLeistung_W >= 0){
-            AutoLadeleistung_W = PV_Leistung_W-Hausverbrauch_W-BatterieLeistung_W-NetzLeistung_W;
-        }else if (NetzLeistung_W >= 0 && BatterieLeistung_W < 0){
-            AutoLadeleistung_W = PV_Leistung_W-Hausverbrauch_W+BatterieLeistung_W+NetzLeistung_W-1000; //1000 W Trägheitsreserve bei Netzbezug
-        }else if (NetzLeistung_W >= 0 && BatterieLeistung_W >= 0){
-            AutoLadeleistung_W = PV_Leistung_W-Hausverbrauch_W-BatterieLeistung_W+NetzLeistung_W-1000; //1000 W Trägheitsreserve bei Netzbezug
+        }else if (NetzLeistung_W > 0 && BatterieLeistung_W < 0) {
+            AutoLadeleistung_W = PV_Leistung_W-Hausverbrauch_W+BatterieLeistung_W-1380; //1380 W Trägheitsreserve bei Netzbezug
+        }else if (NetzLeistung_W > 0 && BatterieLeistung_W > 0) {
+            AutoLadeleistung_W = PV_Leistung_W-Hausverbrauch_W-1380; //1380 W Trägheitsreserve bei Netzbezug
+        }else if (NetzLeistung_W < 0 && BatterieLeistung_W > 0){
+            AutoLadeleistung_W = PV_Leistung_W-Hausverbrauch_W-NetzLeistung_W;
         }
         if (AutoLadeleistung_W<0){AutoLadeleistung_W =0}
         
@@ -292,10 +297,14 @@ function Lademodus2(){
     if (StromA(PV_Leistung_W,3)>MinLadestromAuto_A || HaltezeitLaden2){
         
         // Prüfen ob Werte Netzleistung negativ ist
-        if (NetzLeistung_W < 0){
+        if (NetzLeistung_W < 0 && BatterieLeistung_W < 0){
             AutoLadeleistung_W = PV_Leistung_W-Hausverbrauch_W-NetzLeistung_W;
-        }else if (NetzLeistung_W >= 0){
-            AutoLadeleistung_W = PV_Leistung_W-Hausverbrauch_W+NetzLeistung_W-1000; //1000 W Trägheitsreserve bei Netzbezug
+        }else if (NetzLeistung_W > 0 && BatterieLeistung_W < 0) {
+            AutoLadeleistung_W = PV_Leistung_W-Hausverbrauch_W-NetzLeistung_W-1380; //1380 W Trägheitsreserve bei Netzbezug
+        }else if (NetzLeistung_W > 0 && BatterieLeistung_W > 0) {
+            AutoLadeleistung_W = PV_Leistung_W-Hausverbrauch_W+BatterieLeistung_W-NetzLeistung_W-1380; //1380 W Trägheitsreserve bei Netzbezug
+        }else if (NetzLeistung_W < 0 && BatterieLeistung_W > 0){
+            AutoLadeleistung_W = PV_Leistung_W-Hausverbrauch_W+BatterieLeistung_W-NetzLeistung_W;
         }
         if (AutoLadeleistung_W < 0){AutoLadeleistung_W = 0}
         
@@ -374,20 +383,29 @@ function Lademodus4(){
     let AutoLadestrom_A = 0;
     let NetzLeistung_W = getState(sID_Netz_Leistung).val;
     let BatterieSoC = getState(sID_Batterie_SoC).val;
-
+    let EntladeleistungBatterie;
+    // prüfen ob max Nennleistung Wechselrichter eingehalten wird
+    let MaxNennleistung = MaxEntladeLeistungBatterie_W+PV_Leistung_W
+    
     // Prüfen ob ausreichend PV-Leistung erzeugt wird oder Batterie E3DC geladen ist
     if (StromA(PV_Leistung_W,3)>MinLadestromAuto_A || HaltezeitLaden2 || BatterieSoC > HTmin){
-        
-        // Prüfen ob Werte Netzleistung negativ ist
-        if (NetzLeistung_W < 0 && BatterieLeistung_W < 0){
-            AutoLadeleistung_W = PV_Leistung_W-Hausverbrauch_W-BatterieLeistung_W-NetzLeistung_W;
-        }else if (NetzLeistung_W < 0 && BatterieLeistung_W >= 0){
-            AutoLadeleistung_W = PV_Leistung_W-Hausverbrauch_W+BatterieLeistung_W-NetzLeistung_W;
-        }else if (NetzLeistung_W >= 0 && BatterieLeistung_W < 0){
-            AutoLadeleistung_W = PV_Leistung_W-Hausverbrauch_W-BatterieLeistung_W+NetzLeistung_W-1000; //1000 W Trägheitsreserve bei Netzbezug
-        }else if (NetzLeistung_W >= 0 && BatterieLeistung_W >= 0){
-            AutoLadeleistung_W = PV_Leistung_W-Hausverbrauch_W+BatterieLeistung_W+NetzLeistung_W-1000; //1000 W Trägheitsreserve bei Netzbezug
+        // prüfen ob max Nennleistung Wechselrichter eingehalten wird sonst Entladeleistung Batterie reduzieren
+        if (MaxNennleistung > MaxNennleistungWR) {
+            EntladeleistungBatterie = MaxEntladeLeistungBatterie_W-(MaxNennleistung - MaxNennleistungWR);
+            if (EntladeleistungBatterie<0){EntladeleistungBatterie=0}
+        }else{
+            EntladeleistungBatterie = MaxEntladeLeistungBatterie_W
         }
+        if (NetzLeistung_W < 0 && BatterieLeistung_W < 0){
+            AutoLadeleistung_W = EntladeleistungBatterie+PV_Leistung_W-Hausverbrauch_W;
+        }else if (NetzLeistung_W < 0 && BatterieLeistung_W >= 0){
+            AutoLadeleistung_W = EntladeleistungBatterie+PV_Leistung_W-Hausverbrauch_W+BatterieLeistung_W-NetzLeistung_W;
+        }else if (NetzLeistung_W >= 0 && BatterieLeistung_W < 0){
+            AutoLadeleistung_W = EntladeleistungBatterie+PV_Leistung_W-Hausverbrauch_W-1380; //1380 W Trägheitsreserve bei Netzbezug
+        }else if (NetzLeistung_W >= 0 && BatterieLeistung_W >= 0){
+            AutoLadeleistung_W = EntladeleistungBatterie+PV_Leistung_W-Hausverbrauch_W+BatterieLeistung_W-NetzLeistung_W-1380; //1380 W Trägheitsreserve bei Netzbezug
+        }
+        
         if (AutoLadeleistung_W < 0){AutoLadeleistung_W = 0}
         
         //AutoLadeleistung_W in AutoLadestrom_A umrechnen.
@@ -406,12 +424,12 @@ function Lademodus4(){
         // Wenn Hausspeicher Batterie unter Parameter HTmin E3DC-Control ist soll das laden vom E-Auto beendet werden.
         // Wenn die Autobatterie bis zum eingestellten SoC geladen ist soll das Laden abgebrochen werden
         if (existsState(sID_Autobatterie_SoC)){
-            if (AutoLadestrom_A > MinLadestromStart_A && BatterieSoC > HTmin && Autobatterie_SoC < AutoLadenBis_SoC){
+            if (AutoLadestrom_A > MinLadestromStart_A && BatterieSoC > HTmin && Autobatterie_SoC < AutoLadenBis_SoC && BatterieSoC > MinBatterieSoC){
                 if (HaltezeitLaden4){clearTimeout(HaltezeitLaden4)}
                 HaltezeitLaden4 = setTimeout(function () {HaltezeitLaden4 = null;}, Haltezeit4*60000);
                 setState(sID_Ladevorgang_Pause_1,false);
             }else{
-                if (HaltezeitLaden4) {
+                if (HaltezeitLaden4 && BatterieSoC > MinBatterieSoC) {
                     AutoLadestrom_A = MinLadestromAuto_A;    
                 }else{
                     AutoLadestrom_A = MinLadestromAuto_A;
@@ -433,14 +451,17 @@ function Lademodus4(){
             }
         }
         
-        //Schnelle Wechsel beim Laden verhindern und nur in 1 A Schritte alle 6 sek. erhöhen/verringern 
+        //Schnelle Wechsel beim Laden verhindern und nur in 1 A Schritte erhöhen/verringern
+        //Ladeleistung Wallbox über Tendenz Zähler möglichst konstant halten. 
         if (AutoLadestrom_A > iAutoLadestrom_A && !timerPause1 && !timerPause2){
-            timerPause1 =  setTimeout(function () {clearTimeout(timerPause1);timerPause1 = null;}, 6000);
-            ++iAutoLadestrom_A
+            timerPause1 =  setTimeout(function () {clearTimeout(timerPause1);timerPause1 = null;}, 2000);
+            Tendenz_i++
+            if (Tendenz_i>=5){++iAutoLadestrom_A;Tendenz_i=0}
             if (iAutoLadestrom_A > MaxLadestrom_A){ iAutoLadestrom_A = MaxLadestrom_A;}
         }else if(AutoLadestrom_A < iAutoLadestrom_A && !timerPause1 && !timerPause2){
-            timerPause2 =  setTimeout(function () {clearTimeout(timerPause2);timerPause2 = null;}, 6000);
-            --iAutoLadestrom_A
+            Tendenz_i--
+            timerPause2 =  setTimeout(function () {clearTimeout(timerPause2);timerPause2 = null;}, 2000);
+            if (Tendenz_i<=-5){--iAutoLadestrom_A;Tendenz_i=0}
             if (iAutoLadestrom_A < MinLadestromAuto_A){ iAutoLadestrom_A = MinLadestromAuto_A;}
         }
         
@@ -642,7 +663,7 @@ on({id: sID_PV_Leistung}, function (obj){
 on({id: sID_Batterie_Leistung}, function (obj){
 	let LademodusWallbox = getState(sID_Lademodus_Wallbox).val;
     
-    if (FahrzeugAngesteckt == true && Automatik && (LademodusWallbox == 4 || LademodusWallbox == 5 ))
+    if (FahrzeugAngesteckt == true && Automatik && LademodusWallbox == 4 )
     {
         main();
     }
@@ -750,13 +771,6 @@ on({id: sID_min_SoC_Batterie_E3DC,change: "ne"}, function (obj){
         MinBatterieSoC = getState(obj.id).val;
 });	
 
-
-// Wenn State vorhanden ist, dann bei Änderung den Wert der Variable aktualisieren
-if (existsState(sID_Autobatterie_SoC)){
-    on({id: sID_Autobatterie_SoC,change: "ne"}, function (obj){
-        Autobatterie_SoC = getState(obj.id).val;
-    });	
-}
 
 // Wenn State vorhanden ist, dann bei Änderung den Wert der Variable aktualisieren
 if (existsState(sID_Autobatterie_SoC)){
