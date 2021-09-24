@@ -1,4 +1,7 @@
 /*****************************************************************************************
+ Version: 0.3.3     Folgende Fehler wurden korrigiert:
+                    Daten Proplanta wurden bei einem Serverfehler erst wieder am nächsten Tag abgerufen.
+                    Zeiten RB, RE und LE wurden beim manuellen Wechsel der Einstellungen nicht neu berechnet.
  Version: 0.3.2     XMLHttpRequest Fehler bei langsamen Verbindungen korrigiert und Warnung bei Timeout eingefügt.
                     Prognosewerte Forecast werden nur noch Täglich auf 0 gesetzt. Skript aufgeräumt und optimiert
  Version: 0.3.1     Überprüfung ob die serverseitige Bearbeitung Proplanta oder Forecast erfolgreich war eingefügt.
@@ -359,15 +362,16 @@ createUserStates(instanz, false, statesToCreate, function(){
 
 function main()
 {
+    
     // Berechnug der Regelzeiten aktualisieren
-    MEZ_Regelzeiten();
+    setTimeout(function(){MEZ_Regelzeiten();},2000);
     
     //Prognosen in kWh umrechen
-    Prognosen_kWh_Berechnen();
+    setTimeout(function(){Prognosen_kWh_Berechnen();},500);
     
     // Diagramm aktualisieren
     setTimeout(function(){makeJson();},300); //verzögerung asyncron min. 300 ms erforderlich;
-        
+      
     // Überschuss PV-Leistung berechnen
     let UeberschussPrognoseProzent = Ueberschuss_Prozent();
     
@@ -976,7 +980,7 @@ function InterrogateForecast(DachFl,AnzWiederholungen)
                 log('Gespeichert wurde Dachfläche ='+DachFl+'/'+AnzWiederholungen+' : '+Response1+' :'+Response2);
             }
         }else{
-            log('Fehler beim Abruf der Daten von Forecast oder max. Anzahl Dachflächen überschritten  Status:'+xhr.statusText+' Rückmeldung'+xhr.responseText,'warn');    
+            log('Fehler beim Abruf der Daten von Forecast oder max. Anzahl Dachflächen überschritten  Status: '+xhr.statusText+' Rückmeldung: '+xhr.responseText,'warn');    
         }
 	}
     xhr.ontimeout = () => {
@@ -1103,6 +1107,11 @@ function InterrogateProplanta(AnzWiederholungen) {
             setTimeout(function(){main();},12000); //Zeit wird benötigt um alle Werte sicher zu speichern bevor main ausgeführt wird
         }else{
             log('Fehler beim Abruf der Daten von Proplanta  Status:'+xhr.statusText+' Rückmeldung'+xhr.responseText,'warn');    
+            // Nach einer Stunde noch mal versuchen die Daten abzurufen
+            let d = new Date(), Stunde = d.getHours();
+            d.setHours (Stunde + 1);
+            let  uhrzeit = d.getHours() + ":" + d.getMinutes();
+            setState(instanz + PfadEbene1 + PfadEbene2[3]+'NaesteAktualisierung',uhrzeit);
         }
     }
     xhr.ontimeout = () => {
