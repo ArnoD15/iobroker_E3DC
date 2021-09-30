@@ -1,5 +1,7 @@
 'use strict';
 /*****************************************************************************************
+ Version: 0.3.5     Bei allen Parameter Typ:number role:value geändert.
+                    Ganzen Objektbaum 0.E3DC-Control.Parameter muss gelöscht werden und dann das Script neu gestartet werden.  
  Version: 0.3.4     Skript optimiert, xmlhttprequest Forecast und Proplanta neu programmiert
                     Script ohne setTimeout mit async/await programmiert, dadurch schneller.
  Version: 0.3.3     Folgende Fehler wurden korrigiert:
@@ -243,31 +245,31 @@ const sID_AnzeigeHistoryMonat = instanz + PfadEbene1 + PfadEbene2[2] + 'HistoryS
 //***************************************************************************************************
 
 let statesToCreate = [
-[PfadEbene1 + PfadEbene2[0] + 'Einspeiselimit', {'def':'10.0', 'name':'bei 15kWp beginnt die 70% Einspeisegrenze bei 10.5 kWh -0.1 Sicherheit', 'type':'string', 'role':'string', 'desc':'Einspeiselimit', 'unit':'kWh'}],
-[PfadEbene1 + PfadEbene2[0] + 'UntererLadekorridor', {'def':'500', 'name':'Die Ladeleistung soll sich innerhalb diesen Korridors bewegen', 'type':'string', 'role':'string', 'desc':'UntererLadekorridor', 'unit':'W'}],
-[PfadEbene1 + PfadEbene2[0] + 'ObererLadekorridor', {'def':'4500', 'name':'beim S10 E PRO wird 4500 empfohlen', 'type':'string', 'role':'string', 'desc':'ObererLadekorridor', 'unit':'W'}],
-[PfadEbene1 + PfadEbene2[0] + 'MinimumLadeleistung', {'def':'500', 'name':'es soll mind. mit dieser Leistung geladen werden, liegt sie darunter, stoppt die Ladung.', 'type':'string', 'role':'string', 'desc':'MinimumLadeleistung', 'unit':'W'}],
-[PfadEbene1 + PfadEbene2[0] + 'MaximumLadeleistung', {'def':'12000', 'name':'Leistung der Batteriewandler 3000 beim E10, beim Pro zwischen 6000 u. 12000 immer > MINIMUMLADELEISTUNG', 'type':'string', 'role':'string', 'desc':'MaximumLadeleistung', 'unit':'W'}],
-[PfadEbene1 + PfadEbene2[0] + 'Wrleistung', {'def':'12000', 'name':'AC-Leistung des WR, 12000 bei PRO', 'type':'string', 'role':'string', 'desc':'Wrleistung', 'unit':'W'}],
-[PfadEbene1 + PfadEbene2[0] + 'Ladeschwelle', {'def':'0', 'name':'bis zur dieser Schwelle wird geladen bevor die Regelung beginnt', 'type':'string', 'role':'string', 'desc':'Ladeschwelle', 'unit':'%'}],
-[PfadEbene1 + PfadEbene2[0] + 'Ladeende', {'def':'80', 'name':'Zielwert bis Ende Regelung, dannach wird Ladung auf ladeende2 weiter geregelt', 'type':'string', 'role':'string', 'desc':'Ladeende', 'unit':'%'}],
-[PfadEbene1 + PfadEbene2[0] + 'Ladeende2', {'def':'93', 'name':'ladeende2 kann der Wert abweichend vom Defaultwert 93% gesetzt werden.Muss > ladeende sein', 'type':'string', 'role':'string', 'desc':'Ladeende2', 'unit':'%'}],
-[PfadEbene1 + PfadEbene2[0] + 'Winterminimum', {'def':'11.02', 'name':'winterminimum wintersonnenwende', 'type':'string', 'role':'string', 'desc':'Winterminimum', 'unit':'Uhr'}],
-[PfadEbene1 + PfadEbene2[0] + 'Sommermaximum', {'def':'13.12', 'name':'sommermaximum sommersonnenwende', 'type':'string', 'role':'string', 'desc':'Sommermaximum', 'unit':'Uhr'}],
-[PfadEbene1 + PfadEbene2[0] + 'Sommerladeende', {'def':'18.00', 'name':'Zielwert bis Ende Regelung, dannach wird Ladung auf 93% weiter geregelt', 'type':'string', 'role':'string', 'desc':'Sommerladeende', 'unit':'Uhr'}],
-[PfadEbene1 + PfadEbene2[0] + 'Speichergroesse', {'def':'39.0', 'name':'nutzbare Kapazitaet des S10 Speichers', 'type':'string', 'role':'string', 'desc':'Speichergroesse', 'unit':'kWh'}],
-[PfadEbene1 + PfadEbene2[0] + 'Unload', {'def':'100', 'name':'Zielwert beim entladen.Die ladeschwelle muss < unload sein', 'type':'string', 'role':'string', 'desc':'Unload', 'unit':'%'}],
-[PfadEbene1 + PfadEbene2[0] + 'HTmin', {'def':'30', 'name':'Speicherreserve in % bei Wintersonnenwende 21.12', 'type':'string', 'role':'string', 'desc':'Speicherreserve in % bei winterminimum', 'unit':'%'}],
-[PfadEbene1 + PfadEbene2[0] + 'HTsockel', {'def':'20', 'name':'min. SOC Wert bei Tag-/Nachtgleiche 21.3./21.9.', 'type':'string', 'role':'string', 'desc':'min. SOC Wert bei Tag-/Nachtgleiche 21.3./21.9.', 'unit':'%'}],
-[PfadEbene1 + PfadEbene2[0] + 'HTon', {'def':'5.00', 'name':'Uhrzeit UTC für Freigabe Speicher entladen.(5.5 = 7:30 Uhr Sommerzeit)', 'type':'string', 'role':'string', 'desc':'Uhrzeit UTC für Freigabe Speicher entladen.(5.5 = 7:30 Uhr Sommerzeit)', 'unit':'Uhr'}],
-[PfadEbene1 + PfadEbene2[0] + 'HToff', {'def':'13.12', 'name':'Uhrzeit UTC für Sperre Speicher entladen.(5.5 = 7:30 Uhr Sommerzeit)', 'type':'string', 'role':'string', 'desc':'Uhrzeit UTC für Sperre Speicher entladen.(5.5 = 7:30 Uhr Sommerzeit)', 'unit':'Uhr'}],
-[PfadEbene1 + PfadEbene2[0] + 'HTsat', {'def':'false', 'name':'Hochtarif auch am Samstag = true', 'type':'string', 'role':'string', 'desc':'Hochtarif auch am Samstag = true'}],
-[PfadEbene1 + PfadEbene2[0] + 'HTsun', {'def':'false', 'name':'Hochtarif auch am Sonntag = true', 'type':'string', 'role':'string', 'desc':'Hochtarif auch am Sonntag = true'}],
-[PfadEbene1 + PfadEbene2[0] + 'Wallbox', {'def':'false', 'name':'Steuerung Wollbox ein = true', 'type':'string', 'role':'string', 'desc':'Steuerung Wollbox ein = true'}],
-[PfadEbene1 + PfadEbene2[0] + 'Debug', {'def':'false', 'name':'zusätzliche debug ausgaben in der Shell = true', 'type':'string', 'role':'string', 'desc':'zusätzliche debug ausgaben in der Shell = true'}],
-[PfadEbene1 + PfadEbene2[0] + 'WBminLade', {'def':'3000', 'name':'min. Ladeleistung Wallbox', 'type':'string', 'role':'string', 'desc':'min. Ladeleistung Wallbox', 'unit':'W'}],
-[PfadEbene1 + PfadEbene2[0] + 'WBmode', {'def':'0', 'name':'Priorität der Wallbox ', 'type':'string', 'role':'string', 'desc':'Priorität der Wallbox'}],
-[PfadEbene1 + PfadEbene2[0] + 'Peakshave', {'def':'0', 'name':'Zur zeit ist nur reines Peakshaving realisiert, d.h. wenn man nicht mehr als z.B. 10kW Strombezug aus dem Netz haben möchte, dann speist der E3DC soviel aus, dass die 10kW Netzbezug eingehalten werden.', 'type':'string', 'role':'string', 'desc':'Begrenzung des Netzbezug'}],
+[PfadEbene1 + PfadEbene2[0] + 'Einspeiselimit', {'def':10.0, 'name':'bei 15kWp beginnt die 70% Einspeisegrenze bei 10.5 kWh -0.1 Sicherheit', 'type':'number', 'role':'value', 'desc':'Einspeiselimit', 'unit':'kWh'}],
+[PfadEbene1 + PfadEbene2[0] + 'UntererLadekorridor', {'def':500, 'name':'Die Ladeleistung soll sich innerhalb diesen Korridors bewegen', 'type':'number', 'role':'value', 'desc':'UntererLadekorridor', 'unit':'W'}],
+[PfadEbene1 + PfadEbene2[0] + 'ObererLadekorridor', {'def':4500, 'name':'beim S10 E PRO wird 4500 empfohlen', 'type':'number', 'role':'value', 'desc':'ObererLadekorridor', 'unit':'W'}],
+[PfadEbene1 + PfadEbene2[0] + 'MinimumLadeleistung', {'def':500, 'name':'es soll mind. mit dieser Leistung geladen werden, liegt sie darunter, stoppt die Ladung.', 'type':'number', 'role':'value', 'desc':'MinimumLadeleistung', 'unit':'W'}],
+[PfadEbene1 + PfadEbene2[0] + 'MaximumLadeleistung', {'def':12000, 'name':'Leistung der Batteriewandler 3000 beim E10, beim Pro zwischen 6000 u. 12000 immer > MINIMUMLADELEISTUNG', 'type':'number', 'role':'value', 'desc':'MaximumLadeleistung', 'unit':'W'}],
+[PfadEbene1 + PfadEbene2[0] + 'Wrleistung', {'def':12000, 'name':'AC-Leistung des WR, 12000 bei PRO', 'type':'number', 'role':'value', 'desc':'Wrleistung', 'unit':'W'}],
+[PfadEbene1 + PfadEbene2[0] + 'Ladeschwelle', {'def':0, 'name':'bis zur dieser Schwelle wird geladen bevor die Regelung beginnt', 'type':'number', 'role':'value', 'desc':'Ladeschwelle', 'unit':'%'}],
+[PfadEbene1 + PfadEbene2[0] + 'Ladeende', {'def':80, 'name':'Zielwert bis Ende Regelung, dannach wird Ladung auf ladeende2 weiter geregelt', 'type':'number', 'role':'value', 'desc':'Ladeende', 'unit':'%'}],
+[PfadEbene1 + PfadEbene2[0] + 'Ladeende2', {'def':93, 'name':'ladeende2 kann der Wert abweichend vom Defaultwert 93% gesetzt werden.Muss > ladeende sein', 'type':'number', 'role':'value', 'desc':'Ladeende2', 'unit':'%'}],
+[PfadEbene1 + PfadEbene2[0] + 'Winterminimum', {'def':11.02, 'name':'winterminimum wintersonnenwende', 'type':'number', 'role':'value', 'desc':'Winterminimum', 'unit':'Uhr'}],
+[PfadEbene1 + PfadEbene2[0] + 'Sommermaximum', {'def':13.12, 'name':'sommermaximum sommersonnenwende', 'type':'number', 'role':'value', 'desc':'Sommermaximum', 'unit':'Uhr'}],
+[PfadEbene1 + PfadEbene2[0] + 'Sommerladeende', {'def':18.00, 'name':'Zielwert bis Ende Regelung, dannach wird Ladung auf 93% weiter geregelt', 'type':'number', 'role':'value', 'desc':'Sommerladeende', 'unit':'Uhr'}],
+[PfadEbene1 + PfadEbene2[0] + 'Speichergroesse', {'def':39.0, 'name':'nutzbare Kapazitaet des S10 Speichers', 'type':'number', 'role':'value', 'desc':'Speichergroesse', 'unit':'kWh'}],
+[PfadEbene1 + PfadEbene2[0] + 'Unload', {'def':100, 'name':'Zielwert beim entladen.Die ladeschwelle muss < unload sein', 'type':'number', 'role':'value', 'desc':'Unload', 'unit':'%'}],
+[PfadEbene1 + PfadEbene2[0] + 'HTmin', {'def':30, 'name':'Speicherreserve in % bei Wintersonnenwende 21.12', 'type':'number', 'role':'value', 'desc':'Speicherreserve in % bei winterminimum', 'unit':'%'}],
+[PfadEbene1 + PfadEbene2[0] + 'HTsockel', {'def':20, 'name':'min. SOC Wert bei Tag-/Nachtgleiche 21.3./21.9.', 'type':'number', 'role':'value', 'desc':'min. SOC Wert bei Tag-/Nachtgleiche 21.3./21.9.', 'unit':'%'}],
+[PfadEbene1 + PfadEbene2[0] + 'HTon', {'def':5.00, 'name':'Uhrzeit UTC für Freigabe Speicher entladen.(5.5 = 7:30 Uhr Sommerzeit)', 'type':'number', 'role':'value', 'desc':'Uhrzeit UTC für Freigabe Speicher entladen.(5.5 = 7:30 Uhr Sommerzeit)', 'unit':'Uhr'}],
+[PfadEbene1 + PfadEbene2[0] + 'HToff', {'def':13.12, 'name':'Uhrzeit UTC für Sperre Speicher entladen.(5.5 = 7:30 Uhr Sommerzeit)', 'type':'number', 'role':'value', 'desc':'Uhrzeit UTC für Sperre Speicher entladen.(5.5 = 7:30 Uhr Sommerzeit)', 'unit':'Uhr'}],
+[PfadEbene1 + PfadEbene2[0] + 'HTsat', {'def':'false', 'name':'Hochtarif auch am Samstag = true', 'type':'string', 'role':'state', 'desc':'Hochtarif auch am Samstag = true'}],
+[PfadEbene1 + PfadEbene2[0] + 'HTsun', {'def':'false', 'name':'Hochtarif auch am Sonntag = true', 'type':'string', 'role':'state', 'desc':'Hochtarif auch am Sonntag = true'}],
+[PfadEbene1 + PfadEbene2[0] + 'Wallbox', {'def':'false', 'name':'Steuerung Wollbox ein = true', 'type':'string', 'role':'state', 'desc':'Steuerung Wollbox ein = true'}],
+[PfadEbene1 + PfadEbene2[0] + 'Debug', {'def':'false', 'name':'zusätzliche debug ausgaben in der Shell = true', 'type':'string', 'role':'state', 'desc':'zusätzliche debug ausgaben in der Shell = true'}],
+[PfadEbene1 + PfadEbene2[0] + 'WBminLade', {'def':3000, 'name':'min. Ladeleistung Wallbox', 'type':'number', 'role':'value', 'desc':'min. Ladeleistung Wallbox', 'unit':'W'}],
+[PfadEbene1 + PfadEbene2[0] + 'WBmode', {'def':0, 'name':'Priorität der Wallbox ', 'type':'number', 'role':'value', 'desc':'Priorität der Wallbox'}],
+[PfadEbene1 + PfadEbene2[0] + 'Peakshave', {'def':0, 'name':'Zur zeit ist nur reines Peakshaving realisiert, d.h. wenn man nicht mehr als z.B. 10kW Strombezug aus dem Netz haben möchte, dann speist der E3DC soviel aus, dass die 10kW Netzbezug eingehalten werden.', 'type':'number', 'role':'value', 'desc':'Begrenzung des Netzbezug'}],
 [PfadEbene1 + PfadEbene2[1] + 'Winterminimum_MEZ', {'def':'11.02', 'name':'winterminimum wintersonnenwende MEZ', 'type':'string', 'role':'string', 'desc':'Winterminimum', 'unit':'Uhr'}],
 [PfadEbene1 + PfadEbene2[1] + 'Sommermaximum_MEZ', {'def':'13.12', 'name':'sommermaximum sommersonnenwende MEZ', 'type':'string', 'role':'string', 'desc':'Sommermaximum', 'unit':'Uhr'}],
 [PfadEbene1 + PfadEbene2[1] + 'Sommerladeende_MEZ', {'def':'18.00', 'name':'Sommerladeende MEZ', 'type':'string', 'role':'string', 'desc':'Sommerladeende', 'unit':'Uhr'}],
@@ -897,7 +899,9 @@ async function e3dcConfigRead()
         let SrtingSplit = data.split(' ');
         for (let i in StateParameter) {
             var idx = SrtingSplit.indexOf(StateParameter[i].toLowerCase());
-            if (idx != -1){            
+            if (idx != -1 && !isNaN(parseFloat(SrtingSplit[idx+2]))){            
+                await setStateAsync(instanz + PfadEbene1 + PfadEbene2[0]+StateParameter[i], parseFloat(SrtingSplit[idx+2]));
+            }else if(idx != -1 && isNaN(parseFloat(SrtingSplit[idx+2]))){
                 await setStateAsync(instanz + PfadEbene1 + PfadEbene2[0]+StateParameter[i], SrtingSplit[idx+2]);
             }else{
                 log('-==== Parameter '+StateParameter[i]+' wurde nicht gefunden ====-', 'warn');
