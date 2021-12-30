@@ -30,9 +30,9 @@ _address	name	description	unit	type	len	factor	offset	formula	role	room	poll	wp	
 40096	DC_String_1_Voltage	Spannung in Volt (String 1)	V	uint16be	1	1	0		value		true	false	false	
 40097	DC_String_2_Voltage	Spannung in Volt (String 2)	V	uint16be	1	1	0		value		true	false	false	
 40098	DC_String_3_Voltage	Spannung in Volt (String 3)	V	uint16be	1	1	0		value		true	false	false	
-40099	DC_String_1_Current	Strom in Ampere (String 1)	A	uint16be	1	1	0		value		true	false	false	
-40100	DC_String_2_Current	Strom in Ampere (String 2)	A	uint16be	1	1	0		value		true	false	false	
-40101	DC_String_3_Current	Strom in Ampere (String 3)	A	uint16be	1	1	0		value		true	false	false	
+40099	DC_String_1_Current	Strom in Ampere (String 1)	A	uint16be	1	0.01	0		value		true	false	false	
+40100	DC_String_2_Current	Strom in Ampere (String 2)	A	uint16be	1	0.01	0		value		true	false	false	
+40101	DC_String_3_Current	Strom in Ampere (String 3)	A	uint16be	1	0.01	0		value		true	false	false	
 40102	DC_String_1_Power	Leistung in Watt (String 1)	W	uint16be	1	1	0		value		true	false	false	
 40103	DC_String_2_Power	Leistung in Watt (String 2)	W	uint16be	1	1	0		value		true	false	false	
 40104	DC_String_3_Power	Leistung in Watt (String 3)	W	uint16be	1	1	0		value		true	false	false	
