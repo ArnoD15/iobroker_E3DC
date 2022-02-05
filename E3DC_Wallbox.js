@@ -1,4 +1,5 @@
 /****************************************************************************************************
+    Version: 0.3.5  Über neues Modbusregister 400 ist eine ODER Verknüpfung mit Eingang EN möglich und die Eingänge EN und ML müssen dann nicht mehr deaktiviert werden.  
     Version: 0.3.4  Fehler behoben das bei Schlüsselstellung 0 die Wallbox deaktiviert wurde.
                     Um den Schlüsselschalter im Script verwenden zu können muss die Standard Funktion von Eingang EN und ML deaktiviert werden.
     Version: 0.3.3  Lademodus 1 und 2 optimiert.
@@ -50,6 +51,7 @@ const sID_Batterie_SoC = 'modbus.0.holdingRegisters.40083_Batterie_SOC';        
 //********************************* Modul Modbus.1 E3DC Wallbox_1 ***********************************
 const sID_WallboxLadeLeistung_1 = 'modbus.1.inputRegisters.120_Leistung_aktuell';           // Pfad State Modul ModBus 120_Leistung_aktuell
 const sID_Ladevorgang_Pause_1 = 'modbus.1.coils.468_Ladevorgang_pausieren';                 // Pfad State Modul ModBus Ladevorgang pausieren
+const sID_Ladevorgang_Freigeben_1 = 'modbus.1.coils.400_Ladevorgang_freigeben';             // Ladevorgang freigeben (oder Verknüpfung mit Schlüsselschalter und Eingang EN)
 const sID_Schluesselschalter_Wallbox_1 = 'modbus.1.discreteInputs.201_Eingang_EN';          // Pfad State Modul ModBus 201_Eingang_EN
 const sID_Ladestrom_Wallbox_1 = 'modbus.1.holdingRegisters.528_Vorgabe_Ladestrom';          // Pfad State Modul ModBus 528_Vorgabe_Ladestrom
 const sID_Gesamtzaehler_Verbrauch_kWh_1 = 'modbus.1.inputRegisters.128_total_kwh';          // Pfad State Modul ModBus 128_total_kwh
@@ -90,7 +92,7 @@ if ((typeof Schluesselschalter_Wallbox1_0 != "number") || (typeof Schluesselscha
 if ((typeof MaxNennleistungWR != "number") || (typeof MaxNennleistungWR == undefined)){console.error("MaxNennleistungWR muss als Number eingegeben werden");}
 
 const PruefeID = [sID_PV_Leistung,sID_Eigenverbrauch,sID_Netz_Leistung,sID_Batterie_Leistung,sID_Batterie_SoC,
-sID_WallboxLadeLeistung_1,sID_Ladevorgang_Pause_1,sID_Schluesselschalter_Wallbox_1,sID_Ladestrom_Wallbox_1,sID_Gesamtzaehler_Verbrauch_kWh_1,
+sID_WallboxLadeLeistung_1,sID_Ladevorgang_Pause_1,sID_Ladevorgang_Freigeben_1,sID_Schluesselschalter_Wallbox_1,sID_Ladestrom_Wallbox_1,sID_Gesamtzaehler_Verbrauch_kWh_1,
 sID_Ladestatus_1];
 for (let i = 0; i < PruefeID.length; i++) {
     if (!existsState(PruefeID[i])){log('Pfad ='+PruefeID[i]+' existiert nicht, bitte prüfen','error');}
@@ -159,10 +161,7 @@ createUserStates(instanz, false, statesToCreate, async function(){
         Autobatterie_SoC = getState(sID_Autobatterie_SoC).val;
         AutoLadenBis_SoC = getState(sID_AutoLadenBis_SoC).val;
     }
-    // Funktion Schlüsselschalter ist mit den digitalen Eingängen EN und ML verbunden
-    // diese müsssen deaktiviert werden um über das Script den Schlüsselschalter verwenden zu können.
-    await setStateAsync(sID_Definition_Eingang_EN,0); // Standard ist hier 1
-	await setStateAsync(sID_Definition_Eingang_ML,0); // Standard ist hier 13
+    
 });
 
 //---------------------------------------------------------------------------------------------------
@@ -175,6 +174,7 @@ function main()
     case 0:
         // E-Auto nicht laden
         setState(sID_Ladevorgang_Pause_1,true);
+        setState(sID_Ladevorgang_Freigeben_1,false);
         break;
     case 1:
         // Lademodus 1= Nur Überschuss Laden mit Prio. Batterie möglichst ohne Netzbezug. (Netzbezug / Entladen Batterie ist während der Haltezeit möglich)
@@ -188,6 +188,7 @@ function main()
         // E-Auto mit max. Ladestrom laden. Batterie und Netzbezug werden ignoriert
         setState(sID_Ladestrom_Wallbox_1,MaxLadestrom_A);
         setState(sID_Ladevorgang_Pause_1,false);        
+        setState(sID_Ladevorgang_Freigeben_1,true);
         break;
     case 4:
         // Lademodus 4= Laden über Batterie E3DC ohne Netzbezug bis zu einem eingestellten SoC Wert der Batterie E3DC
@@ -196,6 +197,7 @@ function main()
    default:
         setState(sID_Ladestrom_Wallbox_1,MinLadestromAuto_A);
         setState(sID_Ladevorgang_Pause_1,true);        
+        setState(sID_Ladevorgang_Freigeben_1,false);
         log('unbekannter Lademodus angewählt',"warn");
     }
 
@@ -250,12 +252,14 @@ async function Lademodus1(){
                 if (HaltezeitLaden1){clearTimeout(HaltezeitLaden1)}
                 HaltezeitLaden1 = setTimeout(function () {HaltezeitLaden1 = null;}, Haltezeit1*60000);
                 await setStateAsync(sID_Ladevorgang_Pause_1,false);
+                await setStateAsync(sID_Ladevorgang_Freigeben_1,true);
             }else{
                 if (HaltezeitLaden1) {
                     AutoLadestrom_A = MinLadestromAuto_A;    
                 }else{
                     AutoLadestrom_A = MinLadestromAuto_A;
                     await setStateAsync(sID_Ladevorgang_Pause_1,true);
+                    await setStateAsync(sID_Ladevorgang_Freigeben_1,false);
                 }
             }
         }else{
@@ -263,12 +267,14 @@ async function Lademodus1(){
                 if (HaltezeitLaden1){clearTimeout(HaltezeitLaden1)}
                 HaltezeitLaden1 = setTimeout(function () {HaltezeitLaden1 = null;}, Haltezeit1*60000);
                 await setStateAsync(sID_Ladevorgang_Pause_1,false);
+                await setStateAsync(sID_Ladevorgang_Freigeben_1,true);
             }else{
                 if (HaltezeitLaden1) {
                     AutoLadestrom_A = MinLadestromAuto_A;    
                 }else{
                     AutoLadestrom_A = MinLadestromAuto_A;
                     await setStateAsync(sID_Ladevorgang_Pause_1,true);
+                    await setStateAsync(sID_Ladevorgang_Freigeben_1,false);
                 }
             }
         }
@@ -297,6 +303,7 @@ async function Lademodus1(){
     }else{
         AutoLadestrom_A = MinLadestromAuto_A;
         await setStateAsync(sID_Ladevorgang_Pause_1,true);
+        await setStateAsync(sID_Ladevorgang_Freigeben_1,false);
     }
 }
 
@@ -346,12 +353,14 @@ async function Lademodus2(){
                 if (HaltezeitLaden2){clearTimeout(HaltezeitLaden2)}
                 HaltezeitLaden2 = setTimeout(function () {HaltezeitLaden2 = null;}, Haltezeit2*60000);
                 await setStateAsync(sID_Ladevorgang_Pause_1,false);
+                await setStateAsync(sID_Ladevorgang_Freigeben_1,true);
             }else{
                 if (HaltezeitLaden2) {
                     AutoLadestrom_A = MinLadestromAuto_A;    
                 }else{
                     AutoLadestrom_A = MinLadestromAuto_A;
                     await setStateAsync(sID_Ladevorgang_Pause_1,true);
+                    await setStateAsync(sID_Ladevorgang_Freigeben_1,false);
                 }
             }
         }else{
@@ -359,12 +368,14 @@ async function Lademodus2(){
                 if (HaltezeitLaden2){clearTimeout(HaltezeitLaden2)}
                 HaltezeitLaden2 = setTimeout(function () {HaltezeitLaden2 = null;}, Haltezeit2*60000);
                 await setStateAsync(sID_Ladevorgang_Pause_1,false);
+                await setStateAsync(sID_Ladevorgang_Freigeben_1,true);
             }else{
                 if (HaltezeitLaden2) {
                     AutoLadestrom_A = MinLadestromAuto_A;    
                 }else{
                     AutoLadestrom_A = MinLadestromAuto_A;
                     await setStateAsync(sID_Ladevorgang_Pause_1,true);
+                    await setStateAsync(sID_Ladevorgang_Freigeben_1,false);
                 }
             }
         }
@@ -392,6 +403,7 @@ async function Lademodus2(){
     }else{
         AutoLadestrom_A = MinLadestromAuto_A;
         await setStateAsync(sID_Ladevorgang_Pause_1,true);
+        await setStateAsync(sID_Ladevorgang_Freigeben_1,false);
     }
 }
 
@@ -449,12 +461,14 @@ async function Lademodus4(){
                 if (HaltezeitLaden4){clearTimeout(HaltezeitLaden4)}
                 HaltezeitLaden4 = setTimeout(function () {HaltezeitLaden4 = null;}, Haltezeit4*60000);
                 await setStateAsync(sID_Ladevorgang_Pause_1,false);
+                await setStateAsync(sID_Ladevorgang_Freigeben_1,true);
             }else{
                 if (HaltezeitLaden4 && BatterieSoC > MinBatterieSoC) {
                     AutoLadestrom_A = MinLadestromAuto_A;    
                 }else{
                     AutoLadestrom_A = MinLadestromAuto_A;
                     await setStateAsync(sID_Ladevorgang_Pause_1,true);
+                    await setStateAsync(sID_Ladevorgang_Freigeben_1,false);
                 }
             }
         }else{
@@ -462,12 +476,14 @@ async function Lademodus4(){
                 if (HaltezeitLaden4){clearTimeout(HaltezeitLaden4)}
                 HaltezeitLaden4 = setTimeout(function () {HaltezeitLaden4 = null;}, Haltezeit4*60000);
                 await setStateAsync(sID_Ladevorgang_Pause_1,false);
+                await setStateAsync(sID_Ladevorgang_Freigeben_1,true);
             }else{
                 if (HaltezeitLaden4) {
                     AutoLadestrom_A = MinLadestromAuto_A;    
                 }else{
                     AutoLadestrom_A = MinLadestromAuto_A;
                     await setStateAsync(sID_Ladevorgang_Pause_1,true);
+                    await setStateAsync(sID_Ladevorgang_Freigeben_1,false);
                 }
             }
         }
@@ -495,6 +511,7 @@ async function Lademodus4(){
     }else{
         AutoLadestrom_A = MinLadestromAuto_A;
         await setStateAsync(sID_Ladevorgang_Pause_1,true);
+        await setStateAsync(sID_Ladevorgang_Freigeben_1,false);
     }
 }
 
@@ -688,11 +705,7 @@ on({id: sID_Batterie_Leistung}, async function (obj){
 // Wird bei Änderung Schluesselschalter Wallbox aufgerufen
 // Anwahl Lademodus über Schlüsselschalter der Wallbox
 on({id: sID_Schluesselschalter_Wallbox_1}, async function (obj){
-	// Funktion Schlüsselschalter ist mit den digitalen Eingängen EN und ML verbunden
-    // diese müsssen deaktiviert werden um über das Script den Schlüsselschalter verwenden zu können.
-    await setStateAsync(sID_Definition_Eingang_EN,0); // Standard ist hier 1
-	await setStateAsync(sID_Definition_Eingang_ML,0); // Standard ist hier 13
-    let Schluesselschalter = (await getStateAsync(obj.id)).val
+	let Schluesselschalter = (await getStateAsync(obj.id)).val
     let Lademodus_Wallbox = 0
     
     if (Schluesselschalter){
@@ -711,6 +724,7 @@ on({id: sID_Automatik}, async function (obj){
     }else{
         Automatik = false;
         await setStateAsync(sID_Ladevorgang_Pause_1,true);
+        await setStateAsync(sID_Ladevorgang_Freigeben_1,false);
     }
 });  
 
