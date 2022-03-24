@@ -90,7 +90,7 @@ _address	name	description	unit	type	len	factor	offset	formula	role	room	poll	wp	
 41028	WR0_DC_Leistung_L3	DC-Leistung in Watt L3 wird nicht verwendet	W	int16be	1	1	0		value		true	false	false	false
 41029	WR0_DC_Spannung_L1	DC-Spannung in Volt String1	V	int16be	1	0.1	0		value		true	false	false	false
 41030	WR0_DC_Spannung_L2	DC-Spannung in Volt String2	V	int16be	1	0.1	0		value		true	false	false	false
-41031	WR0_DC_Spannung_L3	DC-Spannung in Volt L3  wird nicht verwendet	V	int16be	1	0.01	0		value		true	false	false	false
-41032	WR0_DC_Strom_L1	DC-Strom in Ampere L1	A	int16be	1	0.1	0		value		true	false	false	false
+41031	WR0_DC_Spannung_L3	DC-Spannung in Volt L3  wird nicht verwendet	V	int16be	1	0.1	0		value		true	false	false	false
+41032	WR0_DC_Strom_L1	DC-Strom in Ampere L1	A	int16be	1	0.01	0		value		true	false	false	false
 41033	WR0_DC_Strom_L2	DC-Strom in Ampere L2	A	int16be	1	0.01	0		value		true	false	false	false
 41034	WR0_DC_Strom_L3	DC-Strom in Ampere L3	A	int16be	1	0.01	0		value		true	false	false	false
