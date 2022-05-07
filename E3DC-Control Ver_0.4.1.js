@@ -1,5 +1,6 @@
 'use strict';
 /*****************************************************************************************
+Version: 0.4.1      Fehler in der Prognoseberechnung korrigiert.
 Version: 0.4.0      Die Solar Prognose Forecast wurde entfernt und dafür die Prognose Solcast integriert.
                     Es müssen folgende States gelöscht werden:
                     - 0_userdata.0.E3DC-Control.Forecast
@@ -483,7 +484,6 @@ async function Prognosen_Berechnen()
     for (let i = 0; i < 7 ; i++){
         if (PrognoseSolcast_kWh_Tag[i] == 0 && PrognoseSolcast90_kWh_Tag[i] == 0 && PrognoseProplanta_kWh_Tag[i] == 0){
             if (LogAusgabe){log('-==== Prognose für Tag'+i+' konnte nicht abgerufen werden ====-')};
-            return null
         }else{
             if ((PrognoseSolcast_kWh_Tag[i] == 0 && PrognoseSolcast90_kWh_Tag[i] == 0) || PrognoseAnwahl == 1){Prognose_kWh_Tag[i] = PrognoseProplanta_kWh_Tag[i];}
             if ((PrognoseProplanta_kWh_Tag[i] == 0 && PrognoseSolcast90_kWh_Tag[i] == 0) || PrognoseAnwahl == 2){Prognose_kWh_Tag[i] = PrognoseSolcast_kWh_Tag[i];}
@@ -511,15 +511,16 @@ async function Prognosen_Berechnen()
             if (PrognoseSolcast_kWh_Tag[i] != 0 && PrognoseSolcast90_kWh_Tag[i] != 0 && PrognoseAnwahl == 6) {
                 Prognose_kWh_Tag[i] = (PrognoseSolcast90_kWh_Tag[i]+PrognoseSolcast_kWh_Tag[i])/2;
             }
-        }   
-        // nKorrFaktor abziehen
-        Prognose_kWh_Tag[i] = (Prognose_kWh_Tag[i]/100)*(100-nKorrFaktor)
-        // nMaxPvLeistungTag_kWh verwenden wenn die Prognose höher ist
-        if (Prognose_kWh_Tag[i] > nMaxPvLeistungTag_kWh) {Prognose_kWh_Tag[i] = nMaxPvLeistungTag_kWh;}
-        // nMinPvLeistungTag_kWh verwenden wenn die Prognose niedriger ist
-        if (Prognose_kWh_Tag[i] != 0) {
-            if (Prognose_kWh_Tag[i] < nMinPvLeistungTag_kWh) {Prognose_kWh_Tag[i] = nMinPvLeistungTag_kWh;}
-        }
+           
+			// nKorrFaktor abziehen
+			Prognose_kWh_Tag[i] = (Prognose_kWh_Tag[i]/100)*(100-nKorrFaktor)
+			// nMaxPvLeistungTag_kWh verwenden wenn die Prognose höher ist
+			if (Prognose_kWh_Tag[i] > nMaxPvLeistungTag_kWh) {Prognose_kWh_Tag[i] = nMaxPvLeistungTag_kWh;}
+			// nMinPvLeistungTag_kWh verwenden wenn die Prognose niedriger ist
+			if (Prognose_kWh_Tag[i] != 0) {
+				if (Prognose_kWh_Tag[i] < nMinPvLeistungTag_kWh) {Prognose_kWh_Tag[i] = nMinPvLeistungTag_kWh;}
+			}
+		}
     }
     if (LogAusgabe){log('Prognose_kWh nach Abzug Korrekturfaktor  = '+ Prognose_kWh_Tag[0]);}
        
