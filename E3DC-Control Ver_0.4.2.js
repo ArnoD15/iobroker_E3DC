@@ -1,5 +1,6 @@
 'use strict';
 /*****************************************************************************************
+Version: 0.4.2      Fehler in der Prognoseberechnung und Fehler das Timer bei Scriptende nicht beendet werden korrigiert.
 Version: 0.4.1      Fehler in der Prognoseberechnung korrigiert.
 Version: 0.4.0      Die Solar Prognose Forecast wurde entfernt und dafür die Prognose Solcast integriert.
                     Es müssen folgende States gelöscht werden:
@@ -8,19 +9,7 @@ Version: 0.4.0      Die Solar Prognose Forecast wurde entfernt und dafür die Pr
                     In VIS muss in der View SolarDiag_Prognose der Materialdesign Select Button die Menüpunkte 2 in Solcast 
                     umbenant werden.
                     Kleinere Fehler beseitigt.
-Version: 0.3.5      Bei allen Parameter Typ: number role:value geändert.
-                    Ganzen Objektbaum 0.E3DC-Control.Parameter muss gelöscht werden und dann das Script neu gestartet werden.  
-Version: 0.3.4     Skript optimiert, xmlhttprequest Forecast und Proplanta neu programmiert
-                    Script ohne setTimeout mit async/await programmiert, dadurch schneller.
-Version: 0.3.3      Folgende Fehler korrigiert:
-                    Daten Proplanta wurden bei einem Serverfehler erst wieder am nächsten Tag abgerufen.
-                    Zeiten RB, RE und LE wurden beim manuellen Wechsel der Einstellungen nicht neu berechnet.
-Version: 0.3.2      XMLHttpRequest Fehler bei langsamen Verbindungen korrigiert und Warnung bei Timeout eingefügt.
-                    Prognosewerte Forecast werden nur noch täglich auf 0 gesetzt. Skript aufgeräumt und optimiert
-Version: 0.3.1      Überprüfung ob die serverseitige Bearbeitung Proplanta oder Forecast erfolgreich war eingefügt.
-Version: 0.3.0      Neue Auswahl für "PrognoseAnwahl" hinzugefügt. Wenn beide Prognosen verwendet werden, kann jetzt nach max., min. oder Durchschnitt die Prognose
-                    berechnet werden. 
-                    Beide Berechnung nach min. Wert = 0 / nur Proplanta = 1 / nur Forecast = 2 / Beide Berechnung nach max. Wert = 3 / Beide Berechnung nach Ø Wert = 4
+
 ******************************************************************************************/
 //++++++++++++++++++++++++++++++++++  USER ANPASSUNGEN ++++++++++++++++++++++++++++++++++
 
@@ -50,7 +39,7 @@ const SolcastDachflaechen = 2;                              // Aktuell max. zwei
 Resource_Id_Dach[1] = ''                 					// Rooftop 1 Id von der Homepage Solcast
 Resource_Id_Dach[2] = ''                 					// Rooftop 2 Id von der Homepage Solcast
 const SolcastAPI_key = ''   								// Solcast API Key
-const Solcast = true;                                       // true = Daten Solcast werden abgerufen false = Daten Solcast werden nicht abgerufenb
+const Solcast = false;                                      // true = Daten Solcast werden abgerufen false = Daten Solcast werden nicht abgerufenb
 
 //********************* Einstellungen Automatische Prognoseberechnung *******************
 const nModulFlaeche = 73;                       // 73 Installierte Modulfläche in m² (Silizium-Zelle 156x156x60 Zellen x 50 Module)
@@ -196,7 +185,7 @@ let xhr1 = new XMLHttpRequest();
 let xhr2 = new XMLHttpRequest();
 // @ts-ignore
 const dst = require('is-it-bst');
-let AutomatikAnwahl,ZeitAnwahl_MEZ_MESZ,EinstellungAnwahl,PrognoseAnwahl,count0 = 0, count1 = 0, Summe0 = 0, Summe1 = 0;
+let AutomatikAnwahl,ZeitAnwahl_MEZ_MESZ,EinstellungAnwahl,PrognoseAnwahl,count0 = 0, count1 = 0, Summe0 = 0, Summe1 = 0,TimerObj;
 let sWrleistung,sHtmin,sHtsockel,sHton,sHtoff,sHtsat,sHtsun,sDebug,sWallbox,sWBmode,sWBminLade,sPeakshave;
 let Timer0 = null, Timer1 = null,Timer2 = null;
 let SummePV_Leistung_Tag_kW =[{0:'',1:'',2:'',3:'',4:'',5:'',6:'',7:''},{0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0},{0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0},{0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0}];
@@ -484,6 +473,7 @@ async function Prognosen_Berechnen()
     for (let i = 0; i < 7 ; i++){
         if (PrognoseSolcast_kWh_Tag[i] == 0 && PrognoseSolcast90_kWh_Tag[i] == 0 && PrognoseProplanta_kWh_Tag[i] == 0){
             if (LogAusgabe){log('-==== Prognose für Tag'+i+' konnte nicht abgerufen werden ====-')};
+            Prognose_kWh_Tag[i] = 0;
         }else{
             if ((PrognoseSolcast_kWh_Tag[i] == 0 && PrognoseSolcast90_kWh_Tag[i] == 0) || PrognoseAnwahl == 1){Prognose_kWh_Tag[i] = PrognoseProplanta_kWh_Tag[i];}
             if ((PrognoseProplanta_kWh_Tag[i] == 0 && PrognoseSolcast90_kWh_Tag[i] == 0) || PrognoseAnwahl == 2){Prognose_kWh_Tag[i] = PrognoseSolcast_kWh_Tag[i];}
@@ -511,16 +501,15 @@ async function Prognosen_Berechnen()
             if (PrognoseSolcast_kWh_Tag[i] != 0 && PrognoseSolcast90_kWh_Tag[i] != 0 && PrognoseAnwahl == 6) {
                 Prognose_kWh_Tag[i] = (PrognoseSolcast90_kWh_Tag[i]+PrognoseSolcast_kWh_Tag[i])/2;
             }
-           
-			// nKorrFaktor abziehen
-			Prognose_kWh_Tag[i] = (Prognose_kWh_Tag[i]/100)*(100-nKorrFaktor)
-			// nMaxPvLeistungTag_kWh verwenden wenn die Prognose höher ist
-			if (Prognose_kWh_Tag[i] > nMaxPvLeistungTag_kWh) {Prognose_kWh_Tag[i] = nMaxPvLeistungTag_kWh;}
-			// nMinPvLeistungTag_kWh verwenden wenn die Prognose niedriger ist
-			if (Prognose_kWh_Tag[i] != 0) {
-				if (Prognose_kWh_Tag[i] < nMinPvLeistungTag_kWh) {Prognose_kWh_Tag[i] = nMinPvLeistungTag_kWh;}
-			}
-		}
+            // nKorrFaktor abziehen
+            Prognose_kWh_Tag[i] = (Prognose_kWh_Tag[i]/100)*(100-nKorrFaktor)
+            // nMaxPvLeistungTag_kWh verwenden wenn die Prognose höher ist
+            if (Prognose_kWh_Tag[i] > nMaxPvLeistungTag_kWh) {Prognose_kWh_Tag[i] = nMaxPvLeistungTag_kWh;}
+            // nMinPvLeistungTag_kWh verwenden wenn die Prognose niedriger ist
+            if (Prognose_kWh_Tag[i] != 0) {
+                if (Prognose_kWh_Tag[i] < nMinPvLeistungTag_kWh) {Prognose_kWh_Tag[i] = nMinPvLeistungTag_kWh;}
+            }
+        }
     }
     if (LogAusgabe){log('Prognose_kWh nach Abzug Korrekturfaktor  = '+ Prognose_kWh_Tag[0]);}
        
@@ -1630,3 +1619,10 @@ schedule({hour: 0, minute: 1}, function () {
 	setState(sID_PVErtragLM1,0,true);
 	if (LogAusgabe)log('-==== Tagesertragswert auf 0 gesetzt ====-');
 });
+
+//Bei Scriptende alle Timer löschen
+onStop(function () { 
+        clearSchedule(Timer0);
+        clearSchedule(Timer1);
+        clearSchedule(Timer2);
+}, 100);
