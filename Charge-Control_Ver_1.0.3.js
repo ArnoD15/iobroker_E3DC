@@ -3,18 +3,23 @@ let Resource_Id_Dach=[];
 let sID_UntererLadekorridor_W =[],sID_Ladeschwelle_Proz =[],sID_Ladeende_Proz=[],sID_Ladeende2_Proz=[],sID_Winterminimum=[],sID_Sommermaximum=[],sID_Sommerladeende=[],sID_Unload_Proz=[];
 
 /**********************************************************************************************************
- Version: 1.0.0     Das zusatz Programm E3DC-Control wird ab dieser Version nicht mehr benötig, dafür muss der
-                    Adapter e3dc-rscp installiert sein. 
-					! Bitte die Anleitung Charge-Control auf GitHub lesen !
+ Version: 1.0.3     Auch die Entladeleistung wird langsam erhöht, um Kurve zu glätten.
+ Version: 1.0.2     Speichergröße berechnen geändert. Es wird der ASOC (Alterungszustand) von Bat_0 verwendet, um die
+                    verfügbare Batterie Kapazität zu berechnen
+ Version: 1.0.1     Wenn weniger als 500 W in das Netz eingespeist werden können, wird die Regelung ausgeschaltet.
+                    Bei wechselnder Bewölkung ist die Regelung zu langsam, um Netzbezug zu verhindern, deswegen wird bereits 
+                    ab einer Einspeiseleistung von 500 W die Regelung E3DC überlassen.
+ Version: 1.0.0     Das Zusatzprogramm E3DC-Control wird ab dieser Version nicht mehr benötig, dafür muss der
+                    Adapter e3dc-rscp installiert sein.
  **********************************************************************************************************/
 //+++++++++++++++++++++++++++++++++++++++++++  USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++++++
 
-//*************************************** Einstellungen E3DC-Control **************************************
+//*************************************** Einstellungen Charge-Control **************************************
 let logflag = true;                                             // History Daten in Lokaler Datei speichern 
 const sLogPath = "/home/iobroker/HistoryPV_Leistung.json";      // Pfad zur Sicherungsdatei History 
 const LogAusgabe = true                                         // Zusätzliche allgemeine LOG Ausgaben 
 const DebugAusgabe = false                                      // Debug Ausgabe im LOG zur Fehlersuche
-const LogAusgabeSteuerung = false                                // Zusätzliche LOG Ausgaben der Lade-Steuerung
+const LogAusgabeSteuerung = true                                // Zusätzliche LOG Ausgaben der Lade-Steuerung
 
 //***************************************** Einstellungen Proplanta ***************************************
 const country = "de"                                            // Ländercode de,at, ch, fr, it
@@ -27,14 +32,6 @@ const SolcastDachflaechen = 2;                                  // Aktuell max. 
 Resource_Id_Dach[1] = 'xxxx-xxxx-xxxx-xxxx'                     // Rooftop 1 Id von der Homepage Solcast
 Resource_Id_Dach[2] = 'xxxx-xxxx-xxxx-xxxx'                     // Rooftop 2 Id von der Homepage Solcast
 const SolcastAPI_key = 'xxxxxxxx-xx-xxxxxxxxxxxxxxxxxxxx'       // Solcast API Key
-
-
-//************************************* Einstellungen Diagramm Prognose ***********************************
-const nModulFlaeche = 73;                       // 73 Installierte Modulfläche in m² (Silizium-Zelle 156x156x60 Zellen x 50 Module)
-const nWirkungsgradModule = 18;                 // 18.4 Wirkungsgrad der Solarmodule in %
-const nKorrFaktor = 0                           // nKorrFaktor in Prozent. Reduziert die berechnete Prognose um diese anzugleichen.nKorrFaktor= 0 ohne Korrektur 
-const nMinPvLeistungTag_kWh = 3                 // minimal Mögliche PV-Leistung. Wenn Prognose niedriger ist wird mit diesem Wert gerechnet
-const nMaxPvLeistungTag_kWh = 105               // max. Mögliche PV-Leistung. Wenn Prognose höher ist wird mit diesem Wert gerechnet
 
 
 //****************************** Einstellungen Modul Modbus *****************************
@@ -56,11 +53,8 @@ const sID_maxDischargePower = 'e3dc-rscp.0.EMS.SYS_SPECS.maxDischargePower'     
 const sID_startDischargeDefault = 'e3dc-rscp.0.EMS.SYS_SPECS.startDischargeDefault'                 // Anfängliche Entladeleistung Standard
 const sID_Max_wrleistung_W = 'e3dc-rscp.0.EMS.SYS_SPECS.maxAcPower'                                 // Maximale Wechselrichter Leistung
 const sID_Einspeiselimit_W = 'e3dc-rscp.0.EMS.DERATE_AT_POWER_VALUE'                                // Eingestellte Einspeisegrenze E3DC
-const sID_BAT0_Nutzbare_Kapazitaet = 'e3dc-rscp.0.BAT.BAT_0.USABLE_CAPACITY'                        // Nutzbare Batterie Kapazität BAT0
-const sID_BAT1_Nutzbare_Kapazitaet = 'e3dc-rscp.0.BAT.BAT_1.USABLE_CAPACITY'                        // Nutzbare Batterie Kapazität BAT1
-const sID_Bat0_Modulspannung = 'e3dc-rscp.0.BAT.BAT_0.MODULE_VOLTAGE'                               // Modulspannung BAT0
-const sID_Bat1_Modulspannung = 'e3dc-rscp.0.BAT.BAT_1.MODULE_VOLTAGE'                               // Modulspannung BAT1
-//********************* Einstellungen Instanz Script E3DC-Control ***********************
+const sID_BAT0_Alterungszustand = 'e3dc-rscp.0.BAT.BAT_0.ASOC'                                      // Batterie ASOC e3dc-rscp
+//********************* Einstellungen Instanz Script Charge-Control ***********************
 let instanz = '0_userdata.0.';
 // Pfad innerhalb der Instanz
 let PfadEbene1 = 'Charge_Control.';
@@ -100,10 +94,8 @@ if (!existsState(sID_Max_Discharge_Power_W)){log('State '+sID_Max_Discharge_Powe
 if (!existsState(sID_maxDischargePower)){log('State '+sID_maxDischargePower+' ist nicht vorhanden','error')} ;
 if (!existsState(sID_startDischargeDefault)){log('State '+sID_startDischargeDefault+' ist nicht vorhanden','error')} ;
 if (!existsState(sID_Max_wrleistung_W)){log('State '+sID_Max_wrleistung_W+' ist nicht vorhanden','error')} ;
-if (!existsState(sID_BAT0_Nutzbare_Kapazitaet)){log('State '+sID_BAT0_Nutzbare_Kapazitaet+' ist nicht vorhanden','error')} ;
-if (!existsState(sID_BAT1_Nutzbare_Kapazitaet)){log('State '+sID_BAT1_Nutzbare_Kapazitaet+' ist nicht vorhanden','error')} ;
-if (!existsState(sID_Bat0_Modulspannung)){log('State '+sID_Bat0_Modulspannung+' ist nicht vorhanden','error')} ;
-if (!existsState(sID_Bat1_Modulspannung)){log('State '+sID_Bat1_Modulspannung+' ist nicht vorhanden','error')} ;
+if (!existsState(sID_Einspeiselimit_W)){log('State '+sID_Einspeiselimit_W+' ist nicht vorhanden','error')} ;
+if (!existsState(sID_BAT0_Alterungszustand)){log('State '+sID_BAT0_Alterungszustand+' ist nicht vorhanden','error')} ;
 
 //***************************************************************************************************
 //************************************ Deklaration Variablen ****************************************
@@ -146,8 +138,6 @@ const arrayID_Parameter2 =[sID_UntererLadekorridor_W[2],sID_Ladeschwelle_Proz[2]
 const arrayID_Parameter3 =[sID_UntererLadekorridor_W[3],sID_Ladeschwelle_Proz[3],sID_Ladeende_Proz[3],sID_Ladeende2_Proz[2],sID_Winterminimum[3],sID_Sommerladeende[3],sID_Sommermaximum[3],sID_Unload_Proz[3]];
 const arrayID_Parameter4 =[sID_UntererLadekorridor_W[4],sID_Ladeschwelle_Proz[4],sID_Ladeende_Proz[4],sID_Ladeende2_Proz[2],sID_Winterminimum[4],sID_Sommerladeende[4],sID_Sommermaximum[4],sID_Unload_Proz[4]];
 const arrayID_Parameter5 =[sID_UntererLadekorridor_W[5],sID_Ladeschwelle_Proz[5],sID_Ladeende_Proz[5],sID_Ladeende2_Proz[2],sID_Winterminimum[5],sID_Sommerladeende[5],sID_Sommermaximum[5],sID_Unload_Proz[5]];
-
-const arrayID_Batterie =[sID_BAT0_Nutzbare_Kapazitaet,sID_BAT1_Nutzbare_Kapazitaet,sID_Bat0_Modulspannung,sID_Bat1_Modulspannung];
 
 let xhr = new XMLHttpRequest();
 let xhr2 = new XMLHttpRequest();
@@ -195,6 +185,7 @@ async function ScriptStart()
     // Wetterdaten beim Programmstart aktualisieren und Timer starten.
     await Speichergroesse()                                             // aktuell verfügbare Batterie Speichergröße berechnen
     await PrognosedatenAbrufen();                                       // Wetterdaten Proplanta abrufen
+    //await SheduleSolcast(SolcastDachflaechen)                           // Wetterdaten Solcast abrufen
     await UTC_Dezimal_to_MEZ();                                         // UTC Zeiten in MEZ umrechnen
     await MEZ_Regelzeiten();                                            // RE,RB und Ladeende berechnen
     await Notstromreserve();                                            // Eingestellte Notstromreserve berechnen
@@ -309,11 +300,11 @@ async function Ladesteuerung()
     // Nur wenn PV-Leistung vorhanden ist Regelung starten.
     if(PV_Leistung_Summe_W >0 ){ //|| Zeit_aktuell_sek < tRegelbeginn)
         let Power = 0;
-        let Unload_Proz = (await getStateAsync(sID_Unload_Proz[EinstellungAnwahl])).val;                            // Parameter E3DC-Control Unload
-        let Ladeende_Proz = (await getStateAsync(sID_Ladeende_Proz[EinstellungAnwahl])).val                         // Parameter E3DC-Control Ladeende
-        let Ladeende2_Proz = (await getStateAsync(sID_Ladeende2_Proz[EinstellungAnwahl])).val                       // Parameter E3DC-Control Ladeende2
-        let UntererLadekorridor_W = (await getStateAsync(sID_UntererLadekorridor_W[EinstellungAnwahl])).val         // Parameter E3DC-Control UntererLadekorridor
-        let Ladeschwelle_Proz = (await getStateAsync(sID_Ladeschwelle_Proz[EinstellungAnwahl])).val                 // Parameter E3DC-Control Ladeschwelle
+        let Unload_Proz = (await getStateAsync(sID_Unload_Proz[EinstellungAnwahl])).val;                            // Parameter Unload
+        let Ladeende_Proz = (await getStateAsync(sID_Ladeende_Proz[EinstellungAnwahl])).val                         // Parameter Ladeende
+        let Ladeende2_Proz = (await getStateAsync(sID_Ladeende2_Proz[EinstellungAnwahl])).val                       // Parameter Ladeende2
+        let UntererLadekorridor_W = (await getStateAsync(sID_UntererLadekorridor_W[EinstellungAnwahl])).val         // Parameter UntererLadekorridor
+        let Ladeschwelle_Proz = (await getStateAsync(sID_Ladeschwelle_Proz[EinstellungAnwahl])).val                 // Parameter Ladeschwelle
         
         // Prüfen ob SOC Batterie > Ladeschwelle.Bis zu diesem SoC Wert wird sofort mit der gesamten überschüssigen PV-Leistung geladen. Erst wenn die ladeschwelle erreicht wird, wird mit dem geregelten Laden begonnen  
         if (Batterie_SOC_Proz > Ladeschwelle_Proz) { //SOC Ladeschwelle wurde erreicht.
@@ -336,7 +327,7 @@ async function Ladesteuerung()
                             Batterie_SOC_alt_Proz = Batterie_SOC_Proz; CheckConfig = false; tRegelbeginn_alt = tRegelbeginn; Zeit_alt_UTC_sek = Zeit_aktuell_UTC_sek;
                             // Berechnen der Entladeleistung bis zum Unload SOC in W/sek.
                             M_Power = Math.round(((Unload_SOC_Proz - Batterie_SOC_Proz)*Speichergroesse_kWh*10*3600) / (tRegelbeginn-Zeit_aktuell_UTC_sek)) ;
-                            if(LogAusgabeSteuerung){log('-==== M_Power:'+M_Power+' = Math.round(((Unload_SOC_Proz:'+Unload_SOC_Proz+' - Batterie_SOC_Proz:'+Batterie_SOC_Proz+')*Speichergroesse_kWh*10*3600) / (tRegelbeginn:'+tRegelbeginn+' - Zeit_aktuell_UTC_sek:'+Zeit_aktuell_UTC_sek+')) ====-')}
+                            if(LogAusgabeSteuerung){log('-==== 1 M_Power:'+M_Power+' = Math.round(((Unload_SOC_Proz:'+Unload_SOC_Proz+' - Batterie_SOC_Proz:'+Batterie_SOC_Proz+')*Speichergroesse_kWh:'+Speichergroesse_kWh+'*10*3600) / (tRegelbeginn:'+tRegelbeginn+' - Zeit_aktuell_UTC_sek:'+Zeit_aktuell_UTC_sek+')) ====-')}
                 
                             // Prüfen ob die PV-Leistung plus Entladeleistung Batterie die max. WR-Leistung übersteigt
                             if((PV_Leistung_E3DC_W - M_Power)> Max_wrleistung_W){
@@ -358,7 +349,7 @@ async function Ladesteuerung()
                     Batterie_SOC_alt_Proz = Batterie_SOC_Proz; CheckConfig = false; tRegelende_alt = tRegelende; Zeit_alt_UTC_sek = Zeit_aktuell_UTC_sek;
                     // Berechnen der Ladeleistung bis zum Ladeende SOC in W/sek.
                     M_Power = Math.round(((Ladeende_Proz - Batterie_SOC_Proz)*Speichergroesse_kWh*10*3600) / (tRegelende-Zeit_aktuell_UTC_sek));
-                    if(LogAusgabeSteuerung){log('-==== 1 M_Power:'+M_Power+' = Math.round(((Ladeende_Proz:'+Ladeende_Proz+' - Batterie_SOC_Proz:'+Batterie_SOC_Proz+')*Speichergroesse_kWh*10*3600) / (tRegelende:'+tRegelende+' - Zeit_aktuell_UTC_sek:'+Zeit_aktuell_UTC_sek+')) ====-')}
+                    if(LogAusgabeSteuerung){log('-==== 2 M_Power:'+M_Power+' = Math.round(((Ladeende_Proz:'+Ladeende_Proz+' - Batterie_SOC_Proz:'+Batterie_SOC_Proz+')*Speichergroesse_kWh:'+Speichergroesse_kWh+'*10*3600) / (tRegelende:'+tRegelende+' - Zeit_aktuell_UTC_sek:'+Zeit_aktuell_UTC_sek+')) ====-')}
                     if (M_Power < UntererLadekorridor_W || M_Power < 0){
                         M_Power = 0
                     }
@@ -374,7 +365,7 @@ async function Ladesteuerung()
                     if(Batterie_SOC_Proz != Batterie_SOC_alt_Proz || (Zeit_aktuell_UTC_sek - Zeit_alt_UTC_sek) > 300 || tRegelende != tRegelende_alt || M_Power == 0 || M_Power == maximumLadeleistung_W || CheckConfig){
                         Batterie_SOC_alt_Proz = Batterie_SOC_Proz; CheckConfig = false; tRegelende_alt = tRegelende; Zeit_alt_UTC_sek = Zeit_aktuell_UTC_sek;
                         M_Power = Math.round(((Ladeende2_Proz - Batterie_SOC_Proz)*Speichergroesse_kWh*10*3600) / (tSommerladeende-Zeit_aktuell_UTC_sek));
-                        if(LogAusgabeSteuerung){log('-==== M_Power:'+M_Power+' = Math.round(((Ladeende2_Proz:'+Ladeende2_Proz+' - Batterie_SOC_Proz:'+Batterie_SOC_Proz+')* Speichergroesse_kWh:'+Speichergroesse_kWh+' * 10 * 3600)/(tSommerladeende:'+tSommerladeende+' - Zeit_aktuell_UTC_sek:'+Zeit_aktuell_UTC_sek+')) ====-')}
+                        if(LogAusgabeSteuerung){log('-==== 3 M_Power:'+M_Power+' = Math.round(((Ladeende2_Proz:'+Ladeende2_Proz+' - Batterie_SOC_Proz:'+Batterie_SOC_Proz+')* Speichergroesse_kWh:'+Speichergroesse_kWh+' * 10 * 3600)/(tSommerladeende:'+tSommerladeende+' - Zeit_aktuell_UTC_sek:'+Zeit_aktuell_UTC_sek+')) ====-')}
                         if (M_Power < 0){M_Power = 0;} 
                     }   
                 }else{
@@ -421,7 +412,7 @@ async function Ladesteuerung()
     //Prüfen ob berechnete Ladeleistung M_Power zu Netzbezug führt
     if(M_Power >= 0){   
         let PowerGrid = PV_Leistung_Summe_W -(Power_Home_W + M_Power)
-        if(PowerGrid < 0 && M_Power != maximumLadeleistung_W){// Führt zu Netzbezug, Steuerung ausschalten
+        if(PowerGrid < 500 && M_Power != maximumLadeleistung_W){// Führt zu Netzbezug, Steuerung ausschalten
             M_Power = maximumLadeleistung_W
             if(LogAusgabeSteuerung){log('-==== Ladesteuerung gestoppt ====-','warn');}
         }   
@@ -435,7 +426,6 @@ async function Ladesteuerung()
             if(LogAusgabeSteuerung){log('Entladeleistung PowerGrid ='+PowerGrid,'warn');}
         }   
     }
-    
     // Leerlauf beibehalten bis sich der Wert M_Power ändert oder Notstrom Reserve erreicht ist
     if(M_Power_alt != maximumLadeleistung_W || M_Power != maximumLadeleistung_W || !BAT_Notstrom_Enladen ){
         // Alle 10 sek. muss mindestens ein Steuerbefehl an e3dc.rscp Adapter gesendet werden sonst übernimmt E3DC die Steuerung
@@ -450,25 +440,38 @@ async function Ladesteuerung()
             }else if(M_Power == maximumLadeleistung_W){
                 // E3DC die Steuerun überlassen, dann wird mit der maximal möglichen Ladeleistung geladen oder entladen
                 Set_Power_Value_W = 0
+                await setStateAsync(sID_SET_POWER_MODE,0); // Normal
                 if(LogAusgabeSteuerung){log('-==== Schritt = '+Schritt+' keine Steuerung ====-')}
                 
             }else if(M_Power > 0){
                 // Beim ersten aufruf Wert M_Power übernehmen und erst dann langsam erhöhen oder senken
                 if(Set_Power_Value_W < 1){Set_Power_Value_W=M_Power}
                 // Leistung langsam erhöhrn oder senken um Schwankungen auszugleichen
-                if(M_Power > Set_Power_Value_W+2){
-                    Set_Power_Value_W = Set_Power_Value_W + 2
-                }else if(M_Power < Set_Power_Value_W-2){
-                    Set_Power_Value_W = Set_Power_Value_W-2
+                if(M_Power > Set_Power_Value_W){
+                    Set_Power_Value_W = Set_Power_Value_W + 1
+                }else if(M_Power < Set_Power_Value_W){
+                    Set_Power_Value_W = Set_Power_Value_W-1
                 }
                 await setStateAsync(sID_SET_POWER_MODE,3); // Laden
                 await setStateAsync(sID_SET_POWER_VALUE_W,Set_Power_Value_W) // E3DC bleib beim Laden im Schnitt um ca 82 W unter der eingestellten Ladeleistung
                 if (LogAusgabeSteuerung){log('Schritt = '+Schritt+' E3DC_Set_Power_Mode = 3 (laden)  Set_Power_Value_W = '+Set_Power_Value_W+' M_Power = '+M_Power,'warn');}
             
             }else if(M_Power < 0){
+                // Beim ersten aufruf Wert M_Power übernehmen und erst dann langsam erhöhen oder senken
+                if(Set_Power_Value_W >= 0){Set_Power_Value_W=M_Power}
+                if(!CheckConfig){
+                    // Leistung langsam erhöhrn oder senken um Schwankungen auszugleichen
+                    if(M_Power > Set_Power_Value_W){
+                        Set_Power_Value_W = Set_Power_Value_W + 1
+                    }else if(M_Power < Set_Power_Value_W){
+                        Set_Power_Value_W = Set_Power_Value_W-1
+                    }
+                }else{
+                    Set_Power_Value_W = M_Power
+                }
                 await setStateAsync(sID_SET_POWER_MODE,2); // Entladen
-                await setStateAsync(sID_SET_POWER_VALUE_W,Math.abs(M_Power)) // E3DC bleib beim Entladen im Schnitt um ca 65 W über der eingestellten Ladeleistung
-                if (LogAusgabeSteuerung){log('Schritt = '+Schritt+' E3DC_Set_Power_Mode = 2 (entladen)  M_Power = '+M_Power,'warn');}
+                await setStateAsync(sID_SET_POWER_VALUE_W,Math.abs(Set_Power_Value_W)) // E3DC bleib beim Entladen im Schnitt um ca 65 W über der eingestellten Ladeleistung
+                if (LogAusgabeSteuerung){log('Schritt = '+Schritt+' E3DC_Set_Power_Mode = 2 (entladen) Set_Power_Value_W = '+Set_Power_Value_W+' M_Power = '+M_Power,'warn');}
             }
             E3DC_Set_Power_Mode_alt=E3DC_Set_Power_Mode;
             if (LogAusgabeSteuerung){
@@ -492,8 +495,8 @@ async function Notstromreserve()
     let dStart = new Date(jjjj+',1,1');
     // @ts-ignore
     let tm_yday = Math.round(Math.abs(dAkt - dStart) / (1000 * 60 * 60 * 24 ));
-    let Notstrom_sockel_Proz = (await getStateAsync(sID_Notstrom_sockel_Proz)).val           // Parameter E3DC-Control HTsockel
-    let Notstrom_min_Proz = (await getStateAsync(sID_Notstrom_min_Proz)).val                 // Parameter E3DC-Control HTmin
+    let Notstrom_sockel_Proz = (await getStateAsync(sID_Notstrom_sockel_Proz)).val           // Parameter Charge-Control Notstrom Sockel
+    let Notstrom_min_Proz = (await getStateAsync(sID_Notstrom_min_Proz)).val                 // Parameter Charge-Control Notstrom min
     Notstrom_SOC_Proz = Math.round(Notstrom_sockel_Proz + (Notstrom_min_Proz - Notstrom_sockel_Proz) * Math.cos((tm_yday+9)*2*3.14/365))
     await setStateAsync(sID_Notstrom_akt,Notstrom_SOC_Proz)
 }
@@ -868,13 +871,10 @@ async function writelog() {
 // Verfügbare Speichergröße berechnen
 async function Speichergroesse()
 {
-    let Kapa_BAT0_Ah = (await getStateAsync(sID_BAT0_Nutzbare_Kapazitaet)).val
-    let Kapa_BAT1_Ah = (await getStateAsync(sID_BAT1_Nutzbare_Kapazitaet)).val
-    let Medulspannung_BAT0_V = (await getStateAsync(sID_Bat0_Modulspannung)).val
-    let Medulspannung_BAT1_V = (await getStateAsync(sID_Bat1_Modulspannung)).val
-    let Speicher0_kwh = Kapa_BAT0_Ah * Medulspannung_BAT0_V / 1000
-    let Speicher1_kwh = Kapa_BAT1_Ah * Medulspannung_BAT1_V / 1000
-    Speichergroesse_kWh = round(Speicher0_kwh+Speicher1_kwh,0);
+    let Kapa_Bat_Wh = (await getStateAsync(sID_installed_Battery_Capacity)).val;
+    let ASOC_Bat_Pro = (await getStateAsync(sID_BAT0_Alterungszustand)).val;
+    
+    Speichergroesse_kWh = round(((Kapa_Bat_Wh/100)*ASOC_Bat_Pro)/1000,0);
 }
 
 // Freie Batterie Speicherkapazität in kWh berechnen, Parameter BatterieSoC in %
@@ -1282,7 +1282,7 @@ async function UTC_Dezimal_to_MEZ(){
 }
 
 
-// Zeiten Start und Ende E3DC-Control Regelung von eba
+// Zeiten Start und Ende Regelung von eba
 async function MEZ_Regelzeiten(){
     let dAkt = new Date();
     let jjjj= dAkt.getFullYear();
@@ -1591,7 +1591,7 @@ on({id: arrayID_Parameter5, change: "ne"}, async function (obj) {
 });
 
 // Triggern wenn sich an den Batterie Leistungswerten oder Spannung was ändert
-on({id: arrayID_Batterie, change: "ne"}, async function (obj) {
+on({id: sID_BAT0_Alterungszustand, change: "ne"}, async function (obj) {
     await Speichergroesse();
     CheckConfig = true
     log('-==== Speichergröße hat sich geändert Speichergroesse_kWh ='+Speichergroesse_kWh+' ====-','warn')
