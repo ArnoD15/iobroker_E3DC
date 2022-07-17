@@ -3,6 +3,16 @@ let Resource_Id_Dach=[];
 let sID_UntererLadekorridor_W =[],sID_Ladeschwelle_Proz =[],sID_Ladeende_Proz=[],sID_Ladeende2_Proz=[],sID_Winterminimum=[],sID_Sommermaximum=[],sID_Sommerladeende=[],sID_Unload_Proz=[];
 
 /**********************************************************************************************************
+ Version: 1.0.7     Nach der Zeit Ladeende (Sommer Ladeende) wird die Regelung ausgeschaltet 
+ Version: 1.0.6     Beim Skript Start werden jetzt auch die Prognosewerte Solcast abgerufen mit folgender Einschränkung:
+                    Vor 4 Uhr werden die Prognosewerte für den aktuellen Tag + 6 Tage aktualisiert
+                    Nach 4 Uhr werden nur die Prognosewerte für den nächsten Tag + 5 Tage aktualisiert
+ Version: 1.0.5     Ea werden 200 W vom Einspeiselimit und der maximalen Wechselrichterleistung abgezogen, um die Trägheit der Steuerung auszugleichen 
+ Version: 1.0.4     Speichergröße berechnen geändert. Von der max. Kapazität der Batterie, werden 10% abgezogen die E3DC verwendet,
+                    um ein Entladen auf 0% oder laden auf 100% zu verhindern.
+                    Da das typabhängig ist, muss die Entladetiefe in % im Script unter Einstellungen E3DC eingetragen werden.
+                    Fehler korrigiert das SET_POWER_MODE und SET_POWER_VALUE beim Skript Start zu einem Fehler führen, wenn diese beiden State
+                    nicht definiert sind.
  Version: 1.0.3     Auch die Entladeleistung wird langsam erhöht, um Kurve zu glätten.
  Version: 1.0.2     Speichergröße berechnen geändert. Es wird der ASOC (Alterungszustand) von Bat_0 verwendet, um die
                     verfügbare Batterie Kapazität zu berechnen
@@ -32,6 +42,16 @@ const SolcastDachflaechen = 2;                                  // Aktuell max. 
 Resource_Id_Dach[1] = 'xxxx-xxxx-xxxx-xxxx'                     // Rooftop 1 Id von der Homepage Solcast
 Resource_Id_Dach[2] = 'xxxx-xxxx-xxxx-xxxx'                     // Rooftop 2 Id von der Homepage Solcast
 const SolcastAPI_key = 'xxxxxxxx-xx-xxxxxxxxxxxxxxxxxxxx'       // Solcast API Key
+
+//******************************************** Einstellungen E3DC *******************************************
+const Entladetiefe_Pro = 90;                                    // Die Entladetiefe der Batterie in % aus den Technischen Daten E3DC
+
+//************************************* Einstellungen Diagramm Prognose ***********************************
+const nModulFlaeche = 73;                       // 73 Installierte Modulfläche in m² (Silizium-Zelle 156x156x60 Zellen x 50 Module)
+const nWirkungsgradModule = 18;                 // Wirkungsgrad / Effizienzgrad der Solarmodule in % bezogen auf die Globalstrahlung (aktuelle Module haben max. 24 %)
+const nKorrFaktor = 0                           // nKorrFaktor in Prozent. Reduziert die berechnete Prognose um diese anzugleichen.nKorrFaktor= 0 ohne Korrektur 
+const nMinPvLeistungTag_kWh = 3                 // minimal Mögliche PV-Leistung. Wenn Prognose niedriger ist wird mit diesem Wert gerechnet
+const nMaxPvLeistungTag_kWh = 105               // max. Mögliche PV-Leistung. Wenn Prognose höher ist wird mit diesem Wert gerechnet
 
 
 //****************************** Einstellungen Modul Modbus *****************************
@@ -71,6 +91,8 @@ ScriptStart();
 if ((typeof nModulFlaeche != "number") || (typeof nModulFlaeche == undefined)){console.error("nModulFlaeche muss als Number eingegeben werden");}
 if ((typeof nWirkungsgradModule != "number") || (typeof nWirkungsgradModule == undefined)){console.error("nWirkungsgradModule muss als Number eingegeben werden");}
 if (typeof country != 'string' || typeof country == 'undefined') {console.error('country muss als String eingegeben werden');}
+if ((typeof Entladetiefe_Pro != "number") || (typeof Entladetiefe_Pro == undefined)){console.error("Entladetiefe Batterie muss als Number eingegeben werden");}
+if(Entladetiefe_Pro < 0 || Entladetiefe_Pro >100){console.error("Entladetiefe Batterie muss zwischen 0% und 100% sein");}
 if (Solcast){
     if ((typeof SolcastDachflaechen != "number") || (typeof SolcastDachflaechen == "undefined")){console.error("SolcastDachflaechen muss als Type Number eingegeben werden");}
     if ((typeof Resource_Id_Dach[1] != "string") || (typeof Resource_Id_Dach[1] == "undefined")){console.error("Resource_Id_Dach[1] muss als String eingegeben werden");}
@@ -88,8 +110,8 @@ if (!existsState(sID_Bat_Discharge_Limit)){log('State '+sID_Bat_Discharge_Limit+
 if (!existsState(sID_Bat_Charge_Limit)){log('State '+sID_Bat_Charge_Limit+' ist nicht vorhanden','error')} ;
 if (!existsState(sID_Notrom_Status)){log('State '+sID_Notrom_Status+' ist nicht vorhanden','error')} ;
 if (!existsState(sID_installed_Battery_Capacity)){log('State '+sID_installed_Battery_Capacity+' ist nicht vorhanden','error')} ;
-if (!existsState(sID_SET_POWER_MODE)){log('State '+sID_SET_POWER_MODE+' ist nicht vorhanden','error')} ;
-if (!existsState(sID_SET_POWER_VALUE_W)){log('State '+sID_SET_POWER_VALUE_W+' ist nicht vorhanden','error')} ;
+if (!existsObject(sID_SET_POWER_MODE)){log('State '+sID_SET_POWER_MODE+' ist nicht vorhanden','error')} ;
+if (!existsObject(sID_SET_POWER_VALUE_W)){log('State '+sID_SET_POWER_VALUE_W+' ist nicht vorhanden','error')} ;
 if (!existsState(sID_Max_Discharge_Power_W)){log('State '+sID_Max_Discharge_Power_W+' ist nicht vorhanden','error')} ;
 if (!existsState(sID_maxDischargePower)){log('State '+sID_maxDischargePower+' ist nicht vorhanden','error')} ;
 if (!existsState(sID_startDischargeDefault)){log('State '+sID_startDischargeDefault+' ist nicht vorhanden','error')} ;
@@ -142,8 +164,8 @@ const arrayID_Parameter5 =[sID_UntererLadekorridor_W[5],sID_Ladeschwelle_Proz[5]
 let xhr = new XMLHttpRequest();
 let xhr2 = new XMLHttpRequest();
 
-let Max_wrleistung_W = getState(sID_Max_wrleistung_W).val;                      // Maximale Wechselrichter Leistung
-let Einspeiselimit_kWh = getState(sID_Einspeiselimit_W).val/1000;               // Einspeiselimit
+let Max_wrleistung_W = getState(sID_Max_wrleistung_W).val - 200;                // Maximale Wechselrichter Leistung (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
+let Einspeiselimit_kWh = (getState(sID_Einspeiselimit_W).val - 200)/1000;       // Einspeiselimit (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
 let maximumLadeleistung_W = getState(sID_Bat_Charge_Limit).val;                 // Maximal mögliche Batterie Ladeleistung
 let Bat_Discharge_Limit_W = getState(sID_Bat_Discharge_Limit).val;              // Maximal mögliche Batterie Entladeleistung (negativer Wert)
 let Speichergroesse_kWh                                                         // Installierte Batterie Speicher Kapazität wird in Funktion Speichergroesse() berechnet
@@ -184,11 +206,11 @@ async function ScriptStart()
     Wh_Leistungsmesser2();                                              // Leistungsmesser Überschussleistung starten
     // Wetterdaten beim Programmstart aktualisieren und Timer starten.
     await Speichergroesse()                                             // aktuell verfügbare Batterie Speichergröße berechnen
-    await PrognosedatenAbrufen();                                       // Wetterdaten Proplanta abrufen
-    //await SheduleSolcast(SolcastDachflaechen)                           // Wetterdaten Solcast abrufen
+    if (Solcast) {await SheduleSolcast(SolcastDachflaechen);}           // Wetterdaten Solcast abrufen
     await UTC_Dezimal_to_MEZ();                                         // UTC Zeiten in MEZ umrechnen
     await MEZ_Regelzeiten();                                            // RE,RB und Ladeende berechnen
     await Notstromreserve();                                            // Eingestellte Notstromreserve berechnen
+    await PrognosedatenAbrufen();                                       // Wetterdaten Proplanta abrufen danach wird main() augerufen
 }   
 
 async function CreateState(){
@@ -374,11 +396,7 @@ async function Ladesteuerung()
             }else if(Zeit_aktuell_UTC_sek > tSommerladeende){// Nach Sommerladeende
                 // Wurde Batterie SOC Ladeende2 erreicht, dann Ladung beenden ansonsten mit maximal möglicher Ladeleistung Laden.
                 if(LogAusgabeSteuerung && Schritt != 4){log('-==== Sommerladeende überschritten ====-','warn');Schritt=4;}
-                if (Ladeende2_Proz <= Batterie_SOC_Proz){
-                    M_Power = 0;
-                }else{
-                    M_Power = maximumLadeleistung_W;
-                }
+                M_Power = maximumLadeleistung_W;
             }
         }else{ // SOC Ladeschwelle wurde nicht erreicht. 
             M_Power = maximumLadeleistung_W;
@@ -584,11 +602,11 @@ async function Prognosen_Berechnen()
 {
     let Tag =[], PrognoseProplanta_kWh_Tag =[],PrognoseSolcast_kWh_Tag=[],PrognoseSolcast90_kWh_Tag=[],Prognose_kWh_Tag =[];
 	let IstSummePvLeistung_kWh = (await getStateAsync(instanz + PfadEbene1 + PfadEbene2[1] + 'IstSummePvLeistung_kWh')).val;
-    // Array Tag Datum von heute bis + Tag eintragen
+    // Array Tag Datum von heute bis + 5 Tag eintragen
     for (let i = 0; i < 7 ; i++){
         Tag[i] = nextDayDate(i).slice(8,10);
     }
-    // Array die Aktuellen kWh von Heute + 3 Tage vorraus zuweisen
+    // Array die Aktuellen kWh von Heute + 5 Tage vorraus zuweisen
     for (let i = 0; i < 7 ; i++){
         PrognoseProplanta_kWh_Tag[i] = (await getStateAsync(instanz + PfadEbene1 + PfadEbene2[2]+'PrognoseProp_kWh_'+Tag[i])).val;  
         PrognoseSolcast_kWh_Tag[i] = (await getStateAsync(instanz + PfadEbene1 + PfadEbene2[2]+'PrognoseSolcast_kWh_'+Tag[i])).val;  
@@ -873,7 +891,8 @@ async function Speichergroesse()
 {
     let Kapa_Bat_Wh = (await getStateAsync(sID_installed_Battery_Capacity)).val;
     let ASOC_Bat_Pro = (await getStateAsync(sID_BAT0_Alterungszustand)).val;
-    
+    // E3DC verwendet ca. 10% der Batteriekapazität um sicherzustellen das diese nie ganz entladen wird.
+    Kapa_Bat_Wh = Kapa_Bat_Wh * (Entladetiefe_Pro/100);
     Speichergroesse_kWh = round(((Kapa_Bat_Wh/100)*ASOC_Bat_Pro)/1000,0);
 }
 
@@ -1207,7 +1226,8 @@ function InterrogateSolcast(DachFl){
 
 // Daten Solcast aktualisieren
 async function SheduleSolcast(DachFl) { 
-    let Date, Monat;
+    let Datum, Monat;
+    let dAkt = new Date();
     if (DachFl > 0 && DachFl <= 2 ){
         for (let z = DachFl; z > 0; z--) {
             if (LogAusgabe){log('****************************** Es wird Solcast Dach '+z+' abgerufen ******************************');}
@@ -1216,26 +1236,30 @@ async function SheduleSolcast(DachFl) {
                 log('Rueckmeldung XHR.Status= '+ xhr2.status)
                 //log('DAten='+JSON.stringify(objDaten))
                 let ArrayTageswerte = objDaten['forecasts'];
-                for (let d = 0; d < 7; d++) {
-                    Date = nextDayDate(d);
-                    if (d == 0) {Monat = Date.slice(5,7)} // Monat merken um am Monatende nicht vom Monatsanfang die Werte zu überschreiben
+                
+                for (let d = 0 ; d < 7; d++) {
+                    Datum = nextDayDate(d);
+                    if (d == 0) {Monat = Datum.slice(5,7);} // Monat merken um am Monatende nicht vom Monatsanfang die Werte zu überschreiben
                     for (let i = 0; i < ArrayTageswerte.length; i++) {
-                        if (ArrayTageswerte[i].period_end.search(Date)>-1){
+                        if (ArrayTageswerte[i].period_end.search(Datum)>-1){
                             SummePV_Leistung_Tag_kW[1][d] = SummePV_Leistung_Tag_kW[1][d] + ArrayTageswerte[i].pv_estimate
                             SummePV_Leistung_Tag_kW[3][d] = SummePV_Leistung_Tag_kW[3][d] + ArrayTageswerte[i].pv_estimate90
                         }
                     }
                     if (z ==1){
-                        log('Summe PV Leistung Tag '+Date+ ' pv_estimate= '+round(SummePV_Leistung_Tag_kW[1][d]/2,2)+' pv_estimate10= '+round(SummePV_Leistung_Tag_kW[2][d]/2,2)+' pv_estimate90= '+round(SummePV_Leistung_Tag_kW[3][d]/2,2))
-                        if (Date.slice(5,7) == Monat) {
-                            setState(instanz +PfadEbene1 + PfadEbene2[2] + 'PrognoseSolcast_kWh_' +Date.slice(8,10),round(SummePV_Leistung_Tag_kW[1][d]/2,2));
-                            setState(instanz +PfadEbene1 + PfadEbene2[2] + 'PrognoseSolcast90_kWh_' +Date.slice(8,10),round(SummePV_Leistung_Tag_kW[3][d]/2,2));
+                        log('Summe PV Leistung Tag '+Datum+ ' pv_estimate= '+round(SummePV_Leistung_Tag_kW[1][d]/2,2)+' pv_estimate90= '+round(SummePV_Leistung_Tag_kW[3][d]/2,2))
+                        if (Datum.slice(5,7) == Monat) {
+                            // Nach 4 Uhr die Werte vom aktuellen Tag nicht überschreiben
+                            if (toInt(dAkt.getHours()) <= 4 || d != 0){
+                                setState(instanz +PfadEbene1 + PfadEbene2[2] + 'PrognoseSolcast_kWh_' +Datum.slice(8,10),round(SummePV_Leistung_Tag_kW[1][d]/2,2));
+                                setState(instanz +PfadEbene1 + PfadEbene2[2] + 'PrognoseSolcast90_kWh_' +Datum.slice(8,10),round(SummePV_Leistung_Tag_kW[3][d]/2,2));
+                            }
                         }
                         SummePV_Leistung_Tag_kW[1][d] = 0;
-                        SummePV_Leistung_Tag_kW[2][d] = 0;
                         SummePV_Leistung_Tag_kW[3][d] = 0;
                     }
                 }
+                main();
             }, function(error) {
                 log ('Error in der function InterrogateSolcast. Fehler = '+error, 'warn')
             })   
@@ -1550,7 +1574,7 @@ on({id: arrayID_Notstrom, change: "ne"}, async function (obj) {
 });
 
 
-// Triggern wenn sich an den Parameter1 was ändert
+// Triggern wenn sich an Einstellung 1 was ändert
 on({id: arrayID_Parameter1, change: "ne"}, async function (obj) {
     if(EinstellungAnwahl==1){
         await MEZ_Regelzeiten();
@@ -1558,7 +1582,7 @@ on({id: arrayID_Parameter1, change: "ne"}, async function (obj) {
     }
 });
 
-// Triggern wenn sich an den Parameter2 was ändert
+// Triggern wenn sich an Einstellung 2 was ändert
 on({id: arrayID_Parameter2, change: "ne"}, async function (obj) {
     if(EinstellungAnwahl==2){
         await MEZ_Regelzeiten();
@@ -1566,7 +1590,7 @@ on({id: arrayID_Parameter2, change: "ne"}, async function (obj) {
     }
 });
 
-// Triggern wenn sich an den Parameter3 was ändert
+// Triggern wenn sich an Einstellung 3 was ändert
 on({id: arrayID_Parameter3, change: "ne"}, async function (obj) {
     if(EinstellungAnwahl==3){
         await MEZ_Regelzeiten();
@@ -1574,7 +1598,7 @@ on({id: arrayID_Parameter3, change: "ne"}, async function (obj) {
     }
 });
 
-// Triggern wenn sich an den Parameter4 was ändert
+// Triggern wenn sich an Einstellung 4 was ändert
 on({id: arrayID_Parameter4, change: "ne"}, async function (obj) {
     if(EinstellungAnwahl==4){
         await MEZ_Regelzeiten();
@@ -1582,7 +1606,7 @@ on({id: arrayID_Parameter4, change: "ne"}, async function (obj) {
     }
 });
 
-// Triggern wenn sich an den Parameter5 was ändert
+// Triggern wenn sich an Einstellung 5 was ändert
 on({id: arrayID_Parameter5, change: "ne"}, async function (obj) {
     if(EinstellungAnwahl==5){
         await MEZ_Regelzeiten();
