@@ -3,7 +3,10 @@ let Resource_Id_Dach=[];
 let sID_UntererLadekorridor_W =[],sID_Ladeschwelle_Proz =[],sID_Ladeende_Proz=[],sID_Ladeende2_Proz=[],sID_Winterminimum=[],sID_Sommermaximum=[],sID_Sommerladeende=[],sID_Unload_Proz=[];
 
 /**********************************************************************************************************
- Version: 1.0.8     Wenn die Notstromreserve erreicht ist, wird auch DISCHARGE_START_POWER, MAX_CHARGE_POWER und MAX_DISCHARGE_POWER auf 0 gesetzt,
+ Version: 1.0.9     Fehler, dass Timer bei Neustart vom Skript nicht gelöscht werden, behoben.
+                    Fehler, dass eine Aktualisierung des State "EinstellungAnwahl" zu einem Aufruf von der Funktion Main() führte, behoben.
+                    Fehler, dass die Funktion Main() beim Scriptstart vor der aktualisierung der Prognosewerte Proplanta aufgerufen wurde, behoben.
+ Version: 1.0.8     Wenn Notstromreserve erreicht ist, wird auch DISCHARGE_START_POWER, MAX_CHARGE_POWER und MAX_DISCHARGE_POWER auf 0 gesetzt,
                     damit der WR in den Standby-Modus wechselt und die Batterie nicht weiter entladen wird.
                     Aktualisierung der State SET_POWER_VALUE auf 5 sek. reduziert und kleinere Fehler behoben.
  Version: 1.0.7     Nach der Zeit Ladeende (Sommer Ladeende) wird die Regelung ausgeschaltet 
@@ -47,7 +50,7 @@ Resource_Id_Dach[2] = 'xxxx-xxxx-xxxx-xxxx'                     // Rooftop 2 Id 
 const SolcastAPI_key = 'xxxxxxxx-xx-xxxxxxxxxxxxxxxxxxxx'       // Solcast API Key
 
 //******************************************** Einstellungen E3DC *******************************************
-const Entladetiefe_Pro = 90;                                    // Die Entladetiefe der Batterie in % aus den Technischen Daten E3DC
+const Entladetiefe_Pro = 90;                                    // Die Entladetiefe der Batterie in % aus den technischen Daten E3DC
 
 //************************************* Einstellungen Diagramm Prognose ***********************************
 const nModulFlaeche = 73;                       // 73 Installierte Modulfläche in m² (Silizium-Zelle 156x156x60 Zellen x 50 Module)
@@ -92,6 +95,7 @@ let PfadEbene2 = ['Parameter.','Allgemein.','History.','Proplanta.']
 //***************************************************************************************************
 //*********************************** User Eingaben prüfen ******************************************
 //***************************************************************************************************
+let Start = true
 ScriptStart();
 if ((typeof nModulFlaeche != "number") || (typeof nModulFlaeche == undefined)){console.error("nModulFlaeche muss als Number eingegeben werden");}
 if ((typeof nWirkungsgradModule != "number") || (typeof nWirkungsgradModule == undefined)){console.error("nWirkungsgradModule muss als Number eingegeben werden");}
@@ -194,6 +198,12 @@ let baseUrls = {
 };
 let baseurl = baseUrls[country];
 
+// Wenn noch vom Script gestartet Schedules aktiv sind, dann diese beenden.
+// @ts-ignore
+const list_Start = getSchedules(false);
+list_Start.forEach(schedule => log('-==== Schedule war noch aktiv und wurde beendet ===-'+JSON.stringify(schedule),'warn'));
+list_Start.forEach(schedule => clearSchedule(schedule));
+
 //***************************************************************************************************
 //**************************************** Function Bereich *****************************************
 //***************************************************************************************************
@@ -218,6 +228,7 @@ async function ScriptStart()
     await MEZ_Regelzeiten();                                            // RE,RB und Ladeende berechnen
     await Notstromreserve();                                            // Eingestellte Notstromreserve berechnen
     await PrognosedatenAbrufen();                                       // Wetterdaten Proplanta abrufen danach wird main() augerufen
+    Start = false;
 }   
 
 async function CreateState(){
@@ -564,7 +575,7 @@ async function Notstromreserve()
 async function Einstellung(UeberschussPrognoseProzent)
 {
     let Bedeckungsgrad12,Bedeckungsgrad15;
-    EinstellungAnwahl =  getState(sID_EinstellungAnwahl).val    
+    EinstellungAnwahl =  (await getStateAsync(sID_EinstellungAnwahl)).val    
     if (UeberschussPrognoseProzent== null){
       log('-==== Überschuss PV-Leistung konnte nicht berechnet werden. Ueberschuss='+UeberschussPrognoseProzent+' ====-','error');  
       return  
@@ -1060,7 +1071,7 @@ function InterrogateProplanta(){
         xhr.onreadystatechange = function(){
             if (xhr.readyState ==4){
                 if(xhr.status < 200 || xhr.status > 206 || xhr.responseText == null){
-                    reject('Error, status code = '+ xhr.status)
+                    reject('Error Proplanta, status code = '+ xhr.status)
                 }else{
                     resolve(xhr.responseText)
                 }
@@ -1273,7 +1284,7 @@ async function SheduleSolcast(DachFl) {
             if (LogAusgabe){log('****************************** Es wird Solcast Dach '+z+' abgerufen ******************************');}
             await InterrogateSolcast(z).then(async function(result){
                 let objDaten = JSON.parse(result)
-                log('Rueckmeldung XHR.Status= '+ xhr2.status)
+                log('Rueckmeldung XHR.Status Solcast= '+ xhr2.status)
                 //log('DAten='+JSON.stringify(objDaten))
                 let ArrayTageswerte = objDaten['forecasts'];
                 
@@ -1299,12 +1310,12 @@ async function SheduleSolcast(DachFl) {
                         SummePV_Leistung_Tag_kW[3][d] = 0;
                     }
                 }
-                main();
+                
             }, function(error) {
                 log ('Error in der function InterrogateSolcast. Fehler = '+error, 'warn')
             })   
         }
-                
+        if(!Start){main();}      
     }
 }
 
@@ -1513,7 +1524,7 @@ on({id: sID_Saved_Power_W, valGt: 0}, function (obj) {
 
 
 // Wird aufgerufen wenn State Automatik in VIS geändert wird
-on({id: sID_Automatik}, async function (obj){
+on({id: sID_Automatik, change: "ne"}, async function (obj){
 	 AutomatikAnwahl = getState(obj.id).val;
      if(AutomatikAnwahl) {
         if (LogAusgabe){log('-==== Automatik gestartet ====-');}
@@ -1533,7 +1544,7 @@ on({id: sID_EigenverbrauchTag, change: "ne"}, function (obj){
 
 
 // Wird aufgerufen wenn State HistorySelect in VIS geändert wird
-on({id: sID_AnzeigeHistoryMonat}, async function (obj){
+on({id: sID_AnzeigeHistoryMonat, change: "ne"}, async function (obj){
 	let Auswahl = (await getStateAsync(obj.id)).val
     let Auswahl_0 = await zeroPad(Auswahl,2);
     if (Auswahl<=12){
@@ -1584,7 +1595,7 @@ on({id: sID_PrognoseAnwahl, change: "ne"},async function(obj) {
 });
 
 // Bei Betättigung der Button Einstellung 1-5 in VIS jeweilige Einstellung laden und automatik ausschalten
-on({id: sID_EinstellungAnwahl, valGt: 0}, async function (obj){
+on({id: sID_EinstellungAnwahl, change: "ne",valGt: 0}, async function (obj){
     if(AutomatikAnwahl== true){
         EinstellungAnwahl = obj.state.val
         CheckConfig = true
@@ -1710,8 +1721,9 @@ schedule({hour: 0, minute: 1}, function () {
 
 //Bei Scriptende alle Timer löschen
 onStop(function () { 
-        clearSchedule(Timer0);
-        clearSchedule(Timer1);
-        clearSchedule(Timer2);
-        clearSchedule(Timer3);
+    // @ts-ignore
+    const list_Ende = getSchedules(false);
+    list_Ende.forEach(schedule => clearSchedule(schedule));
 }, 100);
+
+
