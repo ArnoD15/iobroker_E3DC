@@ -3,9 +3,10 @@ let Resource_Id_Dach=[];
 let sID_UntererLadekorridor_W =[],sID_Ladeschwelle_Proz =[],sID_Ladeende_Proz=[],sID_Ladeende2_Proz=[],sID_Winterminimum=[],sID_Sommermaximum=[],sID_Sommerladeende=[],sID_Unload_Proz=[];
 
 /**********************************************************************************************************
+ Version: 1.0.10    getSchedules(false) ersetzt, da es nicht bei allen Problemlos funktioniert.
  Version: 1.0.9     Fehler, dass Timer bei Neustart vom Skript nicht gelöscht werden, behoben.
                     Fehler, dass eine Aktualisierung des State "EinstellungAnwahl" zu einem Aufruf von der Funktion Main() führte, behoben.
-                    Fehler, dass die Funktion Main() beim Scriptstart vor der aktualisierung der Prognosewerte Proplanta aufgerufen wurde, behoben.
+                    Fehler, dass die Function Main() beim Scriptstart vor der aktualisierung der Prognosewerte Proplanta aufgerufen wurde, behoben.
  Version: 1.0.8     Wenn Notstromreserve erreicht ist, wird auch DISCHARGE_START_POWER, MAX_CHARGE_POWER und MAX_DISCHARGE_POWER auf 0 gesetzt,
                     damit der WR in den Standby-Modus wechselt und die Batterie nicht weiter entladen wird.
                     Aktualisierung der State SET_POWER_VALUE auf 5 sek. reduziert und kleinere Fehler behoben.
@@ -198,11 +199,12 @@ let baseUrls = {
 };
 let baseurl = baseUrls[country];
 
+
 // Wenn noch vom Script gestartet Schedules aktiv sind, dann diese beenden.
-// @ts-ignore
-const list_Start = getSchedules(false);
-list_Start.forEach(schedule => log('-==== Schedule war noch aktiv und wurde beendet ===-'+JSON.stringify(schedule),'warn'));
-list_Start.forEach(schedule => clearSchedule(schedule));
+clearSchedule(Timer0);
+clearSchedule(Timer1);
+clearSchedule(Timer2);
+clearSchedule(Timer3);
 
 //***************************************************************************************************
 //**************************************** Function Bereich *****************************************
@@ -1721,9 +1723,10 @@ schedule({hour: 0, minute: 1}, function () {
 
 //Bei Scriptende alle Timer löschen
 onStop(function () { 
-    // @ts-ignore
-    const list_Ende = getSchedules(false);
-    list_Ende.forEach(schedule => clearSchedule(schedule));
+    clearSchedule(Timer0);
+    clearSchedule(Timer1);
+    clearSchedule(Timer2);
+    clearSchedule(Timer3);
 }, 100);
 
 
