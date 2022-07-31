@@ -1,11 +1,15 @@
 # iobroker-E3DC
 
-<h3>E3DC-Control</h3>
-Script zum steuern von E3DC-Control von Eberhard M. über iobroker VIS.
-<p>https://github.com/Eba-M/E3DC-Control</p>
-Mit dem Programm E3DC-Control soll erreicht werden, dass der Batteriespeicher möglichst schonend geladen wird, um die Lebensdauer zu erhöhen und ein abregeln 
+<h3>Charge-Control</h3>
+ioBroker Script zum steuern der Laderegelung von einem E3DC Hauskraftwerk mit Wetterprognose
+<br>
+Mit dem Programm Charge-Control soll erreicht werden, dass der Batteriespeicher möglichst schonend geladen wird, um die Lebensdauer zu erhöhen und ein abregeln 
 beim Überschreiten der 70% Einspeisegrenze zu verhindern.
-Das Script erweitert die Funktion von E3DC-Control um eine Wetterprognose, mit der 5 verschiedene Einstellungen je nach Wetter aufgerufen werden können.
+- Speicher soll nie längere Zeit auf 100 % geladen werden oder auf 0 % entladen werden.
+- Möglichst gleichmäßige Ladeleistung beim Laden.
+- PV-Überschuss soll gespeichert werden, um nicht in die 70 % Abriegelung zu kommen.
+- Bei Überschreitung WR Begrenzung soll Überschuss in die Batterie gespeichert werden.
+<br>
 <p>Weitere Informationen im iobroker Forum: https://forum.iobroker.net/topic/32976/e3dc-hauskraftwerk-steuern</p>
 
 
