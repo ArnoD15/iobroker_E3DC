@@ -4,12 +4,13 @@
 ioBroker Script zum steuern der Laderegelung von einem E3DC Hauskraftwerk mit Wetterprognose
 <br>
 Mit dem Programm Charge-Control soll erreicht werden, dass der Batteriespeicher möglichst schonend geladen wird, um die Lebensdauer zu erhöhen und ein abregeln 
-beim Überschreiten der 70% Einspeisegrenze zu verhindern.
-- Speicher soll nie längere Zeit auf 100 % geladen werden oder auf 0 % entladen werden.
-- Möglichst gleichmäßige Ladeleistung beim Laden.
-- PV-Überschuss soll gespeichert werden, um nicht in die 70 % Abriegelung zu kommen.
-- Bei Überschreitung WR Begrenzung soll Überschuss in die Batterie gespeichert werden.
-<br>
+beim Überschreiten der 70% Einspeisegrenze zu verhindern.<br>
+<ul>
+<li>Speicher soll nie längere Zeit auf 100 % geladen werden oder auf 0 % entladen werden.</li><br>
+<li>Möglichst gleichmäßige Ladeleistung beim Laden.</li><br>
+<li>PV-Überschuss soll gespeichert werden, um nicht in die 70 % Abriegelung zu kommen.</li><br>
+<li>Bei Überschreitung WR Begrenzung soll Überschuss in die Batterie gespeichert werden.</li><br>
+</ul><br><br>
 <p>Weitere Informationen im iobroker Forum: https://forum.iobroker.net/topic/32976/e3dc-hauskraftwerk-steuern</p>
 
 
