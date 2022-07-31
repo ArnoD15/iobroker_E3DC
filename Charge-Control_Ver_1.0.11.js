@@ -3,7 +3,9 @@ let Resource_Id_Dach=[];
 let sID_UntererLadekorridor_W =[],sID_Ladeschwelle_Proz =[],sID_Ladeende_Proz=[],sID_Ladeende2_Proz=[],sID_Winterminimum=[],sID_Sommermaximum=[],sID_Sommerladeende=[],sID_Unload_Proz=[];
 
 /**********************************************************************************************************
- Version: 1.0.10    getSchedules(false) ersetzt, da es nicht bei allen Problemlos funktioniert.
+ Version: 1.0.11    Fehler, dass nach erreichen der Notstromreserve und ausreichender PV-Leistung nicht geladen wurde, behoben.
+                    Wenn die PV-Leistung > 500 W ist, wird das Laden/Entladen der Batterie eingeschaltet und ab 100 W PV-Leistung und Notstrom SOC erreicht ausgeschaltet.
+ Version: 1.0.10    getSchedules(false) ersetzt, da es nicht bei allen problemlos funktioniert.
  Version: 1.0.9     Fehler, dass Timer bei Neustart vom Skript nicht gelöscht werden, behoben.
                     Fehler, dass eine Aktualisierung des State "EinstellungAnwahl" zu einem Aufruf von der Funktion Main() führte, behoben.
                     Fehler, dass die Function Main() beim Scriptstart vor der aktualisierung der Prognosewerte Proplanta aufgerufen wurde, behoben.
@@ -185,7 +187,7 @@ let Speichergroesse_kWh                                                         
 
 let AutomatikAnwahl,ZeitAnwahl_MEZ_MESZ,EinstellungAnwahl,PrognoseAnwahl,count0 = 0, count1 = 0, count2 = 0, Summe0 = 0, Summe1 = 0, Summe2 = 0;
 let tRegelende,tSommerladeende,tRegelbeginn,tRegelende_alt,tRegelbeginn_alt,Zeit_alt_UTC_sek=0,ZeitE3DC_SetPower_alt=0;
-let M_Power,M_Power_alt =0,BAT_Notstrom_Enladen=true,E3DC_Set_Power_Mode=0,E3DC_Set_Power_Mode_alt=0,Set_Power_Value_W=0,Batterie_SOC_alt_Proz=0;
+let M_Power,M_Power_alt =0,BAT_Notstrom_SOC=true,E3DC_Set_Power_Mode=0,E3DC_Set_Power_Mode_alt=0,Set_Power_Value_W=0,Batterie_SOC_alt_Proz=0;
 let Notstrom_SOC_Proz = 0;
 let Timer0 = null, Timer1 = null,Timer2 = null,Timer3 = null;
 let CheckConfig = true, Schritt = 0;
@@ -286,7 +288,7 @@ async function CreateState(){
 
     for (let i = 1; i <= 31; i++) {
 	    let n = zeroPad(i,2);
-        createStateAsync(instanz+PfadEbene1 + PfadEbene2[2] + 'IstPvLeistung_kWh_' +n, {'def':0, 'name':'PV-Leistung Tag sourceanalytix' ,'type':'number', 'unit':'kWh'});
+        createStateAsync(instanz+PfadEbene1 + PfadEbene2[2] + 'IstPvLeistung_kWh_' +n, {'def':0, 'name':'PV-Leistung Tag' ,'type':'number', 'unit':'kWh'});
         createStateAsync(instanz+PfadEbene1 + PfadEbene2[2] + 'PrognoseProp_kWh_' +n, {'def':0, 'name':'Tagesprognose Proplanta', 'type':'number', 'unit':'kWh'});
         createStateAsync(instanz+PfadEbene1 + PfadEbene2[2] + 'PrognoseAuto_kWh_' +n, {'def':0, 'name':'Berechnete Prognose bei Anwahl Automatik' ,'type':'number', 'unit':'kWh'});
         createStateAsync(instanz+PfadEbene1 + PfadEbene2[2] + 'PrognoseSolcast_kWh_' +n, {'def':0, 'name':'Schätzung der PV-Leistung Solcast in Kilowatt (kW)' ,'type':'number', 'unit':'kWh'});
@@ -321,185 +323,192 @@ async function Ladesteuerung()
     let dAkt_UTC = Date.UTC(jjjj, mm,dd, dAkt.getUTCHours(),dAkt.getUTCMinutes(),dAkt.getUTCSeconds());
     let tStart_UTC = Date.UTC(jjjj,mm,dd,0,0,0);
     // @ts-ignore
-    let Zeit_aktuell_UTC_sek = Math.round(Math.abs(dAkt_UTC - tStart_UTC) / 1000);              // sek von 0:00 Uhr bis aktuelle Zeit 
-    let Notstrom_Status = (await getStateAsync(sID_Notrom_Status)).val;                         // aktueller Notstrom Status E3DC 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
-    let Batterie_SOC_Proz = (await getStateAsync(sID_Batterie_SOC)).val;                        // Aktueller Batterie SOC E3DC
-    let PV_Leistung_ADD_W = (await getStateAsync(sID_PvLeistung_ADD_W)).val;                    // Aktuelle zusätzliche PV Leistung externer WR         
-    let PV_Leistung_E3DC_W = (await getStateAsync(sID_PvLeistung_E3DC_W)).val;                  // Aktuelle PV Leistung E3DC
-    let PV_Leistung_Summe_W = PV_Leistung_E3DC_W + Math.abs(PV_Leistung_ADD_W);                 // Summe PV Leistung, PV_Leistung_ADD_W (negativer Wert)
-    let Power_Home_W = (await getStateAsync(sID_Power_Home_W)).val;                             // Aktueller Hausverbrauch E3DC   
-    let Akk_max_Discharge_Power_W = (await getStateAsync(sID_Max_Discharge_Power_W)).val;       // Aktuell eingestellte Entladeleistung   
-    let Akk_max_Charge_Power_W = (await getStateAsync(sID_Max_Charge_Power_W)).val;             // Aktuell eingestellte Ladeleistung   
+    let Zeit_aktuell_UTC_sek = Math.round(Math.abs(dAkt_UTC - tStart_UTC) / 1000);                      // sek von 0:00 Uhr bis aktuelle Zeit 
+    let Notstrom_Status = (await getStateAsync(sID_Notrom_Status)).val;                                 // aktueller Notstrom Status E3DC 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
+    let Batterie_SOC_Proz = (await getStateAsync(sID_Batterie_SOC)).val;                                // Aktueller Batterie SOC E3DC
+    let PV_Leistung_ADD_W = (await getStateAsync(sID_PvLeistung_ADD_W)).val;                            // Aktuelle zusätzliche PV Leistung externer WR         
+    let PV_Leistung_E3DC_W = (await getStateAsync(sID_PvLeistung_E3DC_W)).val;                          // Aktuelle PV Leistung E3DC
+    let PV_Leistung_Summe_W = PV_Leistung_E3DC_W + Math.abs(PV_Leistung_ADD_W);                         // Summe PV Leistung, PV_Leistung_ADD_W (negativer Wert)
+    let Akk_max_Discharge_Power_W = (await getStateAsync(sID_Max_Discharge_Power_W)).val;               // Aktuell eingestellte Entladeleistung   
+    let Akk_max_Charge_Power_W = (await getStateAsync(sID_Max_Charge_Power_W)).val;                     // Aktuell eingestellte Ladeleistung   
+    let Power_Home_W = (await getStateAsync(sID_Power_Home_W)).val;                                     // Aktueller Hausverbrauch E3DC   
+    let UntererLadekorridor_W = (await getStateAsync(sID_UntererLadekorridor_W[EinstellungAnwahl])).val // Parameter UntererLadekorridor
+
     
-    // Das Entladen aus dem Speicher wird freigegeben wenn Notstrom oder Inselbetrieb aktiv ist oder der Batterie SOC > der berechneten Reserve liegt
+    // Das Entladen aus dem Speicher wird freigegeben wenn
+    // Notstrom oder Inselbetrieb aktiv ist oder der Batterie SOC > der berechneten Reserve liegt oder PV-Leistung > Unterer Ladekorridor ist
     // Notstrom_Status 0=nicht möglich 1=active 2= nicht Active 3= nicht verfügbar 4= Inselbetrieb
-    if (Notstrom_Status == 1 || Notstrom_Status == 4 || Notstrom_SOC_Proz < Batterie_SOC_Proz ){
-        // Endladen einschalten
-        BAT_Notstrom_Enladen = true;
+    if (Notstrom_Status == 1 || Notstrom_Status == 4 || Batterie_SOC_Proz > Notstrom_SOC_Proz || PV_Leistung_E3DC_W > 500 ){
+        // Laden/Endladen einschalten
         if(Akk_max_Discharge_Power_W == 0 || Akk_max_Charge_Power_W == 0){
             await setStateAsync(sID_Max_Discharge_Power_W, Math.abs(Bat_Discharge_Limit_W))
-            await setStateAsync(sID_Max_Charge_Power_W, maximumLadeleistung_W)
             await setStateAsync(sID_DISCHARGE_START_POWER, startDischargeDefault)
+            await setStateAsync(sID_Max_Charge_Power_W, maximumLadeleistung_W)
+            log('-==== Laden/Entladen der Batterie ist eingeschaltet ====-')
         }
-    
+    }else if(Batterie_SOC_Proz <= Notstrom_SOC_Proz && PV_Leistung_E3DC_W <= 100){
+        // Laden/Endladen ausschalten nur wenn Notstrom SOC erreicht wurde und PV-Leistung = 0 W
+        if(Akk_max_Discharge_Power_W != 0 || Akk_max_Charge_Power_W != 0){
+            await setStateAsync(sID_DISCHARGE_START_POWER, 0)
+            await setStateAsync(sID_Max_Discharge_Power_W, 0)
+            await setStateAsync(sID_Max_Charge_Power_W, 0)
+            log('-==== Notstrom Reserve erreicht, Laden/Entladen der Batterie ist ausgeschaltet ====-')
+        }
+    }                                        
+
+    // Merker BAT_Notstrom_SOC ob Notstrom SOC erreicht ist um nur das entladen der Batterie zu verhindern.
+    if (Notstrom_Status == 1 || Notstrom_Status == 4 || Batterie_SOC_Proz > Notstrom_SOC_Proz){
+        // Endladen einschalten
+        BAT_Notstrom_SOC = false;
     }else{
         // Endladen ausschalten
-        BAT_Notstrom_Enladen = false;
-    }                                                                                          
-        
+        BAT_Notstrom_SOC = true;
+    }                                                                                        
+
     // Nur wenn PV-Leistung vorhanden ist Regelung starten.
-    if(PV_Leistung_Summe_W >0 ){ //|| Zeit_aktuell_sek < tRegelbeginn)
+    if(PV_Leistung_Summe_W > 0 ){
         let Power = 0;
         let Unload_Proz = (await getStateAsync(sID_Unload_Proz[EinstellungAnwahl])).val;                            // Parameter Unload
         let Ladeende_Proz = (await getStateAsync(sID_Ladeende_Proz[EinstellungAnwahl])).val                         // Parameter Ladeende
         let Ladeende2_Proz = (await getStateAsync(sID_Ladeende2_Proz[EinstellungAnwahl])).val                       // Parameter Ladeende2
-        let UntererLadekorridor_W = (await getStateAsync(sID_UntererLadekorridor_W[EinstellungAnwahl])).val         // Parameter UntererLadekorridor
         let Ladeschwelle_Proz = (await getStateAsync(sID_Ladeschwelle_Proz[EinstellungAnwahl])).val                 // Parameter Ladeschwelle
         
-        // Prüfen ob SOC Batterie > Ladeschwelle.Bis zu diesem SoC Wert wird sofort mit der gesamten überschüssigen PV-Leistung geladen. Erst wenn die ladeschwelle erreicht wird, wird mit dem geregelten Laden begonnen  
-        if (Batterie_SOC_Proz > Ladeschwelle_Proz) { //SOC Ladeschwelle wurde erreicht.
-            // Prüfen ob vor Regelbeginn
-            if (Zeit_aktuell_UTC_sek < tRegelbeginn) { // Vor Regelbeginn.
-                if(LogAusgabeSteuerung && Schritt != 1){log('-==== Vor Regelbeginn ====-','warn');Schritt = 1;}
-                // Ist Unload < Ladeschwelle wird bis Ladeschwelle geladen und Unload ignoriert
-                if(Ladeschwelle_Proz <= Unload_Proz){
-                    let Unload_SOC_Proz = 100
-                    // Ist der Batterie SoC > Unload wird entladen
-                    if ((Batterie_SOC_Proz - Unload_Proz) > 0){
-                        if ((Batterie_SOC_Proz - Unload_Proz) < 1){
-                            Unload_SOC_Proz = Batterie_SOC_Proz
-                        }else{
-                            // Es wird bis Regelbeginn auf Unload entladen
-                            Unload_SOC_Proz = Unload_Proz;
-                        }
-                        // Neuberechnung der Ladeleistung erfolgt, wenn der SoC sich ändert oder nach Ablauf von höchstens 5 Minuten oder tLadezeitende sich ändert oder die letzte Ladeleistung 0 W war oder die Parameter sich geändert haben.
-                        if(Batterie_SOC_Proz != Batterie_SOC_alt_Proz || (Zeit_aktuell_UTC_sek - Zeit_alt_UTC_sek) > 300 || tRegelbeginn != tRegelbeginn_alt || M_Power == 0 || M_Power == maximumLadeleistung_W || CheckConfig){
-                            Batterie_SOC_alt_Proz = Batterie_SOC_Proz; CheckConfig = false; tRegelbeginn_alt = tRegelbeginn; Zeit_alt_UTC_sek = Zeit_aktuell_UTC_sek;
-                            // Berechnen der Entladeleistung bis zum Unload SOC in W/sek.
-                            M_Power = Math.round(((Unload_SOC_Proz - Batterie_SOC_Proz)*Speichergroesse_kWh*10*3600) / (tRegelbeginn-Zeit_aktuell_UTC_sek)) ;
-                            if(LogAusgabeSteuerung){log('-==== 1 M_Power:'+M_Power+' = Math.round(((Unload_SOC_Proz:'+Unload_SOC_Proz+' - Batterie_SOC_Proz:'+Batterie_SOC_Proz+')*Speichergroesse_kWh:'+Speichergroesse_kWh+'*10*3600) / (tRegelbeginn:'+tRegelbeginn+' - Zeit_aktuell_UTC_sek:'+Zeit_aktuell_UTC_sek+')) ====-')}
-                
-                            // Prüfen ob die PV-Leistung plus Entladeleistung Batterie die max. WR-Leistung übersteigt
-                            if((PV_Leistung_E3DC_W - M_Power)> Max_wrleistung_W){
-                                M_Power = PV_Leistung_E3DC_W - Max_wrleistung_W
+        // Wenn Notstrom SOC nicht erreicht ist oder Notstrom SOC erreicht wurde und mehr PV-Leistung als benötigt vorhanden ist (Überschuss) regelung starten
+        if((BAT_Notstrom_SOC && (PV_Leistung_Summe_W - Power_Home_W) > 0 ) || !BAT_Notstrom_SOC){
+            // Prüfen ob SOC Batterie > Ladeschwelle.Bis zu diesem SoC Wert wird sofort mit der gesamten überschüssigen PV-Leistung geladen. Erst wenn die ladeschwelle erreicht wird, wird mit dem geregelten Laden begonnen  
+            if (Batterie_SOC_Proz > Ladeschwelle_Proz) { //SOC Ladeschwelle wurde erreicht.
+                // Prüfen ob vor Regelbeginn
+                if (Zeit_aktuell_UTC_sek < tRegelbeginn) { // Vor Regelbeginn.
+                    if(LogAusgabeSteuerung && Schritt != 1){log('-==== Vor Regelbeginn ====-','warn');Schritt = 1;}
+                    // Ist Unload < Ladeschwelle wird bis Ladeschwelle geladen und Unload ignoriert
+                    if(Ladeschwelle_Proz <= Unload_Proz){
+                        let Unload_SOC_Proz = 100
+                        // Ist der Batterie SoC > Unload wird entladen
+                        if ((Batterie_SOC_Proz - Unload_Proz) > 0){
+                            if ((Batterie_SOC_Proz - Unload_Proz) < 1){
+                                Unload_SOC_Proz = Batterie_SOC_Proz
+                            }else{
+                                // Es wird bis Regelbeginn auf Unload entladen
+                                Unload_SOC_Proz = Unload_Proz;
                             }
+                            // Neuberechnung der Ladeleistung erfolgt, wenn der SoC sich ändert oder nach Ablauf von höchstens 5 Minuten oder tLadezeitende sich ändert oder die letzte Ladeleistung 0 W war oder die Parameter sich geändert haben.
+                            if(Batterie_SOC_Proz != Batterie_SOC_alt_Proz || (Zeit_aktuell_UTC_sek - Zeit_alt_UTC_sek) > 300 || tRegelbeginn != tRegelbeginn_alt || M_Power == 0 || M_Power == maximumLadeleistung_W || CheckConfig){
+                                Batterie_SOC_alt_Proz = Batterie_SOC_Proz; CheckConfig = false; tRegelbeginn_alt = tRegelbeginn; Zeit_alt_UTC_sek = Zeit_aktuell_UTC_sek;
+                                // Berechnen der Entladeleistung bis zum Unload SOC in W/sek.
+                                M_Power = Math.round(((Unload_SOC_Proz - Batterie_SOC_Proz)*Speichergroesse_kWh*10*3600) / (tRegelbeginn-Zeit_aktuell_UTC_sek)) ;
+                                if(LogAusgabeSteuerung){log('-==== 1 M_Power:'+M_Power+' = Math.round(((Unload_SOC_Proz:'+Unload_SOC_Proz+' - Batterie_SOC_Proz:'+Batterie_SOC_Proz+')*Speichergroesse_kWh:'+Speichergroesse_kWh+'*10*3600) / (tRegelbeginn:'+tRegelbeginn+' - Zeit_aktuell_UTC_sek:'+Zeit_aktuell_UTC_sek+')) ====-')}
+                
+                                // Prüfen ob die PV-Leistung plus Entladeleistung Batterie die max. WR-Leistung übersteigt
+                                if((PV_Leistung_E3DC_W - M_Power)> Max_wrleistung_W){
+                                 M_Power = PV_Leistung_E3DC_W - Max_wrleistung_W
+                                }
+                            }
+                            // Laden der Batterie erst nach Regelbeginn zulassen
+                            if(M_Power > 0){M_Power = 0;}
+                        }else{
+                            M_Power = 0;
                         }
-                        // Laden der Batterie erst nach Regelbeginn zulassen
-                        if(M_Power > 0){M_Power = 0;}
-                        
-                    }else{
-                        M_Power = 0;
                     }
-                }
            
-            }else if(Zeit_aktuell_UTC_sek < tRegelende){ // Nach Regelbeginn vor Regelende
-                if(LogAusgabeSteuerung && Schritt != 2){log('-==== Nach Regelbeginn vor Regelende ====-','warn');Schritt=2;}
-                // Neuberechnung der Ladeleistung erfolgt, wenn der SoC sich ändert oder nach Ablauf von höchstens 5 Minuten oder tLadezeitende sich ändert oder die letzte Ladeleistung 0 W war oder die Parameter sich geändert haben.
-                if(Batterie_SOC_Proz != Batterie_SOC_alt_Proz || (Zeit_aktuell_UTC_sek - Zeit_alt_UTC_sek) > 300 || tRegelende != tRegelende_alt || M_Power == 0 || M_Power == maximumLadeleistung_W || CheckConfig){
-                    Batterie_SOC_alt_Proz = Batterie_SOC_Proz; CheckConfig = false; tRegelende_alt = tRegelende; Zeit_alt_UTC_sek = Zeit_aktuell_UTC_sek;
-                    // Berechnen der Ladeleistung bis zum Ladeende SOC in W/sek.
-                    M_Power = Math.round(((Ladeende_Proz - Batterie_SOC_Proz)*Speichergroesse_kWh*10*3600) / (tRegelende-Zeit_aktuell_UTC_sek));
-                    if(LogAusgabeSteuerung){log('-==== 2 M_Power:'+M_Power+' = Math.round(((Ladeende_Proz:'+Ladeende_Proz+' - Batterie_SOC_Proz:'+Batterie_SOC_Proz+')*Speichergroesse_kWh:'+Speichergroesse_kWh+'*10*3600) / (tRegelende:'+tRegelende+' - Zeit_aktuell_UTC_sek:'+Zeit_aktuell_UTC_sek+')) ====-')}
-                    if (M_Power < UntererLadekorridor_W || M_Power < 0){
-                        M_Power = 0
-                    }
-                }
-            
-            }else if(Zeit_aktuell_UTC_sek < tSommerladeende){ // Nach Regelende vor Sommerladeende
-                if(LogAusgabeSteuerung && Schritt != 3){log('-==== Nach Regelende vor Sommerladeende ====-','warn');Schritt=3;}
-                if (Batterie_SOC_Proz < Ladeende_Proz){
-                    M_Power = maximumLadeleistung_W;
-                }else if (Batterie_SOC_Proz < Ladeende2_Proz){
-                    // Berechnen der Ladeleistung bis zum Ladeende SOC in W/sek.
+                }else if(Zeit_aktuell_UTC_sek < tRegelende){ // Nach Regelbeginn vor Regelende
+                    if(LogAusgabeSteuerung && Schritt != 2){log('-==== Nach Regelbeginn vor Regelende ====-','warn');Schritt=2;}
                     // Neuberechnung der Ladeleistung erfolgt, wenn der SoC sich ändert oder nach Ablauf von höchstens 5 Minuten oder tLadezeitende sich ändert oder die letzte Ladeleistung 0 W war oder die Parameter sich geändert haben.
                     if(Batterie_SOC_Proz != Batterie_SOC_alt_Proz || (Zeit_aktuell_UTC_sek - Zeit_alt_UTC_sek) > 300 || tRegelende != tRegelende_alt || M_Power == 0 || M_Power == maximumLadeleistung_W || CheckConfig){
                         Batterie_SOC_alt_Proz = Batterie_SOC_Proz; CheckConfig = false; tRegelende_alt = tRegelende; Zeit_alt_UTC_sek = Zeit_aktuell_UTC_sek;
-                        M_Power = Math.round(((Ladeende2_Proz - Batterie_SOC_Proz)*Speichergroesse_kWh*10*3600) / (tSommerladeende-Zeit_aktuell_UTC_sek));
-                        if(LogAusgabeSteuerung){log('-==== 3 M_Power:'+M_Power+' = Math.round(((Ladeende2_Proz:'+Ladeende2_Proz+' - Batterie_SOC_Proz:'+Batterie_SOC_Proz+')* Speichergroesse_kWh:'+Speichergroesse_kWh+' * 10 * 3600)/(tSommerladeende:'+tSommerladeende+' - Zeit_aktuell_UTC_sek:'+Zeit_aktuell_UTC_sek+')) ====-')}
-                        if (M_Power < 0){M_Power = 0;} 
-                    }   
-                }else{
-                    M_Power = 0;
+                        // Berechnen der Ladeleistung bis zum Ladeende SOC in W/sek.
+                        M_Power = Math.round(((Ladeende_Proz - Batterie_SOC_Proz)*Speichergroesse_kWh*10*3600) / (tRegelende-Zeit_aktuell_UTC_sek));
+                        if(LogAusgabeSteuerung){log('-==== 2 M_Power:'+M_Power+' = Math.round(((Ladeende_Proz:'+Ladeende_Proz+' - Batterie_SOC_Proz:'+Batterie_SOC_Proz+')*Speichergroesse_kWh:'+Speichergroesse_kWh+'*10*3600) / (tRegelende:'+tRegelende+' - Zeit_aktuell_UTC_sek:'+Zeit_aktuell_UTC_sek+')) ====-')}
+                        if (M_Power < UntererLadekorridor_W || M_Power < 0){
+                         M_Power = 0
+                        }
+                    }
+            
+                }else if(Zeit_aktuell_UTC_sek < tSommerladeende){ // Nach Regelende vor Sommerladeende
+                    if(LogAusgabeSteuerung && Schritt != 3){log('-==== Nach Regelende vor Sommerladeende ====-','warn');Schritt=3;}
+                    if (Batterie_SOC_Proz < Ladeende_Proz){
+                        M_Power = maximumLadeleistung_W;
+                    }else if (Batterie_SOC_Proz < Ladeende2_Proz){
+                        // Berechnen der Ladeleistung bis zum Ladeende SOC in W/sek.
+                        // Neuberechnung der Ladeleistung erfolgt, wenn der SoC sich ändert oder nach Ablauf von höchstens 5 Minuten oder tLadezeitende sich ändert oder die letzte Ladeleistung 0 W war oder die Parameter sich geändert haben.
+                        if(Batterie_SOC_Proz != Batterie_SOC_alt_Proz || (Zeit_aktuell_UTC_sek - Zeit_alt_UTC_sek) > 300 || tRegelende != tRegelende_alt || M_Power == 0 || M_Power == maximumLadeleistung_W || CheckConfig){
+                            Batterie_SOC_alt_Proz = Batterie_SOC_Proz; CheckConfig = false; tRegelende_alt = tRegelende; Zeit_alt_UTC_sek = Zeit_aktuell_UTC_sek;
+                            M_Power = Math.round(((Ladeende2_Proz - Batterie_SOC_Proz)*Speichergroesse_kWh*10*3600) / (tSommerladeende-Zeit_aktuell_UTC_sek));
+                            if(LogAusgabeSteuerung){log('-==== 3 M_Power:'+M_Power+' = Math.round(((Ladeende2_Proz:'+Ladeende2_Proz+' - Batterie_SOC_Proz:'+Batterie_SOC_Proz+')* Speichergroesse_kWh:'+Speichergroesse_kWh+' * 10 * 3600)/(tSommerladeende:'+tSommerladeende+' - Zeit_aktuell_UTC_sek:'+Zeit_aktuell_UTC_sek+')) ====-')}
+                            if (M_Power < 0){M_Power = 0;} 
+                        }   
+                    }else{
+                        M_Power = 0;
+                    }
+                }else if(Zeit_aktuell_UTC_sek > tSommerladeende){// Nach Sommerladeende
+                    // Wurde Batterie SOC Ladeende2 erreicht, dann Ladung beenden ansonsten mit maximal möglicher Ladeleistung Laden.
+                    if(LogAusgabeSteuerung && Schritt != 4){log('-==== Sommerladeende überschritten ====-','warn');Schritt=4;}
+                    M_Power = maximumLadeleistung_W;
                 }
-            }else if(Zeit_aktuell_UTC_sek > tSommerladeende){// Nach Sommerladeende
-                // Wurde Batterie SOC Ladeende2 erreicht, dann Ladung beenden ansonsten mit maximal möglicher Ladeleistung Laden.
-                if(LogAusgabeSteuerung && Schritt != 4){log('-==== Sommerladeende überschritten ====-','warn');Schritt=4;}
+            }else{ // SOC Ladeschwelle wurde nicht erreicht. 
                 M_Power = maximumLadeleistung_W;
             }
-        }else{ // SOC Ladeschwelle wurde nicht erreicht. 
-            M_Power = maximumLadeleistung_W;
-            if(Akk_max_Charge_Power_W == 0){
-                await setStateAsync(sID_Max_Charge_Power_W, maximumLadeleistung_W)
+            
+            // Prüfen ob höhere Ladeleistung nötig ist um Einspeisegrenze einhalten zu können.
+            Power = (PV_Leistung_E3DC_W - (Einspeiselimit_kWh * 1000))-Power_Home_W
+            // Prüfen ob die PV-leistung die WR-Leistung überschreiten.
+            let Power_WR = PV_Leistung_E3DC_W - Max_wrleistung_W
+            if (Power < 0){Power = 0}
+            if (Power_WR < 0){Power_WR=0}
+
+            if(Power_WR > 0 || Power > 0){
+                if (Power_WR > Power){
+                    await setStateAsync(sID_Saved_Power_W,Power_WR)
+                    if(M_Power < Power_WR){M_Power = Power_WR;if(LogAusgabeSteuerung ){log('-==== Power_WR:'+Power_WR+' M_Power:'+M_Power+' ====-')};}
+                }else{
+                    await setStateAsync(sID_Saved_Power_W,Power)
+                    if(M_Power < Power){M_Power = Power;if(LogAusgabeSteuerung ){log('-==== Power:'+Power+' M_Power:'+M_Power+' ====-')};}
+                }  
+            }else{
+                await setStateAsync(sID_Saved_Power_W,0)
             }
         
-        }
-
-        // Prüfen ob höhere Ladeleistung nötig ist um Einspeisegrenze einhalten zu können.
-        Power = (PV_Leistung_E3DC_W - (Einspeiselimit_kWh * 1000))-Power_Home_W
-        // Prüfen ob die PV-leistung die WR-Leistung überschreiten.
-        let Power_WR = PV_Leistung_E3DC_W - Max_wrleistung_W
-        if (Power < 0){Power = 0}
-        if (Power_WR < 0){Power_WR=0}
-
-        if(Power_WR > 0 || Power > 0){
-            if (Power_WR > Power){
-                await setStateAsync(sID_Saved_Power_W,Power_WR)
-                if(M_Power < Power_WR){M_Power = Power_WR;if(LogAusgabeSteuerung ){log('-==== Power_WR:'+Power_WR+' M_Power:'+M_Power+' ====-')};}
-            }else{
-                await setStateAsync(sID_Saved_Power_W,Power)
-                if(M_Power < Power){M_Power = Power;if(LogAusgabeSteuerung ){log('-==== Power:'+Power+' M_Power:'+M_Power+' ====-')};}
-            }  
-        }else{
-            await setStateAsync(sID_Saved_Power_W,0)
-        }
-      
-        // Prüfen ob Berechnete Ladeleistung innerhalb der min. und max. Grenze ist
-        if (M_Power < Bat_Discharge_Limit_W){M_Power = Bat_Discharge_Limit_W;} 
-        if (M_Power > maximumLadeleistung_W){M_Power = maximumLadeleistung_W;}
+            // Prüfen ob Berechnete Ladeleistung innerhalb der min. und max. Grenze ist
+            if (M_Power < Bat_Discharge_Limit_W){M_Power = Bat_Discharge_Limit_W;} 
+            if (M_Power > maximumLadeleistung_W){M_Power = maximumLadeleistung_W;}
         
-    }
+            //Prüfen ob berechnete Ladeleistung M_Power zu Netzbezug führt
+            if(M_Power >= 0){   
+                let PowerGrid = PV_Leistung_Summe_W -(Power_Home_W + M_Power)
+                if(PowerGrid < 500 && M_Power != maximumLadeleistung_W){// Führt zu Netzbezug, Steuerung ausschalten
+                    M_Power = maximumLadeleistung_W
+                    if(LogAusgabeSteuerung){log('-==== Ladesteuerung gestoppt ====-','warn');}
+                }   
+            }else{
+                let PowerGrid = PV_Leistung_Summe_W -(Power_Home_W - M_Power)
+                if(LogAusgabeSteuerung){log('Entladeleistung M_Power='+M_Power,'warn');}
+                if(PowerGrid < M_Power ){// Führt zu Netzbezug, Entladeleistung erhöhen
+                    M_Power = PowerGrid
+                    // Merker um neu Berechnung zu triggern
+                    CheckConfig = true;
+                    if(LogAusgabeSteuerung){log('Entladeleistung PowerGrid ='+PowerGrid,'warn');}
+                }   
+            }
+       }else{
+            // Notstrom SOC erreicht und nicht ausreichend PV-Leistung vorhanden
+            // Entladen der Batterie stoppen
+            M_Power = 0    
+        }
+   }
     
-    //Prüfen ob berechnete Ladeleistung M_Power zu Netzbezug führt
-    if(M_Power >= 0){   
-        let PowerGrid = PV_Leistung_Summe_W -(Power_Home_W + M_Power)
-        if(PowerGrid < 500 && M_Power != maximumLadeleistung_W){// Führt zu Netzbezug, Steuerung ausschalten
-            M_Power = maximumLadeleistung_W
-            if(LogAusgabeSteuerung){log('-==== Ladesteuerung gestoppt ====-','warn');}
-        }   
-    }else{
-        let PowerGrid = PV_Leistung_Summe_W -(Power_Home_W - M_Power)
-        if(LogAusgabeSteuerung){log('Entladeleistung M_Power='+M_Power,'warn');}
-        if(PowerGrid < M_Power ){// Führt zu Netzbezug, Entladeleistung erhöhen
-            M_Power = PowerGrid
-            // Merker um neu Berechnung zu triggern
-            CheckConfig = true;
-            if(LogAusgabeSteuerung){log('Entladeleistung PowerGrid ='+PowerGrid,'warn');}
-        }   
-    }
-    // Leerlauf beibehalten bis sich der Wert M_Power ändert oder Notstrom Reserve erreicht ist
-    if(M_Power_alt != maximumLadeleistung_W || M_Power != maximumLadeleistung_W || !BAT_Notstrom_Enladen ){
-        // Alle 10 sek. muss mindestens ein Steuerbefehl an e3dc.rscp Adapter gesendet werden sonst übernimmt E3DC die Steuerung
+    
+    // Leerlauf beibehalten bis sich der Wert M_Power ändert oder Notstrom SOC erreicht ist
+    if(M_Power_alt != maximumLadeleistung_W || M_Power != maximumLadeleistung_W ){
+        // Alle 6 sek. muss mindestens ein Steuerbefehl an e3dc.rscp Adapter gesendet werden sonst übernimmt E3DC die Steuerung
         if(M_Power != M_Power_alt || E3DC_Set_Power_Mode != E3DC_Set_Power_Mode_alt || (Zeit_aktuell_UTC_sek- ZeitE3DC_SetPower_alt)> 5){
             ZeitE3DC_SetPower_alt = Zeit_aktuell_UTC_sek;M_Power_alt = M_Power;
 
-            if(M_Power == 0 || !BAT_Notstrom_Enladen ){
+            if(M_Power == 0){
                 Set_Power_Value_W = 0;
                 await setStateAsync(sID_SET_POWER_MODE,1); // Idle
                 await setStateAsync(sID_SET_POWER_VALUE_W,0)
-                // Statische Lade/Entladesperre nur wenn Notstrom SOC erreicht wurde um SSD Schreibzugriffe zu reduzieren
-                if((Akk_max_Discharge_Power_W != 0 || Akk_max_Charge_Power_W != 0) && !BAT_Notstrom_Enladen){
-                    await setStateAsync(sID_DISCHARGE_START_POWER, 0)
-                    await setStateAsync(sID_Max_Discharge_Power_W, 0)
-                    await setStateAsync(sID_Max_Charge_Power_W, 0)
-                }
                 if (LogAusgabeSteuerung){log('Schritt = '+Schritt+' E3DC_Set_Power_Mode = 1');}
-            }else if(M_Power == maximumLadeleistung_W){
-                // E3DC die Steuerun überlassen, dann wird mit der maximal möglichen Ladeleistung geladen oder entladen
-                if(Akk_max_Discharge_Power_W == 0 || Akk_max_Charge_Power_W == 0){
-                    await setStateAsync(sID_Max_Discharge_Power_W, Math.abs(Bat_Discharge_Limit_W))
-                    await setStateAsync(sID_Max_Charge_Power_W, maximumLadeleistung_W)
-                    await setStateAsync(sID_DISCHARGE_START_POWER, startDischargeDefault)
-                }
+            }else if(M_Power == maximumLadeleistung_W ){
+                // E3DC die Steuerung überlassen, dann wird mit der maximal möglichen Ladeleistung geladen oder entladen
                 Set_Power_Value_W = 0
                 await setStateAsync(sID_SET_POWER_MODE,0); // Normal
                 if(LogAusgabeSteuerung){log('-==== Schritt = '+Schritt+' keine Steuerung ====-')}
@@ -513,20 +522,15 @@ async function Ladesteuerung()
                 }else if(M_Power < Set_Power_Value_W){
                     Set_Power_Value_W = Set_Power_Value_W-1
                 }
-                if(Akk_max_Discharge_Power_W == 0 || Akk_max_Charge_Power_W == 0){
-                    await setStateAsync(sID_Max_Discharge_Power_W, Math.abs(Bat_Discharge_Limit_W))
-                    await setStateAsync(sID_Max_Charge_Power_W, maximumLadeleistung_W)
-                    await setStateAsync(sID_DISCHARGE_START_POWER, startDischargeDefault)
-                }
                 await setStateAsync(sID_SET_POWER_MODE,3); // Laden
                 await setStateAsync(sID_SET_POWER_VALUE_W,Set_Power_Value_W) // E3DC bleib beim Laden im Schnitt um ca 82 W unter der eingestellten Ladeleistung
                 if (LogAusgabeSteuerung){log('Schritt = '+Schritt+' E3DC_Set_Power_Mode = 3 (laden)  Set_Power_Value_W = '+Set_Power_Value_W+' M_Power = '+M_Power,'warn');}
             
-            }else if(M_Power < 0){
+            }else if(M_Power < 0 && Batterie_SOC_Proz > Notstrom_SOC_Proz){
                 // Beim ersten aufruf Wert M_Power übernehmen und erst dann langsam erhöhen oder senken
                 if(Set_Power_Value_W >= 0){Set_Power_Value_W=M_Power}
                 if(!CheckConfig){
-                    // Leistung langsam erhöhrn oder senken um Schwankungen auszugleichen
+                    // Leistung langsam erhöhen oder senken um Schwankungen auszugleichen
                     if(M_Power > Set_Power_Value_W){
                         Set_Power_Value_W = Set_Power_Value_W + 1
                     }else if(M_Power < Set_Power_Value_W){
@@ -535,23 +539,15 @@ async function Ladesteuerung()
                 }else{
                     Set_Power_Value_W = M_Power
                 }
-                if(Akk_max_Discharge_Power_W == 0 || Akk_max_Charge_Power_W == 0){
-                    await setStateAsync(sID_Max_Discharge_Power_W, Math.abs(Bat_Discharge_Limit_W))
-                    await setStateAsync(sID_Max_Charge_Power_W, maximumLadeleistung_W)
-                    await setStateAsync(sID_DISCHARGE_START_POWER, startDischargeDefault)
-                }
                 await setStateAsync(sID_SET_POWER_MODE,2); // Entladen
                 await setStateAsync(sID_SET_POWER_VALUE_W,Math.abs(Set_Power_Value_W)) // E3DC bleib beim Entladen im Schnitt um ca 65 W über der eingestellten Ladeleistung
                 if (LogAusgabeSteuerung){log('Schritt = '+Schritt+' E3DC_Set_Power_Mode = 2 (entladen) Set_Power_Value_W = '+Set_Power_Value_W+' M_Power = '+M_Power,'warn');}
+            
             }
+            
+            
             E3DC_Set_Power_Mode_alt=E3DC_Set_Power_Mode;
-            if (LogAusgabeSteuerung){
-                if (!BAT_Notstrom_Enladen){log('-==== Notstrom Reserve erreicht, Entladen der Batterie ist ausgeschaltet ====-')}
-                //log('Berechnete Notstromreserve Notstrom_SOC_Proz ='+Notstrom_SOC_Proz)
-                                
-            } 
-       
-        
+            
         }
 
     }
@@ -1728,5 +1724,6 @@ onStop(function () {
     clearSchedule(Timer2);
     clearSchedule(Timer3);
 }, 100);
+
 
 
