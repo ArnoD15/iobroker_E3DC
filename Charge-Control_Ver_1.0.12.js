@@ -3,6 +3,7 @@ let Resource_Id_Dach=[];
 let sID_UntererLadekorridor_W =[],sID_Ladeschwelle_Proz =[],sID_Ladeende_Proz=[],sID_Ladeende2_Proz=[],sID_Winterminimum=[],sID_Sommermaximum=[],sID_Sommerladeende=[],sID_Unload_Proz=[];
 
 /**********************************************************************************************************
+ Version: 1.0.12    Fehler, dass Ladeleistung bei Überschreiten der Einspeisegrenze nur langsam erhöht wurde, behoben.
  Version: 1.0.11    Fehler, dass nach erreichen der Notstromreserve und ausreichender PV-Leistung nicht geladen wurde, behoben.
                     Wenn die PV-Leistung > 500 W ist, wird das Laden/Entladen der Batterie eingeschaltet und ab 100 W PV-Leistung und Notstrom SOC erreicht ausgeschaltet.
  Version: 1.0.10    getSchedules(false) ersetzt, da es nicht bei allen problemlos funktioniert.
@@ -188,7 +189,7 @@ let Speichergroesse_kWh                                                         
 let AutomatikAnwahl,ZeitAnwahl_MEZ_MESZ,EinstellungAnwahl,PrognoseAnwahl,count0 = 0, count1 = 0, count2 = 0, Summe0 = 0, Summe1 = 0, Summe2 = 0;
 let tRegelende,tSommerladeende,tRegelbeginn,tRegelende_alt,tRegelbeginn_alt,Zeit_alt_UTC_sek=0,ZeitE3DC_SetPower_alt=0;
 let M_Power,M_Power_alt =0,BAT_Notstrom_SOC=true,E3DC_Set_Power_Mode=0,E3DC_Set_Power_Mode_alt=0,Set_Power_Value_W=0,Batterie_SOC_alt_Proz=0;
-let Notstrom_SOC_Proz = 0;
+let Notstrom_SOC_Proz = 0, M_Abriegelung=false;
 let Timer0 = null, Timer1 = null,Timer2 = null,Timer3 = null;
 let CheckConfig = true, Schritt = 0;
 let SummePV_Leistung_Tag_kW =[{0:'',1:'',2:'',3:'',4:'',5:'',6:'',7:''},{0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0},{0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0},{0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0}];
@@ -458,10 +459,10 @@ async function Ladesteuerung()
             if(Power_WR > 0 || Power > 0){
                 if (Power_WR > Power){
                     await setStateAsync(sID_Saved_Power_W,Power_WR)
-                    if(M_Power < Power_WR){M_Power = Power_WR;if(LogAusgabeSteuerung ){log('-==== Power_WR:'+Power_WR+' M_Power:'+M_Power+' ====-')};}
+                    if(M_Power < Power_WR){M_Power = Power_WR;M_Abriegelung = true;if(LogAusgabeSteuerung ){log('-==== Power_WR:'+Power_WR+' M_Power:'+M_Power+' ====-')};}
                 }else{
                     await setStateAsync(sID_Saved_Power_W,Power)
-                    if(M_Power < Power){M_Power = Power;if(LogAusgabeSteuerung ){log('-==== Power:'+Power+' M_Power:'+M_Power+' ====-')};}
+                    if(M_Power < Power){M_Power = Power;M_Abriegelung = true;if(LogAusgabeSteuerung ){log('-==== Power:'+Power+' M_Power:'+M_Power+' ====-')};}
                 }  
             }else{
                 await setStateAsync(sID_Saved_Power_W,0)
@@ -514,8 +515,9 @@ async function Ladesteuerung()
                 if(LogAusgabeSteuerung){log('-==== Schritt = '+Schritt+' keine Steuerung ====-')}
                 
             }else if(M_Power > 0){
-                // Beim ersten aufruf Wert M_Power übernehmen und erst dann langsam erhöhen oder senken
-                if(Set_Power_Value_W < 1){Set_Power_Value_W=M_Power}
+                // Beim ersten aufruf Wert M_Power übernehmen oder wenn Einspeisegrenze erreicht wurde und erst dann langsam erhöhen oder senken
+                if(Set_Power_Value_W < 1 ){Set_Power_Value_W=M_Power}
+                if(M_Abriegelung){Set_Power_Value_W=M_Power+100;M_Abriegelung= false}
                 // Leistung langsam erhöhrn oder senken um Schwankungen auszugleichen
                 if(M_Power > Set_Power_Value_W){
                     Set_Power_Value_W = Set_Power_Value_W + 1
