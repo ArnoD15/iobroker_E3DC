@@ -617,7 +617,7 @@
         "e00007": {
             "tpl": "tplValueString",
             "data": {
-                "oid": "0_userdata.0.E3DC-Control.Proplanta.Datum_Tag_0",
+                "oid": "0_userdata.0.Charge_Control.Proplanta.Datum_Tag_0",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -759,7 +759,7 @@
         "e00009": {
             "tpl": "tplValueString",
             "data": {
-                "oid": "0_userdata.0.E3DC-Control.Proplanta.Datum_Tag_1",
+                "oid": "0_userdata.0.Charge_Control.Proplanta.Datum_Tag_1",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -830,7 +830,7 @@
         "e00010": {
             "tpl": "tplValueString",
             "data": {
-                "oid": "0_userdata.0.E3DC-Control.Proplanta.Datum_Tag_2",
+                "oid": "0_userdata.0.Charge_Control.Proplanta.Datum_Tag_2",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -901,7 +901,7 @@
         "e00011": {
             "tpl": "tplValueString",
             "data": {
-                "oid": "0_userdata.0.E3DC-Control.Proplanta.Datum_Tag_3",
+                "oid": "0_userdata.0.Charge_Control.Proplanta.Datum_Tag_3",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -1107,6 +1107,6 @@
             "widgetSet": "materialdesign"
         }
     },
-    "name": "20_SolarDiag_Prognose",
+    "name": "28_E3DC_PV_Prognose",
     "filterList": []
 }
