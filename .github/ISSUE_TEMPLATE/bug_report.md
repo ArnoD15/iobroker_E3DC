@@ -7,18 +7,8 @@ assignees: ''
 
 ---
 
-body:
-- type: textarea
-  attributes:
-  label: The problem
-  description: >-
-        Describe the issue you are experiencing here. Tell us what you were trying to do
-        step by step, and what happened that you did not expect.
-
-        Provide a clear and concise description of what the problem is and include as many
-        details as possible.
-   validations:
-   required: true
+**Describe the bug**  
+A clear and concise description of what the bug is.
 
 **To Reproduce**
 Steps to reproduce the behavior:
