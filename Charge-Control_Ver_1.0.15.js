@@ -3,6 +3,8 @@ let Resource_Id_Dach=[];
 let sID_UntererLadekorridor_W =[],sID_Ladeschwelle_Proz =[],sID_Ladeende_Proz=[],sID_Ladeende2_Proz=[],sID_Winterminimum=[],sID_Sommermaximum=[],sID_Sommerladeende=[],sID_Unload_Proz=[];
 
 /**********************************************************************************************************
+ Version: 1.0.15    Fehler, dass beim Abruf der Wetterdaten Proplanta über Timer die falsche URL verwendet wurde, behoben.
+ Version: 1.0.14    Kleinere Script Optimierungen durchgeführt.
  Version: 1.0.13    Prognose von Proplanta wird jetzt auch für die nächsten 6 Tage abgerufen.
  Version: 1.0.12    Fehler, dass Ladeleistung bei Überschreiten der Einspeisegrenze nur langsam erhöht wurde, behoben.
  Version: 1.0.11    Fehler, dass nach erreichen der Notstromreserve und ausreichender PV-Leistung nicht geladen wurde, behoben.
@@ -195,11 +197,11 @@ let Timer0 = null, Timer1 = null,Timer2 = null,Timer3 = null;
 let CheckConfig = true, Schritt = 0;
 let SummePV_Leistung_Tag_kW =[{0:'',1:'',2:'',3:'',4:'',5:'',6:'',7:''},{0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0},{0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0},{0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0}];
 let baseUrls = {
-    "de" : "https://www.proplanta.de/Wetter/profi-wetter.php?SITEID=60&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=#TAG#",
-    "at" : "https://www.proplanta.de/Wetter-Oesterreich/profi-wetter-at.php?SITEID=70&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=#TAG#",
-    "ch" : "https://www.proplanta.de/Wetter-Schweiz/profi-wetter-ch.php?SITEID=80&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=#TAG#",
-    "fr" : "https://www.proplanta.de/Wetter-Frankreich/profi-wetter-fr.php?SITEID=50&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter-Frankreich&wT=#TAG#",
-    "it" : "https://www.proplanta.de/Wetter-Italien/profi-wetter-it.php?SITEID=40&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter-Italien&wT=#TAG#",
+    "de" : "https://www.proplanta.de/Wetter/profi-wetter.php?SITEID=60&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=0",
+    "at" : "https://www.proplanta.de/Wetter-Oesterreich/profi-wetter-at.php?SITEID=70&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=0",
+    "ch" : "https://www.proplanta.de/Wetter-Schweiz/profi-wetter-ch.php?SITEID=80&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=0",
+    "fr" : "https://www.proplanta.de/Wetter-Frankreich/profi-wetter-fr.php?SITEID=50&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter-Frankreich&wT=0",
+    "it" : "https://www.proplanta.de/Wetter-Italien/profi-wetter-it.php?SITEID=40&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter-Italien&wT=0",
 };
 let baseurl = baseUrls[country];
 
@@ -287,7 +289,7 @@ async function CreateState(){
             createStateAsync(instanz+PfadEbene1 + PfadEbene2[0] + 'Unload_'+i, {'def':100, 'name':'Zielwert beim entladen.Die ladeschwelle muss < unload sein', 'type':'number', 'role':'value', 'desc':'Unload', 'unit':'%'});
         }
         if(i > 0){
-            let n = zeroPad(i,2);
+            let n = i.toString().padStart(2,"0");
             createStateAsync(instanz+PfadEbene1 + PfadEbene2[2] + 'IstPvLeistung_kWh_' +n, {'def':0, 'name':'PV-Leistung Tag' ,'type':'number', 'unit':'kWh'});
             createStateAsync(instanz+PfadEbene1 + PfadEbene2[2] + 'PrognoseProp_kWh_' +n, {'def':0, 'name':'Tagesprognose Proplanta', 'type':'number', 'unit':'kWh'});
             createStateAsync(instanz+PfadEbene1 + PfadEbene2[2] + 'PrognoseAuto_kWh_' +n, {'def':0, 'name':'Berechnete Prognose bei Anwahl Automatik' ,'type':'number', 'unit':'kWh'});
@@ -521,9 +523,9 @@ async function Ladesteuerung()
                 if(M_Abriegelung){Set_Power_Value_W=M_Power+100;M_Abriegelung= false}
                 // Leistung langsam erhöhrn oder senken um Schwankungen auszugleichen
                 if(M_Power > Set_Power_Value_W){
-                    Set_Power_Value_W = Set_Power_Value_W + 1
+                    Set_Power_Value_W++
                 }else if(M_Power < Set_Power_Value_W){
-                    Set_Power_Value_W = Set_Power_Value_W-1
+                    Set_Power_Value_W--
                 }
                 await setStateAsync(sID_SET_POWER_MODE,3); // Laden
                 await setStateAsync(sID_SET_POWER_VALUE_W,Set_Power_Value_W) // E3DC bleib beim Laden im Schnitt um ca 82 W unter der eingestellten Ladeleistung
@@ -535,9 +537,9 @@ async function Ladesteuerung()
                 if(!CheckConfig){
                     // Leistung langsam erhöhen oder senken um Schwankungen auszugleichen
                     if(M_Power > Set_Power_Value_W){
-                        Set_Power_Value_W = Set_Power_Value_W + 1
+                        Set_Power_Value_W++
                     }else if(M_Power < Set_Power_Value_W){
-                        Set_Power_Value_W = Set_Power_Value_W-1
+                        Set_Power_Value_W--
                     }
                 }else{
                     Set_Power_Value_W = M_Power
@@ -773,10 +775,10 @@ async function makeJson(){
     let values1 = [], values2 = [], values3 = [], values4 = [], values5 = [], axisLabels = [];
     let akkPV_Leistung, akkProgProp, akkProgAuto,akkProgSolcast,akkProgSolcast90;
     let date = new Date();
-	let mm = date.getMonth() + 1;
-    let mm0 = zeroPad(mm,2);
+	let mm = (date.getMonth()+1).toString().padStart(2,"0");
+    
     for (let i = 1; i <= 31; i++) {
-	    let n= zeroPad(i,2);
+	    let n= i.toString().padStart(2,"0");
         akkPV_Leistung = (await getStateAsync(instanz + PfadEbene1 + PfadEbene2[2] + 'IstPvLeistung_kWh_' + n)).val
         akkProgProp = (await getStateAsync(instanz + PfadEbene1 + PfadEbene2[2] + 'PrognoseProp_kWh_' + n)).val
         akkProgSolcast = (await getStateAsync(instanz + PfadEbene1 + PfadEbene2[2] + 'PrognoseSolcast_kWh_' + n)).val
@@ -913,8 +915,8 @@ async function makeJson(){
             }
         ]
     }
-    await setStateAsync(instanz + PfadEbene1 + PfadEbene2[2] + 'HistoryJSON_'+mm0,JSON.stringify(chart),true);
-    if (DebugAusgabe){log('-==== JSON History ertellt ====-');}
+    await setStateAsync(instanz + PfadEbene1 + PfadEbene2[2] + 'HistoryJSON_'+mm,JSON.stringify(chart),true);
+    //if (DebugAusgabe){log('-==== JSON History ertellt ====-');}
 }
 
 // Funktion erstellt eine Sicherungsdatei der History JSON vom letzten Monat
@@ -922,7 +924,7 @@ async function writelog() {
     let date = new Date();
 	let mm = date.getMonth();
     if (mm == 0){mm = 12}
-    let MM = zeroPad(mm,2);
+    let MM = mm.toString().padStart(2,"0");
     let Jahr = date.getFullYear()
     let string =MM +"."+ Jahr +"\n"+ (await getStateAsync(instanz + PfadEbene1 + PfadEbene2[2] + 'HistoryJSON_'+MM)).val+"\n";
     if ( logflag === true) {
@@ -977,42 +979,29 @@ function round(wert, dez) {
 function nextDayDate(days) {
     let today = new Date();
 	today.setDate(today.getDate() + days);
-    let mm = today.getMonth() + 1; //January is 0!
-    let dd = today.getDate();
+    let mm = (today.getMonth()+1).toString().padStart(2,"0"); //January is 0!
+    let dd = today.getDate().toString().padStart(2,"0");
     let yyyy = today.getFullYear();
-    let mm0 = zeroPad(mm,2);
-    let dd0 = zeroPad(dd,2);
-    return yyyy + '-' + mm0 + '-' + dd0;
+    return yyyy + '-' + mm + '-' + dd;
 }
-
-
-// Autor:Mic (ioBroker) | Mic-M (github)
-// Fügt Vornullen zu einer Zahl hinzu, macht also z.B. aus 7 eine "007". 
-// Akzeptiert sowohl Datentyp number und string als Eingabe.
-// Autor:Mic (ioBroker) | Mic-M (github)
-function zeroPad(num, places) {
-    let zero = places - num.toString().length + 1;
-    return Array(+(zero > 0 && zero)).join("0") + num;        
-} 
 
 // Summe PV Leistung berechnen Leistungszähler 0 und Leistungszähler 1
 async function SummePvLeistung(){   
     let DatumAk = new Date();
-	let TagHeute = DatumAk.getDate();
-	let TagHeute_0 = zeroPad(TagHeute,2);
+	let TagHeute = DatumAk.getDate().toString().padStart(2,"0");
 	let IstPvLeistung0_kWh = 0;
 	let IstPvLeistung1_kWh = 0;
 	let IstPvLeistung_kWh = 0;
 	if (existsState(sID_PVErtragLM0)){
 	    IstPvLeistung0_kWh = parseFloat(getState(sID_PVErtragLM0).val);
-	    if (DebugAusgabe) {log('PV-Leistung Leistungsmesser 0 Heute = '+IstPvLeistung0_kWh);}
+	    //if (DebugAusgabe) {log('PV-Leistung Leistungsmesser 0 Heute = '+IstPvLeistung0_kWh);}
 	}
 	if (existsState(sID_PVErtragLM1)){
 	    IstPvLeistung1_kWh = parseFloat(getState(sID_PVErtragLM1).val);
-	    if (DebugAusgabe) {log('PV-Leistung Leistungsmesser 1 Heute = '+IstPvLeistung1_kWh);}
+	    //if (DebugAusgabe) {log('PV-Leistung Leistungsmesser 1 Heute = '+IstPvLeistung1_kWh);}
 	}
 	IstPvLeistung_kWh = IstPvLeistung0_kWh + IstPvLeistung1_kWh;
-	await setStateAsync(instanz + PfadEbene1 + PfadEbene2[2] + 'IstPvLeistung_kWh_'+ TagHeute_0, IstPvLeistung_kWh);
+	await setStateAsync(instanz + PfadEbene1 + PfadEbene2[2] + 'IstPvLeistung_kWh_'+ TagHeute, IstPvLeistung_kWh);
     await setStateAsync(instanz + PfadEbene1 + PfadEbene2[1] + 'IstSummePvLeistung_kWh', IstPvLeistung_kWh);
     
     makeJson();
@@ -1044,7 +1033,7 @@ function addMinutes(time, offset){
     let resMinutes = timeSince24 % 60;
     let resHours = (timeSince24 - resMinutes)/60;
     // Sicherstellen, dass der Wert fuer Minuten immer zweistellig ist
-    let sMinuten = zeroPad(resMinutes,2);
+    let sMinuten = resMinutes.toString().padStart(2,"0");
     // Ausgabe des formatierten Ergebnisses
     return resHours + ":" + sMinuten;
 }
@@ -1067,7 +1056,7 @@ async function PrognosedatenAbrufen(){
 }
 
 // Prognose Proplanta abrufen.
-function InterrogateProplanta(){
+async function InterrogateProplanta(){
     return new Promise(function(resolve, reject){
         xhr.onreadystatechange = function(){
             if (xhr.readyState ==4){
@@ -1094,22 +1083,22 @@ async function SheduleProplanta() {
     }else{
         // alle alten Werte löschen
         for (let i = 0; i <= 6; i++) {
-            setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_'+i, 'null');
+            await setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_'+i, 'null');
             if(i <=3){
-                setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_'+i, 200);
-                setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_'+i, 200);       
+                await setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_'+i, 200);
+                await setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_'+i, 200);       
             }
         }
-        setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_12', 200);
-        setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_15', 200);
+        await setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_12', 200);
+        await setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_15', 200);
         
         if (LogAusgabe){log('******************* Es wird die Globalstrahlung ab Tag 0 von Proplanta abgerufen *******************');}
         // Url mit Länderbezeichnung zusammenstellen
-        baseurl = baseurl.replace(/#PLZ#/ig, ProplantaPlz).replace(/#ORT#/ig, ProplantaOrt).replace(/#TAG#/ig, '0');
-        await InterrogateProplanta().then(async function(result){
+        baseurl = baseurl.replace(/#PLZ#/ig, ProplantaPlz).replace(/#ORT#/ig, ProplantaOrt).replace(/&wT=4/ig, '&wT=0');
+        await InterrogateProplanta().then(async function(result0){
             let GlobalstrahlungTag0,GlobalstrahlungTag1,GlobalstrahlungTag2,GlobalstrahlungTag3;
             if (LogAusgabe){log('Rueckmeldung InterrogateProplanta XHR.Status= '+ xhr.status)}
-            let ArrayBereinig = await HTML_CleanUp(result,0)    
+            let ArrayBereinig = await HTML_CleanUp(result0,0)    
             if (DebugAusgabe){
                 for (let i in ArrayBereinig) {
                     log("i ="+i+' Wert ab Tag0=' + ArrayBereinig[i]);
@@ -1143,6 +1132,7 @@ async function SheduleProplanta() {
                 if (isNaN(parseFloat(ArrayBereinig[9]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_3', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_3', parseFloat(ArrayBereinig[9]));}      
         
                 // Proplanta Globalstrahlung in kWh umrechnen und in History speichern *********************************************************  
+                if(LogAusgabe){log('Globalstrahlung Tag0 ='+GlobalstrahlungTag0+'  Globalstrahlung Tag1 ='+GlobalstrahlungTag1+'  Globalstrahlung Tag2 ='+GlobalstrahlungTag2+'  Globalstrahlung Tag3 ='+GlobalstrahlungTag3)}
                 let PrognoseProplanta_kWh_Tag0 = (GlobalstrahlungTag0 * nModulFlaeche) * (nWirkungsgradModule/100);
                 let PrognoseProplanta_kWh_Tag1 = (GlobalstrahlungTag1 * nModulFlaeche) * (nWirkungsgradModule/100);
                 let PrognoseProplanta_kWh_Tag2 = (GlobalstrahlungTag2 * nModulFlaeche) * (nWirkungsgradModule/100);
@@ -1177,12 +1167,11 @@ async function SheduleProplanta() {
         
         if (LogAusgabe){log('******************* Es wird die Globalstrahlung ab Tag 4 von Proplanta abgerufen *******************');}
         // Url mit Länderbezeichnung zusammenstellen
-        baseurl = baseurl.replace(/#PLZ#/ig, ProplantaPlz).replace(/#ORT#/ig, ProplantaOrt).replace(/=0/ig, "=4");
-        
-        await InterrogateProplanta().then(async function(result){
-            let GlobalstrahlungTag0,GlobalstrahlungTag1,GlobalstrahlungTag2;
+        baseurl = baseurl.replace(/#PLZ#/ig, ProplantaPlz).replace(/#ORT#/ig, ProplantaOrt).replace(/&wT=0/ig, "&wT=4");
+        await InterrogateProplanta().then(async function(result4){
+            let GlobalstrahlungTag4,GlobalstrahlungTag5,GlobalstrahlungTag6;
             if (LogAusgabe){log('Rueckmeldung InterrogateProplanta XHR.Status= '+ xhr.status)}
-            let ArrayBereinig = await HTML_CleanUp(result,4)    
+            let ArrayBereinig = await HTML_CleanUp(result4,4)    
             if (DebugAusgabe){
                 for (let i in ArrayBereinig) {
                     log("i ="+i+' Wert ab Tag 4=' + ArrayBereinig[i]);
@@ -1190,14 +1179,15 @@ async function SheduleProplanta() {
             } 
             let Tag0 = nextDayDate(4).slice(8,10), Tag1 = nextDayDate(5).slice(8,10),Tag2 = nextDayDate(6).slice(8,10);
             // Prüfen ob Werte in eine Zahl umgewandelt werden können,wenn nicht 0 zuweisen     
-            if (isNaN(parseFloat(ArrayBereinig[9]))){GlobalstrahlungTag0 = 0;}else{GlobalstrahlungTag0 = parseFloat(ArrayBereinig[9]);}      
-            if (isNaN(parseFloat(ArrayBereinig[10]))){GlobalstrahlungTag1 = 0;}else{GlobalstrahlungTag1 = parseFloat(ArrayBereinig[10]);}      
-            if (isNaN(parseFloat(ArrayBereinig[11]))){GlobalstrahlungTag2 = 0;}else{GlobalstrahlungTag2 = parseFloat(ArrayBereinig[11]);}      
+            if (isNaN(parseFloat(ArrayBereinig[9]))){GlobalstrahlungTag4 = 0;}else{GlobalstrahlungTag4 = parseFloat(ArrayBereinig[9]);}      
+            if (isNaN(parseFloat(ArrayBereinig[10]))){GlobalstrahlungTag5 = 0;}else{GlobalstrahlungTag5 = parseFloat(ArrayBereinig[10]);}      
+            if (isNaN(parseFloat(ArrayBereinig[11]))){GlobalstrahlungTag6 = 0;}else{GlobalstrahlungTag6 = parseFloat(ArrayBereinig[11]);}      
                 
             // Proplanta Globalstrahlung in kWh umrechnen und in History speichern *********************************************************  
-            let PrognoseProplanta_kWh_Tag4 = (GlobalstrahlungTag0 * nModulFlaeche) * (nWirkungsgradModule/100);
-            let PrognoseProplanta_kWh_Tag5 = (GlobalstrahlungTag1 * nModulFlaeche) * (nWirkungsgradModule/100);
-            let PrognoseProplanta_kWh_Tag6 = (GlobalstrahlungTag2 * nModulFlaeche) * (nWirkungsgradModule/100);
+            if(LogAusgabe){log('Globalstrahlung Tag4 ='+GlobalstrahlungTag4+'  Globalstrahlung Tag5 ='+GlobalstrahlungTag5+'  Globalstrahlung Tag6 ='+GlobalstrahlungTag6)}
+            let PrognoseProplanta_kWh_Tag4 = (GlobalstrahlungTag4 * nModulFlaeche) * (nWirkungsgradModule/100);
+            let PrognoseProplanta_kWh_Tag5 = (GlobalstrahlungTag5 * nModulFlaeche) * (nWirkungsgradModule/100);
+            let PrognoseProplanta_kWh_Tag6 = (GlobalstrahlungTag6 * nModulFlaeche) * (nWirkungsgradModule/100);
             if (Tag0!= '01'){
                 setStateAsync(instanz + PfadEbene1 + PfadEbene2[2] + 'PrognoseProp_kWh_'+Tag0, PrognoseProplanta_kWh_Tag4);
                 if (Tag1!= '01'){
@@ -1228,8 +1218,7 @@ async function SheduleProplanta() {
 }
 
 // Proplanta HTML Tags löschen und Daten bereinigen
-function HTML_CleanUp(data,abTag) {
-    
+async function HTML_CleanUp(data,abTag) {
     //Alles bis max. Temperatur löschen
     let idx = data.indexOf('<tr id="TMAX" class="">');
     data = data.replace(data.substring(0, idx), "");
@@ -1276,12 +1265,15 @@ function HTML_CleanUp(data,abTag) {
     data = data.replace(/&#([^;]+);/g, '|');
     data = data.replace(/(\s*\t|<\s*\/*br\s*>)\s*/g, '|');
     data = data.replace(/(%|\r)/g, '').replace(/(kWh\/qm|\r)/g, '').replace(/,/g, '.');
-    
     // Array aus restlichen Daten erstellen     
     let SrtingSplit = data.split('|');    
     // Alle Werte löschen die leer sind       
     let ArrayBereinig = SrtingSplit.filter(function(e){ return e.replace(/(\r\n|\n|\r)/gm,"")});
-    
+    if (DebugAusgabe){
+        for (let i in ArrayBereinig) {
+            log("i ="+i+' array bereinigt vor splice=' + ArrayBereinig[i]);
+        }
+    } 
     // Restlichen Werte die nicht benötigt werden entfernen
     if(abTag == 0){
         ArrayBereinig.splice(5,5)
@@ -1297,7 +1289,7 @@ function HTML_CleanUp(data,abTag) {
     return ArrayBereinig;
 }
 // Prognose Solcast PV-Leistung in kW je Dachfläche abrufen.
-function InterrogateSolcast(DachFl){
+async function InterrogateSolcast(DachFl){
     return new Promise(function(resolve, reject){
         xhr2.onreadystatechange = function(){
             if (xhr2.readyState ==4){
@@ -1457,25 +1449,25 @@ async function MEZ_Regelzeiten(){
 // Leistungsmesser0 jede minute in W/h umrechen W = P*t
 // Autor:smartboart (ioBroker)
 function Wh_Leistungsmesser0(){
-	if(DebugAusgabe)log('Funktion Schedulestart aktiv'); 
+	//if(DebugAusgabe)log('Funktion Schedulestart aktiv'); 
 	let AufDieMinute =  '* * * * *';
 	Timer0 = schedule(AufDieMinute, function(){   
-		if(DebugAusgabe)log('minütlicher Schedule aktiv');       
+		//if(DebugAusgabe)log('minütlicher Schedule aktiv');       
 		let PVErtrag = getState (sID_PVErtragLM0).val;  
 		let Pmin = Summe0/count0;
 		if(count0>0 && Summe0 >0){
 			setState(sID_PVErtragLM0, PVErtrag + Pmin/60/1000,true);//kWh
-			if(DebugAusgabe)log(['Schedule Umrechnen W = P*t.  Minutenwert Leistung: '+ Pmin, ' Minutenwert Arbeit: ' + (Pmin/60/1000), ' Tageswert Ertrag: ' +PVErtrag ].join(''));
+			//if(DebugAusgabe)log(['Schedule Umrechnen W = P*t.  Minutenwert Leistung: '+ Pmin, ' Minutenwert Arbeit: ' + (Pmin/60/1000), ' Tageswert Ertrag: ' +PVErtrag ].join(''));
 			setTimeout(function(){
 				count0=0;
 				Summe0=0;
-				if(DebugAusgabe)log(['Reset: Count =  '+ count0, ' Summe = ' + Summe0 ].join(''));
+				//if(DebugAusgabe)log(['Reset: Count =  '+ count0, ' Summe = ' + Summe0 ].join(''));
 			},100);
 		}else{
 			if(count0===0 && Summe0 ===0){
 				clearSchedule(Timer0);
 				Timer0 = null;
-                if(DebugAusgabe)log('minütlicher Schedule gestoppt');
+                //if(DebugAusgabe)log('minütlicher Schedule gestoppt');
             }
         }  
     });
@@ -1484,10 +1476,10 @@ function Wh_Leistungsmesser0(){
 // Leistungsmesser1 jede minute in W/h umrechen W = P*t
 // Autor:smartboart (ioBroker)
 function Wh_Leistungsmesser1(){
-	if(DebugAusgabe)log('Funktion Schedulestart aktiv'); 
+	//if(DebugAusgabe)log('Funktion Schedulestart aktiv'); 
 	let AufDieMinute =  '* * * * *';
 	Timer1 = schedule(AufDieMinute, function(){   
-		if(DebugAusgabe)log('minütlicher Schedule aktiv');       
+		//if(DebugAusgabe)log('minütlicher Schedule aktiv');       
 		let PVErtrag = getState (sID_PVErtragLM1).val;  
 		let Pmin = Summe1/count1;
 		if(count1>0 && Summe1 >0){
@@ -1495,13 +1487,13 @@ function Wh_Leistungsmesser1(){
 			setTimeout(function(){
 				count1=0;
 				Summe1=0;
-				if(DebugAusgabe)log(['Reset: Count =  '+ count1, ' Summe = ' + Summe1 ].join(''));
+				//if(DebugAusgabe)log(['Reset: Count =  '+ count1, ' Summe = ' + Summe1 ].join(''));
 			},100);
 		}else{
 			if(count1===0 && Summe1 ===0){
 				clearSchedule(Timer1);
 				Timer1=null;
-                if(DebugAusgabe)log('minütlicher Schedule gestoppt');
+                //if(DebugAusgabe)log('minütlicher Schedule gestoppt');
             }
         }  
     });
@@ -1511,10 +1503,10 @@ function Wh_Leistungsmesser1(){
 // Leistungsmesser2 jede minute in W/h umrechen W = P*t
 // Autor:smartboart (ioBroker)
 function Wh_Leistungsmesser2(){
-	if(DebugAusgabe)log('Funktion Schedulestart LM2 aktiv'); 
+	//if(DebugAusgabe)log('Funktion Schedulestart LM2 aktiv'); 
 	let AufDieMinute =  '* * * * *';
 	Timer3 = schedule(AufDieMinute, function(){   
-		if(DebugAusgabe)log('minütlicher Schedule Timer3 aktiv');       
+		//if(DebugAusgabe)log('minütlicher Schedule Timer3 aktiv');       
 		let PVErtrag = getState (sID_PVErtragLM2).val;  
 		let Pmin = Summe2/count2;
 		if(count2>0 && Summe2 >0){
@@ -1527,7 +1519,7 @@ function Wh_Leistungsmesser2(){
 			if(count2===0 && Summe2 ===0){
 				clearSchedule(Timer3);
 				Timer3=null;
-                if(DebugAusgabe)log('minütlicher Schedule Timer3 gestoppt');
+                //if(DebugAusgabe)log('minütlicher Schedule Timer3 gestoppt');
             }
         }  
     });
@@ -1591,7 +1583,7 @@ on({id: sID_EigenverbrauchTag, change: "ne"}, function (obj){
 // Wird aufgerufen wenn State HistorySelect in VIS geändert wird
 on({id: sID_AnzeigeHistoryMonat, change: "ne"}, async function (obj){
 	let Auswahl = (await getStateAsync(obj.id)).val
-    let Auswahl_0 = await zeroPad(Auswahl,2);
+    let Auswahl_0 = Auswahl.toString().padStart(2,"0");
     if (Auswahl<=12){
         let JsonString = (await getStateAsync(instanz +PfadEbene1 + PfadEbene2[2] + 'HistoryJSON_' +Auswahl_0)).val;
         await setStateAsync(instanz + PfadEbene1 + PfadEbene2[2] + 'HistoryJSON',JsonString);
@@ -1605,7 +1597,7 @@ on({id: sID_AnzeigeHistoryMonat, change: "ne"}, async function (obj){
 // Diagramm anzuzeigen
 on({id: /\.HistoryJSON_/, change: "ne"}, async function (){	
     let Auswahl = (await getStateAsync(sID_AnzeigeHistoryMonat)).val;
-    let Auswahl_0 = await zeroPad(Auswahl,2);
+    let Auswahl_0 = Auswahl.toString().padStart(2,"0");
     if (Auswahl<=12){
         let JsonString = (await getStateAsync(instanz +PfadEbene1 + PfadEbene2[2] + 'HistoryJSON_' +Auswahl_0)).val;
         await setStateAsync(instanz + PfadEbene1 + PfadEbene2[2] + 'HistoryJSON',JsonString);
@@ -1739,7 +1731,7 @@ if (Solcast) {
 // jeden Monat am 1 History Daten Tag aktuelles Monat Löschen
 schedule("0 0 1 * *", async function() {
    for (let i = 1; i <= 31; i++) {
-        let n = zeroPad(i,2);
+        let n = i.toString().padStart(2,"0");
         await setStateAsync(instanz + PfadEbene1 + PfadEbene2[2] + 'IstPvLeistung_kWh_'+ n, 0);
         await setStateAsync(instanz + PfadEbene1 + PfadEbene2[2] + 'PrognoseProp_kWh_'+ n, 0);
 	    await setStateAsync(instanz + PfadEbene1 + PfadEbene2[2] + 'PrognoseAuto_kWh_'+ n, 0);
