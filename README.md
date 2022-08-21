@@ -10,13 +10,13 @@ beim Überschreiten der 70% Einspeisegrenze zu verhindern.<br>
 <li>Möglichst gleichmäßige Ladeleistung beim Laden.</li><br>
 <li>PV-Überschuss soll gespeichert werden, um nicht in die 70 % Abriegelung zu kommen.</li><br>
 <li>Bei Überschreitung WR Begrenzung soll Überschuss in die Batterie gespeichert werden.</li><br>
-</ul><br><br>
+</ul>
 <p>Weitere Informationen in der "Anleitung Charge-Control.pdf" oder im iobroker Forum: https://forum.iobroker.net/topic/32976/e3dc-hauskraftwerk-steuern</p>
 
 
 [![paypal](https://www.paypalobjects.com/en_US/DK/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate?hosted_button_id=JWM2WUT7ZACVL&source=url) 
 
-
+<br>
 <h3>E3DC_Wallbox</h3>
 Script zum Steuern der Wallbox easy connect mit Mode 3-Ladekabel (3-phasig) fest angeschlagen mit Ladestecker Typ 2 von E3DC. Die Wallbox muss über Modbus
 verbunden sein.
