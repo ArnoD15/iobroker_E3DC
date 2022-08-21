@@ -3,7 +3,8 @@ let Resource_Id_Dach=[];
 let sID_UntererLadekorridor_W =[],sID_Ladeschwelle_Proz =[],sID_Ladeende_Proz=[],sID_Ladeende2_Proz=[],sID_Winterminimum=[],sID_Sommermaximum=[],sID_Sommerladeende=[],sID_Unload_Proz=[];
 
 /**********************************************************************************************************
- Version: 1.0.15    Fehler, dass beim Abruf der Wetterdaten Proplanta über Timer die falsche URL verwendet wurde, behoben.
+ Version: 1.0.16    Ein-/ Ausschaltkriterium der Lade/Entladeleistung E3DC geändert. Es wird jetzt die Astro-Funktion "sunset" verwendet
+ Version: 1.0.15    Fehler, dass beim Abrufen der Wetterdaten Proplanta über Timer die falsche URL verwendet wurde, behoben.
  Version: 1.0.14    Kleinere Script Optimierungen durchgeführt.
  Version: 1.0.13    Prognose von Proplanta wird jetzt auch für die nächsten 6 Tage abgerufen.
  Version: 1.0.12    Fehler, dass Ladeleistung bei Überschreiten der Einspeisegrenze nur langsam erhöht wurde, behoben.
@@ -340,9 +341,9 @@ async function Ladesteuerung()
 
     
     // Das Entladen aus dem Speicher wird freigegeben wenn
-    // Notstrom oder Inselbetrieb aktiv ist oder der Batterie SOC > der berechneten Reserve liegt oder PV-Leistung > Unterer Ladekorridor ist
+    // Notstrom oder Inselbetrieb aktiv ist oder der Batterie SOC > der berechneten Reserve liegt oder PV-Leistung > 100W ist und vor Sonnenuntergang
     // Notstrom_Status 0=nicht möglich 1=active 2= nicht Active 3= nicht verfügbar 4= Inselbetrieb
-    if (Notstrom_Status == 1 || Notstrom_Status == 4 || Batterie_SOC_Proz > Notstrom_SOC_Proz || PV_Leistung_E3DC_W > 500 ){
+    if (Notstrom_Status == 1 || Notstrom_Status == 4 || Batterie_SOC_Proz > Notstrom_SOC_Proz || (PV_Leistung_E3DC_W > 100 && new Date() < getAstroDate("sunset")) ){
         // Laden/Endladen einschalten
         if(Akk_max_Discharge_Power_W == 0 || Akk_max_Charge_Power_W == 0){
             await setStateAsync(sID_Max_Discharge_Power_W, Math.abs(Bat_Discharge_Limit_W))
@@ -350,9 +351,9 @@ async function Ladesteuerung()
             await setStateAsync(sID_Max_Charge_Power_W, maximumLadeleistung_W)
             log('-==== Laden/Entladen der Batterie ist eingeschaltet ====-')
         }
-    }else if(Batterie_SOC_Proz <= Notstrom_SOC_Proz && PV_Leistung_E3DC_W <= 100){
+    }else if(Batterie_SOC_Proz <= Notstrom_SOC_Proz && new Date() > getAstroDate("sunset")){
         // Laden/Endladen ausschalten nur wenn Notstrom SOC erreicht wurde und PV-Leistung = 0 W
-        if(Akk_max_Discharge_Power_W != 0 || Akk_max_Charge_Power_W != 0){
+        if((Akk_max_Discharge_Power_W != 0 || Akk_max_Charge_Power_W != 0) && Batterie_SOC_Proz !=0){
             await setStateAsync(sID_DISCHARGE_START_POWER, 0)
             await setStateAsync(sID_Max_Discharge_Power_W, 0)
             await setStateAsync(sID_Max_Charge_Power_W, 0)
