@@ -73,11 +73,11 @@
                 "src": "/vis.0/Icon/E3_DC.png"
             },
             "style": {
-                "left": "341px",
-                "top": "6px",
+                "left": "340px",
+                "top": "0px",
                 "z-index": "10",
                 "width": "127px",
-                "height": "71px"
+                "height": "77px"
             },
             "widgetSet": "basic"
         },
@@ -147,7 +147,7 @@
             },
             "style": {
                 "left": "749px",
-                "top": "15px",
+                "top": "9px",
                 "width": "46px",
                 "height": "46px",
                 "z-index": "20"
@@ -318,7 +318,7 @@
             },
             "style": {
                 "left": "87px",
-                "top": "201px",
+                "top": "178px",
                 "z-index": "20",
                 "width": "150px",
                 "height": "25px",
@@ -457,7 +457,7 @@
             },
             "style": {
                 "left": "489px",
-                "top": "15px",
+                "top": "9px",
                 "color": "#ffffff",
                 "font-size": "35px",
                 "width": "300px",
@@ -530,8 +530,8 @@
                 "digits": "2"
             },
             "style": {
-                "left": "643px",
-                "top": "632px",
+                "left": "642px",
+                "top": "609px",
                 "z-index": "30",
                 "color": "#ffffff",
                 "width": "90px",
@@ -607,8 +607,8 @@
                 "lc-oid": "0_userdata.0.Charge_Control.Allgemein.PrognoseBerechnung_kWh_heute"
             },
             "style": {
-                "left": "643px",
-                "top": "585px",
+                "left": "642px",
+                "top": "561px",
                 "z-index": "30",
                 "color": "#ffffff",
                 "width": "90px",
@@ -677,15 +677,15 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "html": "&nbsp;Berechnungsgrundlage:\n<br>&nbsp;nächste Aktualisierung Proplanta:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Durch Charge-Control gesicherte:\n<br>&nbsp;aktuell erzeugte Energie:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\nBewölkung ab 12:00 Uhr =\n<br>&nbsp;Notstromreserve aktuell::&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Bewölkung ab 15:00 Uhr ="
+                "html": "&nbsp;Prognose für Berechnung:\n<br>&nbsp;Eigenverbrauch:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Durch Charge-Control gesicherte:\n<br>&nbsp;aktuell erzeugte Energie:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\n<br>&nbsp;nächste Aktualisierung Proplanta:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\nBewölkung ab 12:00 Uhr =\n<br>&nbsp;Notstromreserve aktuell:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Bewölkung ab 15:00 Uhr ="
             },
             "style": {
-                "left": "390px",
-                "top": "576px",
+                "left": "388px",
+                "top": "553px",
                 "z-index": "10",
                 "color": "#ffffff",
                 "width": "709px",
-                "height": "108px",
+                "height": "126px",
                 "line-height": "1.5",
                 "border-color": "#ffffff",
                 "border-style": "ridge",
@@ -785,7 +785,7 @@
             },
             "style": {
                 "left": "388px",
-                "top": "164px",
+                "top": "141px",
                 "width": "130px",
                 "height": "60px",
                 "z-index": "7",
@@ -894,7 +894,7 @@
             },
             "style": {
                 "left": "533px",
-                "top": "164px",
+                "top": "141px",
                 "width": "130px",
                 "height": "60px",
                 "z-index": "7",
@@ -1003,7 +1003,7 @@
             },
             "style": {
                 "left": "679px",
-                "top": "164px",
+                "top": "141px",
                 "width": "130px",
                 "height": "60px",
                 "z-index": "7",
@@ -1112,7 +1112,7 @@
             },
             "style": {
                 "left": "824px",
-                "top": "164px",
+                "top": "141px",
                 "width": "130px",
                 "height": "60px",
                 "z-index": "7",
@@ -1221,7 +1221,7 @@
             },
             "style": {
                 "left": "969px",
-                "top": "164px",
+                "top": "141px",
                 "width": "130px",
                 "height": "60px",
                 "z-index": "7",
@@ -1439,7 +1439,7 @@
             },
             "style": {
                 "left": "9px",
-                "top": "239px",
+                "top": "216px",
                 "width": "240px",
                 "height": "452px",
                 "z-index": "30"
@@ -1507,8 +1507,8 @@
                 "html_append": " Uhr"
             },
             "style": {
-                "left": "643px",
-                "top": "608px",
+                "left": "642px",
+                "top": "632px",
                 "width": "90px",
                 "height": "18px",
                 "z-index": "20",
@@ -1834,7 +1834,7 @@
             },
             "style": {
                 "left": "12px",
-                "top": "165px",
+                "top": "142px",
                 "z-index": "20",
                 "width": "226px",
                 "height": "25px",
@@ -2064,7 +2064,7 @@
             },
             "style": {
                 "left": "643px",
-                "top": "655px",
+                "top": "656px",
                 "z-index": "30",
                 "color": "#ffffff",
                 "width": "90px",
@@ -2199,7 +2199,7 @@
             },
             "style": {
                 "left": "258px",
-                "top": "242px",
+                "top": "219px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -2329,8 +2329,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "258px",
-                "top": "283px",
+                "left": "257px",
+                "top": "260px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -2460,8 +2460,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "258px",
-                "top": "324px",
+                "left": "257px",
+                "top": "301px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -2591,8 +2591,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "258px",
-                "top": "365px",
+                "left": "257px",
+                "top": "342px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -2722,8 +2722,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "258px",
-                "top": "406px",
+                "left": "257px",
+                "top": "383px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -2853,8 +2853,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "258px",
-                "top": "446px",
+                "left": "257px",
+                "top": "423px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -2984,8 +2984,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "258px",
-                "top": "487px",
+                "left": "257px",
+                "top": "464px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -3115,8 +3115,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "258px",
-                "top": "528px",
+                "left": "257px",
+                "top": "505px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -3246,8 +3246,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "258px",
-                "top": "569px",
+                "left": "257px",
+                "top": "546px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -3377,8 +3377,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "258px",
-                "top": "610px",
+                "left": "257px",
+                "top": "587px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -3508,8 +3508,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "258px",
-                "top": "651px",
+                "left": "257px",
+                "top": "628px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -3640,7 +3640,7 @@
             },
             "style": {
                 "left": "400px",
-                "top": "527px",
+                "top": "504px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -3771,7 +3771,7 @@
             },
             "style": {
                 "left": "400px",
-                "top": "486px",
+                "top": "463px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -3902,7 +3902,7 @@
             },
             "style": {
                 "left": "400px",
-                "top": "445px",
+                "top": "422px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -4033,7 +4033,7 @@
             },
             "style": {
                 "left": "400px",
-                "top": "404px",
+                "top": "381px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -4164,7 +4164,7 @@
             },
             "style": {
                 "left": "400px",
-                "top": "364px",
+                "top": "341px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -4295,7 +4295,7 @@
             },
             "style": {
                 "left": "400px",
-                "top": "323px",
+                "top": "300px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -4426,7 +4426,7 @@
             },
             "style": {
                 "left": "400px",
-                "top": "282px",
+                "top": "259px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -4557,7 +4557,7 @@
             },
             "style": {
                 "left": "400px",
-                "top": "242px",
+                "top": "219px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -4688,7 +4688,7 @@
             },
             "style": {
                 "left": "545px",
-                "top": "527px",
+                "top": "504px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -4819,7 +4819,7 @@
             },
             "style": {
                 "left": "545px",
-                "top": "486px",
+                "top": "463px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -4950,7 +4950,7 @@
             },
             "style": {
                 "left": "545px",
-                "top": "445px",
+                "top": "422px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -5081,7 +5081,7 @@
             },
             "style": {
                 "left": "545px",
-                "top": "404px",
+                "top": "381px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -5212,7 +5212,7 @@
             },
             "style": {
                 "left": "545px",
-                "top": "364px",
+                "top": "341px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -5343,7 +5343,7 @@
             },
             "style": {
                 "left": "545px",
-                "top": "323px",
+                "top": "300px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -5474,7 +5474,7 @@
             },
             "style": {
                 "left": "545px",
-                "top": "282px",
+                "top": "259px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -5605,7 +5605,7 @@
             },
             "style": {
                 "left": "545px",
-                "top": "242px",
+                "top": "219px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -5736,7 +5736,7 @@
             },
             "style": {
                 "left": "690px",
-                "top": "527px",
+                "top": "504px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -5867,7 +5867,7 @@
             },
             "style": {
                 "left": "690px",
-                "top": "486px",
+                "top": "463px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -5998,7 +5998,7 @@
             },
             "style": {
                 "left": "690px",
-                "top": "445px",
+                "top": "422px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -6129,7 +6129,7 @@
             },
             "style": {
                 "left": "690px",
-                "top": "404px",
+                "top": "381px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -6260,7 +6260,7 @@
             },
             "style": {
                 "left": "690px",
-                "top": "364px",
+                "top": "341px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -6391,7 +6391,7 @@
             },
             "style": {
                 "left": "690px",
-                "top": "323px",
+                "top": "300px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -6522,7 +6522,7 @@
             },
             "style": {
                 "left": "690px",
-                "top": "282px",
+                "top": "259px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -6653,7 +6653,7 @@
             },
             "style": {
                 "left": "690px",
-                "top": "242px",
+                "top": "219px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -6784,7 +6784,7 @@
             },
             "style": {
                 "left": "836px",
-                "top": "527px",
+                "top": "504px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -6915,7 +6915,7 @@
             },
             "style": {
                 "left": "836px",
-                "top": "486px",
+                "top": "463px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -7046,7 +7046,7 @@
             },
             "style": {
                 "left": "836px",
-                "top": "445px",
+                "top": "422px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -7177,7 +7177,7 @@
             },
             "style": {
                 "left": "836px",
-                "top": "404px",
+                "top": "381px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -7308,7 +7308,7 @@
             },
             "style": {
                 "left": "836px",
-                "top": "364px",
+                "top": "341px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -7439,7 +7439,7 @@
             },
             "style": {
                 "left": "836px",
-                "top": "323px",
+                "top": "300px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -7570,7 +7570,7 @@
             },
             "style": {
                 "left": "836px",
-                "top": "282px",
+                "top": "259px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -7701,7 +7701,7 @@
             },
             "style": {
                 "left": "836px",
-                "top": "242px",
+                "top": "219px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -7832,7 +7832,7 @@
             },
             "style": {
                 "left": "981px",
-                "top": "527px",
+                "top": "504px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -7963,7 +7963,7 @@
             },
             "style": {
                 "left": "981px",
-                "top": "486px",
+                "top": "463px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -8094,7 +8094,7 @@
             },
             "style": {
                 "left": "981px",
-                "top": "445px",
+                "top": "422px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -8225,7 +8225,7 @@
             },
             "style": {
                 "left": "981px",
-                "top": "404px",
+                "top": "381px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -8356,7 +8356,7 @@
             },
             "style": {
                 "left": "981px",
-                "top": "364px",
+                "top": "341px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -8487,7 +8487,7 @@
             },
             "style": {
                 "left": "981px",
-                "top": "323px",
+                "top": "300px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -8618,7 +8618,7 @@
             },
             "style": {
                 "left": "981px",
-                "top": "282px",
+                "top": "259px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -8749,7 +8749,7 @@
             },
             "style": {
                 "left": "981px",
-                "top": "242px",
+                "top": "219px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -8822,7 +8822,7 @@
             },
             "style": {
                 "left": "392px",
-                "top": "237px",
+                "top": "214px",
                 "width": "130px",
                 "height": "334px",
                 "z-index": "3",
@@ -8898,7 +8898,7 @@
             },
             "style": {
                 "left": "537px",
-                "top": "237px",
+                "top": "214px",
                 "width": "130px",
                 "height": "334px",
                 "z-index": "3",
@@ -8974,7 +8974,7 @@
             },
             "style": {
                 "left": "683px",
-                "top": "237px",
+                "top": "214px",
                 "width": "130px",
                 "height": "334px",
                 "z-index": "3",
@@ -9050,7 +9050,7 @@
             },
             "style": {
                 "left": "828px",
-                "top": "237px",
+                "top": "214px",
                 "width": "130px",
                 "height": "334px",
                 "z-index": "3",
@@ -9126,7 +9126,7 @@
             },
             "style": {
                 "left": "973px",
-                "top": "237px",
+                "top": "214px",
                 "width": "130px",
                 "height": "334px",
                 "z-index": "3",
@@ -9202,7 +9202,7 @@
             },
             "style": {
                 "left": "251px",
-                "top": "237px",
+                "top": "214px",
                 "width": "129px",
                 "height": "331px",
                 "z-index": "3",
@@ -9274,7 +9274,7 @@
             },
             "style": {
                 "left": "252px",
-                "top": "169px",
+                "top": "146px",
                 "z-index": "10",
                 "color": "#ffffff",
                 "width": "123px",
@@ -9353,8 +9353,8 @@
                 "digits": "0"
             },
             "style": {
-                "left": "985px",
-                "top": "630px",
+                "left": "999px",
+                "top": "632px",
                 "z-index": "30",
                 "color": "#ffffff",
                 "width": "98px",
@@ -9429,8 +9429,8 @@
                 "digits": "0"
             },
             "style": {
-                "left": "985px",
-                "top": "654px",
+                "left": "999px",
+                "top": "656px",
                 "z-index": "30",
                 "color": "#ffffff",
                 "width": "98px",
@@ -9658,11 +9658,87 @@
                 "html_prepend": ""
             },
             "style": {
-                "left": "985px",
-                "top": "605px",
+                "left": "999px",
+                "top": "584px",
                 "z-index": "30",
                 "color": "#ffffff",
                 "width": "98px",
+                "height": "18px",
+                "text-align": "center",
+                "font-weight": "bold",
+                "text-shadow": "rgba(0, 0, 0, 0.9) 3px 3px 4px"
+            },
+            "widgetSet": "basic"
+        },
+        "e00087": {
+            "tpl": "tplValueFloat",
+            "data": {
+                "oid": "0_userdata.0.Charge_Control.Allgemein.EigenverbrauchTag",
+                "g_fixed": false,
+                "g_visibility": false,
+                "g_css_font_text": true,
+                "g_css_background": false,
+                "g_css_shadow_padding": false,
+                "g_css_border": false,
+                "g_gestures": false,
+                "g_signals": false,
+                "g_last_change": false,
+                "visibility-cond": "==",
+                "visibility-val": 1,
+                "visibility-groups-action": "hide",
+                "is_comma": "true",
+                "factor": "1",
+                "signals-cond-0": "==",
+                "signals-val-0": true,
+                "signals-icon-0": "/vis/signals/lowbattery.png",
+                "signals-icon-size-0": 0,
+                "signals-blink-0": false,
+                "signals-horz-0": 0,
+                "signals-vert-0": 0,
+                "signals-hide-edit-0": false,
+                "signals-cond-1": "==",
+                "signals-val-1": true,
+                "signals-icon-1": "/vis/signals/lowbattery.png",
+                "signals-icon-size-1": 0,
+                "signals-blink-1": false,
+                "signals-horz-1": 0,
+                "signals-vert-1": 0,
+                "signals-hide-edit-1": false,
+                "signals-cond-2": "==",
+                "signals-val-2": true,
+                "signals-icon-2": "/vis/signals/lowbattery.png",
+                "signals-icon-size-2": 0,
+                "signals-blink-2": false,
+                "signals-horz-2": 0,
+                "signals-vert-2": 0,
+                "signals-hide-edit-2": false,
+                "lc-type": "last-change",
+                "lc-is-interval": true,
+                "lc-is-moment": false,
+                "lc-format": "",
+                "lc-position-vert": "top",
+                "lc-position-horz": "left",
+                "lc-offset-vert": 0,
+                "lc-offset-horz": 0,
+                "lc-font-size": "12px",
+                "lc-font-family": "",
+                "lc-font-style": "",
+                "lc-bkg-color": "",
+                "lc-color": "",
+                "lc-border-width": "0",
+                "lc-border-style": "",
+                "lc-border-color": "",
+                "lc-border-radius": 10,
+                "lc-zindex": 0,
+                "html_append_plural": " kWh",
+                "digits": "2"
+            },
+            "style": {
+                "left": "642px",
+                "top": "585px",
+                "z-index": "30",
+                "color": "#ffffff",
+                "width": "90px",
                 "height": "18px",
                 "text-align": "center",
                 "font-weight": "bold",
