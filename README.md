@@ -32,6 +32,10 @@ verbunden sein.
 <li>Bei Firmware-Updates das Datum des Updates und die alte Versionsnummer speichern<br>Autor: stevie77</li><br>
 </ul>
 
+<h3>iobroker_VIS_View_E3DC_Charge_Control.js</h3>
+<p>View Import Datei für iobroker VIS</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/E3DC_Control.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/E3DC_Control.png" alt="VIS View E3DC-Control" style="max-width:100%;"></a></p>
+
 <h3>iobroker_VIS_View_E3DC_Uebersicht.js</h3>
 <p>View Import Datei für iobroker VIS</p>
 <p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/E3DC_Uebersicht.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/E3DC_Uebersicht.png" alt="VIS View E3DC Uebersicht" style="max-width:100%;"></a></p>
@@ -40,17 +44,31 @@ verbunden sein.
 <p>View Import Datei für iobroker VIS</p>
 <p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/E3DC_Modbus.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/E3DC_Modbus.png" alt="VIS View E3DC Modbus" style="max-width:100%;"></a></p>
 
-<h3>iobroker_VIS_View_E3DC_Charge_Control.js</h3>
-<p>View Import Datei für iobroker VIS</p>
-<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/E3DC_Control.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/E3DC_Control.png" alt="VIS View E3DC-Control" style="max-width:100%;"></a></p>
-
 <h3>iobroker_VIS_View_Diagramm_Prognosen.js</h3>
 <p>View Import Datei für iobroker VIS</p>
-<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/Diagramm_Prognosen.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/Diagramm_Prognosen.png" alt="VIS View E3DC-Control" style="max-width:100%;"></a></p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/Diagramm_Prognosen.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/Diagramm_Prognosen.png" alt="VIS View Diagramm_Prognosen" style="max-width:100%;"></a></p>
 
 <h3>iobroker_VIS_View_E3DC_Wallbox.js</h3>
 <p>View Import Datei für iobroker VIS</p>
-<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/E3DC_Wallbox.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/E3DC_Wallbox.png" alt="VIS View E3DC-Control" style="max-width:100%;"></a></p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/E3DC_Wallbox.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/E3DC_Wallbox.png" alt="VIS View E3DC Wallbox" style="max-width:100%;"></a></p>
+
+<h3>iobroker_VIS_View_E3DC_RSCP_Batterie.js</h3>
+<p>View Import Datei für iobroker VIS</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/VIS_View_E3DC_RSCP_Batterie.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/VIS_View_E3DC_RSCP_Batterie.png" alt="VIS View E3DC RSCP Batterie" style="max-width:100%;"></a></p>
+
+<h3>iobroker_VIS_View_E3DC_RSCP_EMS.js</h3>
+<p>View Import Datei für iobroker VIS</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/VIS_View_E3DC_RSCP_EMS.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/VIS_View_E3DC_RSCP_EMS.png" alt="VIS View E3DC RSCP EMS" style="max-width:100%;"></a></p>
+
+<h3>iobroker_VIS_View_E3DC_RSCP_Sperrzeiten.js</h3>
+<p>View Import Datei für iobroker VIS</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/VIS_View_E3DC_RSCP_Sperrzeiten.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/VIS_View_E3DC_RSCP_Sperrzeiten.png" alt="VIS View E3DC RSCP Sperrzeiten" style="max-width:100%;"></a></p>
+
+<h3>iobroker_VIS_View_E3DC_RSCP_Wechselrichter.js</h3>
+<p>View Import Datei für iobroker VIS</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/VIS_View_E3DC_RSCP_Wechselrichter.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/VIS_View_E3DC_RSCP_Wechselrichter.png" alt="VIS View E3DC RSCP Wechselrichter" style="max-width:100%;"></a></p>
+
+
 <br><br>
 <a name="log"></a>
 
