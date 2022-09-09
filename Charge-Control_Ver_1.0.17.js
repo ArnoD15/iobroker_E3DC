@@ -1,81 +1,47 @@
 'use strict';
 let Resource_Id_Dach=[];
 let sID_UntererLadekorridor_W =[],sID_Ladeschwelle_Proz =[],sID_Ladeende_Proz=[],sID_Ladeende2_Proz=[],sID_Winterminimum=[],sID_Sommermaximum=[],sID_Sommerladeende=[],sID_Unload_Proz=[];
-
-/**********************************************************************************************************
- Version: 1.0.16    Ein-/ Ausschaltkriterium der Lade/Entladeleistung E3DC geändert. Es wird jetzt die Astro-Funktion "sunset" verwendet
- Version: 1.0.15    Fehler, dass beim Abrufen der Wetterdaten Proplanta über Timer die falsche URL verwendet wurde, behoben.
- Version: 1.0.14    Kleinere Script Optimierungen durchgeführt.
- Version: 1.0.13    Prognose von Proplanta wird jetzt auch für die nächsten 6 Tage abgerufen.
- Version: 1.0.12    Fehler, dass Ladeleistung bei Überschreiten der Einspeisegrenze nur langsam erhöht wurde, behoben.
- Version: 1.0.11    Fehler, dass nach erreichen der Notstromreserve und ausreichender PV-Leistung nicht geladen wurde, behoben.
-                    Wenn die PV-Leistung > 500 W ist, wird das Laden/Entladen der Batterie eingeschaltet und ab 100 W PV-Leistung und Notstrom SOC erreicht ausgeschaltet.
- Version: 1.0.10    getSchedules(false) ersetzt, da es nicht bei allen problemlos funktioniert.
- Version: 1.0.9     Fehler, dass Timer bei Neustart vom Skript nicht gelöscht werden, behoben.
-                    Fehler, dass eine Aktualisierung des State "EinstellungAnwahl" zu einem Aufruf von der Funktion Main() führte, behoben.
-                    Fehler, dass die Function Main() beim Scriptstart vor der aktualisierung der Prognosewerte Proplanta aufgerufen wurde, behoben.
- Version: 1.0.8     Wenn Notstromreserve erreicht ist, wird auch DISCHARGE_START_POWER, MAX_CHARGE_POWER und MAX_DISCHARGE_POWER auf 0 gesetzt,
-                    damit der WR in den Standby-Modus wechselt und die Batterie nicht weiter entladen wird.
-                    Aktualisierung der State SET_POWER_VALUE auf 5 sek. reduziert und kleinere Fehler behoben.
- Version: 1.0.7     Nach der Zeit Ladeende (Sommer Ladeende) wird die Regelung ausgeschaltet 
- Version: 1.0.6     Beim Skript Start werden jetzt auch die Prognosewerte Solcast abgerufen mit folgender Einschränkung:
-                    Vor 4 Uhr werden die Prognosewerte für den aktuellen Tag + 6 Tage aktualisiert
-                    Nach 4 Uhr werden nur die Prognosewerte für den nächsten Tag + 5 Tage aktualisiert
- Version: 1.0.5     Ea werden 200 W vom Einspeiselimit und der maximalen Wechselrichterleistung abgezogen, um die Trägheit der Steuerung auszugleichen 
- Version: 1.0.4     Speichergröße berechnen geändert. Von der max. Kapazität der Batterie, werden 10% abgezogen die E3DC verwendet,
-                    um ein Entladen auf 0% oder laden auf 100% zu verhindern.
-                    Da das typabhängig ist, muss die Entladetiefe in % im Script unter Einstellungen E3DC eingetragen werden.
-                    Fehler korrigiert das SET_POWER_MODE und SET_POWER_VALUE beim Skript Start zu einem Fehler führen, wenn diese beiden State
-                    nicht definiert sind.
- Version: 1.0.3     Auch die Entladeleistung wird langsam erhöht, um Kurve zu glätten.
- Version: 1.0.2     Speichergröße berechnen geändert. Es wird der ASOC (Alterungszustand) von Bat_0 verwendet, um die
-                    verfügbare Batterie Kapazität zu berechnen
- Version: 1.0.1     Wenn weniger als 500 W in das Netz eingespeist werden können, wird die Regelung ausgeschaltet.
-                    Bei wechselnder Bewölkung ist die Regelung zu langsam, um Netzbezug zu verhindern, deswegen wird bereits 
-                    ab einer Einspeiseleistung von 500 W die Regelung E3DC überlassen.
- Version: 1.0.0     Das Zusatzprogramm E3DC-Control wird ab dieser Version nicht mehr benötig, dafür muss der
-                    Adapter e3dc-rscp installiert sein.
- **********************************************************************************************************/
-//+++++++++++++++++++++++++++++++++++++++++++  USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++++++
+//-----------------------------------------------------------------------------------------------------------
+//++++++++++++++++++++++++++++++++++++++++++++  USER ANPASSUNGEN ++++++++++++++++++++++++++++++++++++++++++++
 
 //*************************************** Einstellungen Charge-Control **************************************
-let logflag = true;                                             // History Daten in Lokaler Datei speichern 
-const sLogPath = "/home/iobroker/HistoryPV_Leistung.json";      // Pfad zur Sicherungsdatei History 
-const LogAusgabe = true                                         // Zusätzliche allgemeine LOG Ausgaben 
-const DebugAusgabe = false                                      // Debug Ausgabe im LOG zur Fehlersuche
-const LogAusgabeSteuerung = true                                // Zusätzliche LOG Ausgaben der Lade-Steuerung
+let logflag = true;                                                                                 // History Daten in Lokaler Datei speichern 
+const sLogPath = "/home/iobroker/HistoryPV_Leistung.json";                                          // Pfad zur Sicherungsdatei History 
+const LogAusgabe = true                                                                             // Zusätzliche allgemeine LOG Ausgaben 
+const DebugAusgabe = false                                                                          // Debug Ausgabe im LOG zur Fehlersuche
+const LogAusgabeSteuerung = false                                                                   // Zusätzliche LOG Ausgaben der Lade-Steuerung
 
 //***************************************** Einstellungen Proplanta ***************************************
-const country = "de"                                            // Ländercode de,at, ch, fr, it
-const ProplantaOrt = 'xxxxxxxxxxxxxxxx'                           // Welcher Wohnort soll abgefragt werden
-const ProplantaPlz = 'xxxxx'                                    // Postleitzahl
-
+const country = "de"                                                                                // Ländercode de,at, ch, fr, it
+const ProplantaOrt = 'xxxxxxxxxxxxxxxx'                                                             // Welcher Wohnort soll abgefragt werden
+const ProplantaPlz = 'xxxxx'                                                                        // Postleitzahl
+const BewoelkungsgradGrenzwert = 90                                                                 // wird als Umschaltkriterium für die Einstellung 2-5 verwendet
 //***************************************** Einstellungen Solcast *****************************************
-const Solcast = true;                                           // true = Daten Solcast werden abgerufen false = Daten Solcast werden nicht abgerufenb
-const SolcastDachflaechen = 2;                                  // Aktuell max. zwei Dachflächen möglich
-Resource_Id_Dach[1] = 'xxxx-xxxx-xxxx-xxxx'                     // Rooftop 1 Id von der Homepage Solcast
-Resource_Id_Dach[2] = 'xxxx-xxxx-xxxx-xxxx'                     // Rooftop 2 Id von der Homepage Solcast
-const SolcastAPI_key = 'xxxxxxxx-xx-xxxxxxxxxxxxxxxxxxxx'       // Solcast API Key
+const Solcast = true;                                                                               // History Daten in Lokaler Datei speichern 
+const SolcastDachflaechen = 2;                                                                      // Aktuell max. zwei Dachflächen möglich
+Resource_Id_Dach[1] = 'xxxx-xxxx-xxxx-xxxx'                                                         // Rooftop 1 Id von der Homepage Solcast
+Resource_Id_Dach[2] = 'xxxx-xxxx-xxxx-xxxx'                                                         // Rooftop 2 Id von der Homepage Solcast
+const SolcastAPI_key = 'xxxxxxxx-xx-xxxxxxxxxxxxxxxxxxxx'                                           // Solcast API Key
 
 //******************************************** Einstellungen E3DC *******************************************
-const Entladetiefe_Pro = 90;                                    // Die Entladetiefe der Batterie in % aus den technischen Daten E3DC
+const Entladetiefe_Pro = 90;                                                                        // Die Entladetiefe der Batterie in % aus den technischen Daten E3DC
 
-//************************************* Einstellungen Diagramm Prognose ***********************************
-const nModulFlaeche = 73;                       // 73 Installierte Modulfläche in m² (Silizium-Zelle 156x156x60 Zellen x 50 Module)
-const nWirkungsgradModule = 18;                 // Wirkungsgrad / Effizienzgrad der Solarmodule in % bezogen auf die Globalstrahlung (aktuelle Module haben max. 24 %)
-const nKorrFaktor = 0                           // nKorrFaktor in Prozent. Reduziert die berechnete Prognose um diese anzugleichen.nKorrFaktor= 0 ohne Korrektur 
-const nMinPvLeistungTag_kWh = 3                 // minimal Mögliche PV-Leistung. Wenn Prognose niedriger ist wird mit diesem Wert gerechnet
-const nMaxPvLeistungTag_kWh = 105               // max. Mögliche PV-Leistung. Wenn Prognose höher ist wird mit diesem Wert gerechnet
+//************************************* Einstellungen Diagramm Prognose *************************************
+const nModulFlaeche = 73;                                                                           // 73 Installierte Modulfläche in m² (Silizium-Zelle 156x156x60 Zellen x 50 Module)
+const nWirkungsgradModule = 18;                                                                     // Wirkungsgrad / Effizienzgrad der Solarmodule in % bezogen auf die Globalstrahlung (aktuelle Module haben max. 24 %)
+const nKorrFaktor = 0                                                                               // nKorrFaktor in Prozent. Reduziert die berechnete Prognose um diese anzugleichen.nKorrFaktor= 0 ohne Korrektur 
+const nMinPvLeistungTag_kWh = 3                                                                     // minimal Mögliche PV-Leistung. Wenn Prognose niedriger ist wird mit diesem Wert gerechnet
+const nMaxPvLeistungTag_kWh = 105                                                                   // max. Mögliche PV-Leistung. Wenn Prognose höher ist wird mit diesem Wert gerechnet
 
 
-//****************************** Einstellungen Modul Modbus *****************************
+//**************************************** Einstellungen Modul Modbus ***************************************
 const sID_Batterie_SOC = 'modbus.0.holdingRegisters.40083_Batterie_SOC';                            // Pfad Modul ModBus aktueller Batterie_SOC'
 const sID_PvLeistung_E3DC_W = 'modbus.0.holdingRegisters.40068_PV_Leistung'                         // Pfad Modul ModBus aktuelle PV_Leistung'
 const sID_PvLeistung_ADD_W = 'modbus.0.holdingRegisters.40076_Zusaetzliche_Einspeiser_Leistung'     // Pfad Modul ModBus Zusätzliche Einspeiser Leistung
 const sID_BatterieLeistung_W ='modbus.0.holdingRegisters.40070_Batterie_Leistung'                   // Pfad Modul ModBus aktuelle Batterie Leistung
 const sID_Power_Grid_W = 'modbus.0.holdingRegisters.40074_Netz_Leistung'                            // Pfad Modul ModBus aktuelle Netz Leistung
 const sID_Power_Home_W = 'modbus.0.holdingRegisters.40072_Hausverbrauch_Leistung'                   // Pfad Modul ModBus aktueller Hausverbrauch
-//****************************** Einstellungen Modul e3dc.rscp *****************************
+//************************************** Einstellungen Modul e3dc.rscp **************************************
 const sID_Bat_Discharge_Limit = 'e3dc-rscp.0.EMS.BAT_DISCHARGE_LIMIT'                               // Batterie Entladelimit (negativer Wert)
 const sID_Bat_Charge_Limit = 'e3dc-rscp.0.EMS.BAT_CHARGE_LIMIT'                                     // Batterie Ladelimit
 const sID_Notrom_Status = 'e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS'                                  // 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
@@ -89,16 +55,14 @@ const sID_Max_wrleistung_W = 'e3dc-rscp.0.EMS.SYS_SPECS.maxAcPower'             
 const sID_Einspeiselimit_W = 'e3dc-rscp.0.EMS.DERATE_AT_POWER_VALUE'                                // Eingestellte Einspeisegrenze E3DC
 const sID_BAT0_Alterungszustand = 'e3dc-rscp.0.BAT.BAT_0.ASOC'                                      // Batterie ASOC e3dc-rscp
 const sID_DISCHARGE_START_POWER = 'e3dc-rscp.0.EMS.DISCHARGE_START_POWER'                           // Anfängliche Batterie-Entladeleistung
+const sID_PARAM_EP_RESERVE_MAX_W = 'e3dc-rscp.0.EP.PARAM_0.PARAM_EP_RESERVE_MAX_W'                  // Eingestellte Notstrom Reserve E3DC
+//******************************* Einstellungen Instanz Script Charge-Control *******************************
+let instanz = '0_userdata.0.';                                                                      // Instanz
+let PfadEbene1 = 'Charge_Control.';                                                                 // Pfad innerhalb der Instanz
+let PfadEbene2 = ['Parameter.','Allgemein.','History.','Proplanta.']                                // Pfad innerhalb der Instanz
 
-//********************* Einstellungen Instanz Script Charge-Control ***********************
-let instanz = '0_userdata.0.';
-// Pfad innerhalb der Instanz
-let PfadEbene1 = 'Charge_Control.';
-let PfadEbene2 = ['Parameter.','Allgemein.','History.','Proplanta.']
-
-//---------------------------------------------------------------------------------------------------
-//++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN ++++++++++++++++++++++++++++++++++++++
-//---------------------------------------------------------------------------------------------------
+//++++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN ++++++++++++++++++++++++++++++++++++++++++
+//-----------------------------------------------------------------------------------------------------------
 
 //***************************************************************************************************
 //*********************************** User Eingaben prüfen ******************************************
@@ -116,26 +80,14 @@ if (Solcast){
     if ((typeof Resource_Id_Dach[2] != "string") || (typeof Resource_Id_Dach[2] == "undefined")){console.error("Resource_Id_Dach[2] muss als String eingegeben werden");}
     if ((typeof SolcastAPI_key != "string") || (typeof SolcastAPI_key == "undefined")){console.error("SolcastAPI_key muss als String eingegeben werden");}
 }
-if (!existsState(sID_Batterie_SOC)){log('State '+sID_Batterie_SOC+' ist nicht vorhanden','error')} ;
-if (!existsState(sID_PvLeistung_E3DC_W)){log('State '+sID_PvLeistung_E3DC_W+' ist nicht vorhanden','error')} ;
-if (!existsState(sID_PvLeistung_ADD_W)){log('State '+sID_PvLeistung_ADD_W+' ist nicht vorhanden','error')} ;
-if (!existsState(sID_BatterieLeistung_W)){log('State '+sID_BatterieLeistung_W+' ist nicht vorhanden','error')} ;
-if (!existsState(sID_Power_Grid_W)){log('State '+sID_Power_Grid_W+' ist nicht vorhanden','error')} ;
-if (!existsState(sID_Power_Home_W)){log('State '+sID_Power_Home_W+' ist nicht vorhanden','error')} ;
 
-if (!existsState(sID_Bat_Discharge_Limit)){log('State '+sID_Bat_Discharge_Limit+' ist nicht vorhanden','error')} ;
-if (!existsState(sID_Bat_Charge_Limit)){log('State '+sID_Bat_Charge_Limit+' ist nicht vorhanden','error')} ;
-if (!existsState(sID_Notrom_Status)){log('State '+sID_Notrom_Status+' ist nicht vorhanden','error')} ;
-if (!existsState(sID_installed_Battery_Capacity)){log('State '+sID_installed_Battery_Capacity+' ist nicht vorhanden','error')} ;
-if (!existsObject(sID_SET_POWER_MODE)){log('State '+sID_SET_POWER_MODE+' ist nicht vorhanden','error')} ;
-if (!existsObject(sID_SET_POWER_VALUE_W)){log('State '+sID_SET_POWER_VALUE_W+' ist nicht vorhanden','error')} ;
-if (!existsState(sID_Max_Discharge_Power_W)){log('State '+sID_Max_Discharge_Power_W+' ist nicht vorhanden','error')} ;
-if (!existsState(sID_Max_Charge_Power_W)){log('State '+sID_Max_Charge_Power_W+' ist nicht vorhanden','error')} ;
-if (!existsState(sID_startDischargeDefault)){log('State '+sID_startDischargeDefault+' ist nicht vorhanden','error')} ;
-if (!existsState(sID_Max_wrleistung_W)){log('State '+sID_Max_wrleistung_W+' ist nicht vorhanden','error')} ;
-if (!existsState(sID_Einspeiselimit_W)){log('State '+sID_Einspeiselimit_W+' ist nicht vorhanden','error')} ;
-if (!existsState(sID_BAT0_Alterungszustand)){log('State '+sID_BAT0_Alterungszustand+' ist nicht vorhanden','error')} ;
-if (!existsState(sID_DISCHARGE_START_POWER)){log('State '+sID_DISCHARGE_START_POWER+' ist nicht vorhanden','error')} ;
+const PruefeID = [sID_Batterie_SOC,sID_PvLeistung_E3DC_W,sID_PvLeistung_ADD_W,sID_BatterieLeistung_W,sID_Power_Grid_W,
+sID_Power_Home_W,sID_Bat_Discharge_Limit,sID_Bat_Charge_Limit,sID_Notrom_Status,sID_installed_Battery_Capacity,sID_SET_POWER_MODE,
+sID_SET_POWER_VALUE_W,sID_Max_Discharge_Power_W,sID_Max_Charge_Power_W,sID_startDischargeDefault,sID_Max_wrleistung_W,
+sID_Einspeiselimit_W,sID_BAT0_Alterungszustand,sID_DISCHARGE_START_POWER,sID_PARAM_EP_RESERVE_MAX_W];
+for (let i = 0; i < PruefeID.length; i++) {
+    if (!existsObject(PruefeID[i])){log('Pfad ='+PruefeID[i]+' existiert nicht, bitte prüfen','error');}
+}
 
 //***************************************************************************************************
 //************************************ Deklaration Variablen ****************************************
@@ -221,7 +173,7 @@ clearSchedule(Timer3);
 async function ScriptStart()
 {
     await CreateState();
-    log('-==== Jetzt sind alle States abgearbeitet ====-');
+    log('-==== Jetzt sind alle States abgearbeitet Charge-Control Version 1.0.17 ====-');
     AutomatikAnwahl = getState(sID_Automatik).val;
     PrognoseAnwahl = getState(sID_PrognoseAnwahl).val;
     setState(sID_Anwahl_MEZ_MESZ, dst());  
@@ -562,16 +514,21 @@ async function Ladesteuerung()
 // Notstromreserve berechnen (Notstrom_min_Proz = Speicherreserve in % bei Wintersonnenwende 21.12 / Notstrom_sockel_Proz =  min. SOC Wert bei Tag-/Nachtgleiche 21.3./21.9. )
 async function Notstromreserve()
 {
-    
     let dAkt = new Date();
     let jjjj= dAkt.getFullYear();
     let dStart = new Date(jjjj+',1,1');
-    // @ts-ignore
-    let tm_yday = Math.round(Math.abs(dAkt - dStart) / (1000 * 60 * 60 * 24 ));
-    let Notstrom_sockel_Proz = (await getStateAsync(sID_Notstrom_sockel_Proz)).val           // Parameter Charge-Control Notstrom Sockel
-    let Notstrom_min_Proz = (await getStateAsync(sID_Notstrom_min_Proz)).val                 // Parameter Charge-Control Notstrom min
-    Notstrom_SOC_Proz = Math.round(Notstrom_sockel_Proz + (Notstrom_min_Proz - Notstrom_sockel_Proz) * Math.cos((tm_yday+9)*2*3.14/365))
-    await setStateAsync(sID_Notstrom_akt,Notstrom_SOC_Proz)
+    if ((await getStateAsync(sID_PARAM_EP_RESERVE_MAX_W)).val == 0){
+        // @ts-ignore
+        let tm_yday = Math.round(Math.abs(dAkt - dStart) / (1000 * 60 * 60 * 24 ));
+        let Notstrom_sockel_Proz = (await getStateAsync(sID_Notstrom_sockel_Proz)).val           // Parameter Charge-Control Notstrom Sockel
+        let Notstrom_min_Proz = (await getStateAsync(sID_Notstrom_min_Proz)).val                 // Parameter Charge-Control Notstrom min
+        Notstrom_SOC_Proz = Math.round(Notstrom_sockel_Proz + (Notstrom_min_Proz - Notstrom_sockel_Proz) * Math.cos((tm_yday+9)*2*3.14/365))
+        await setStateAsync(sID_Notstrom_akt,Notstrom_SOC_Proz)
+    }else{
+        log('-==== Notstromreserve wurde beim Hauskraftwerk eingestellt und wird nicht von Charge-Control gesteuert ====-','warn')    
+        await setStateAsync(sID_Notstrom_akt,0)
+        Notstrom_SOC_Proz = 0;
+    }
 }
 
 
@@ -609,7 +566,7 @@ async function Einstellung(UeberschussPrognoseProzent)
     // Einstellung 2
     // Prognose PV-Leistung höher als benötigter Eigenverbrauch,Batterie laden und Überschuss ins Netz einspeisen
     // und keine Bewölkung > 90% 
-	if (UeberschussPrognoseProzent > 0 && Bedeckungsgrad12 < 90 && Bedeckungsgrad15 < 90 && AutomatikAnwahl) 
+	if (UeberschussPrognoseProzent > 0 && Bedeckungsgrad12 < BewoelkungsgradGrenzwert && Bedeckungsgrad15 < BewoelkungsgradGrenzwert && AutomatikAnwahl) 
     {
 		if (LogAusgabe){log('Einstellung 2 aktiv EinstellungAnwahl='+EinstellungAnwahl);}
         if(EinstellungAnwahl != 2){
@@ -620,7 +577,7 @@ async function Einstellung(UeberschussPrognoseProzent)
     // Einstellung 3
     // Prognose PV-Leistung höher als benötigter Eigenverbrauch,Batterie laden und Überschuss ins Netz einspeisen.
 	// ab 12:00 - 18:00 Uhr Bewölkung > 90%
-	if ((UeberschussPrognoseProzent > 0 && Bedeckungsgrad12>=90 && Bedeckungsgrad15>=90 && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===3))
+	if ((UeberschussPrognoseProzent > 0 && Bedeckungsgrad12 >= BewoelkungsgradGrenzwert && Bedeckungsgrad15 >= BewoelkungsgradGrenzwert && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===3))
 	{
 		if (LogAusgabe){log('Einstellung 3 aktiv');}
         if(EinstellungAnwahl != 3){
@@ -631,7 +588,7 @@ async function Einstellung(UeberschussPrognoseProzent)
     // Einstellung 4
     // Prognose PV-Leistung höher als benötigter Eigenverbrauch,Batterie laden und Überschuss ins Netz einspeisen.
 	// ab 12:00 - 15:00 Uhr Bewölkung > 90%
-	if ((UeberschussPrognoseProzent > 0 && Bedeckungsgrad12 >= 90 && Bedeckungsgrad15 < 90 && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===4))
+	if ((UeberschussPrognoseProzent > 0 && Bedeckungsgrad12 >= BewoelkungsgradGrenzwert && Bedeckungsgrad15 < BewoelkungsgradGrenzwert && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===4))
 	{
 		if (LogAusgabe){log('Einstellung 4 aktiv');}
         if(EinstellungAnwahl != 4){
@@ -642,7 +599,7 @@ async function Einstellung(UeberschussPrognoseProzent)
     // Einstellung 5
     // Prognose PV-Leistung höher als benötigter Eigenverbrauch,Batterie laden und Überschuss ins Netz einspeisen.
 	// ab 15:00 - 18:00 Uhr Bewölkung > 90%
-	if ((UeberschussPrognoseProzent > 0 && Bedeckungsgrad12<90 && Bedeckungsgrad15>=90 && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===5))
+	if ((UeberschussPrognoseProzent > 0 && Bedeckungsgrad12 < BewoelkungsgradGrenzwert && Bedeckungsgrad15 >= BewoelkungsgradGrenzwert && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===5))
     {
         if (LogAusgabe){log('Einstellung 5 aktiv');}
         if(EinstellungAnwahl != 5){
