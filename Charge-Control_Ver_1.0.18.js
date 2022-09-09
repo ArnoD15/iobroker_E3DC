@@ -55,7 +55,7 @@ const sID_Max_wrleistung_W = 'e3dc-rscp.0.EMS.SYS_SPECS.maxAcPower'             
 const sID_Einspeiselimit_W = 'e3dc-rscp.0.EMS.DERATE_AT_POWER_VALUE'                                // Eingestellte Einspeisegrenze E3DC
 const sID_BAT0_Alterungszustand = 'e3dc-rscp.0.BAT.BAT_0.ASOC'                                      // Batterie ASOC e3dc-rscp
 const sID_DISCHARGE_START_POWER = 'e3dc-rscp.0.EMS.DISCHARGE_START_POWER'                           // Anfängliche Batterie-Entladeleistung
-const sID_PARAM_EP_RESERVE_MAX_W = 'e3dc-rscp.0.EP.PARAM_0.PARAM_EP_RESERVE_MAX_W'                  // Eingestellte Notstrom Reserve E3DC
+const sID_PARAM_EP_RESERVE_W = 'e3dc-rscp.0.EP.PARAM_0.PARAM_EP_RESERVE_W'                          // Eingestellte Notstrom Reserve E3DC
 //******************************* Einstellungen Instanz Script Charge-Control *******************************
 let instanz = '0_userdata.0.';                                                                      // Instanz
 let PfadEbene1 = 'Charge_Control.';                                                                 // Pfad innerhalb der Instanz
@@ -84,7 +84,7 @@ if (Solcast){
 const PruefeID = [sID_Batterie_SOC,sID_PvLeistung_E3DC_W,sID_PvLeistung_ADD_W,sID_BatterieLeistung_W,sID_Power_Grid_W,
 sID_Power_Home_W,sID_Bat_Discharge_Limit,sID_Bat_Charge_Limit,sID_Notrom_Status,sID_installed_Battery_Capacity,sID_SET_POWER_MODE,
 sID_SET_POWER_VALUE_W,sID_Max_Discharge_Power_W,sID_Max_Charge_Power_W,sID_startDischargeDefault,sID_Max_wrleistung_W,
-sID_Einspeiselimit_W,sID_BAT0_Alterungszustand,sID_DISCHARGE_START_POWER,sID_PARAM_EP_RESERVE_MAX_W];
+sID_Einspeiselimit_W,sID_BAT0_Alterungszustand,sID_DISCHARGE_START_POWER,sID_PARAM_EP_RESERVE_W];
 for (let i = 0; i < PruefeID.length; i++) {
     if (!existsObject(PruefeID[i])){log('Pfad ='+PruefeID[i]+' existiert nicht, bitte prüfen','error');}
 }
@@ -173,7 +173,7 @@ clearSchedule(Timer3);
 async function ScriptStart()
 {
     await CreateState();
-    log('-==== Jetzt sind alle States abgearbeitet Charge-Control Version 1.0.17 ====-');
+    log('-==== Jetzt sind alle States abgearbeitet Charge-Control Version 1.0.18 ====-');
     AutomatikAnwahl = getState(sID_Automatik).val;
     PrognoseAnwahl = getState(sID_PrognoseAnwahl).val;
     setState(sID_Anwahl_MEZ_MESZ, dst());  
@@ -517,7 +517,7 @@ async function Notstromreserve()
     let dAkt = new Date();
     let jjjj= dAkt.getFullYear();
     let dStart = new Date(jjjj+',1,1');
-    if ((await getStateAsync(sID_PARAM_EP_RESERVE_MAX_W)).val == 0){
+    if ((await getStateAsync(sID_PARAM_EP_RESERVE_W)).val == 0){
         // @ts-ignore
         let tm_yday = Math.round(Math.abs(dAkt - dStart) / (1000 * 60 * 60 * 24 ));
         let Notstrom_sockel_Proz = (await getStateAsync(sID_Notstrom_sockel_Proz)).val           // Parameter Charge-Control Notstrom Sockel
