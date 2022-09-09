@@ -75,10 +75,13 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.0.18</h3>
+<li>Fehler korrigiert, für die Prüfung ob eine Notstromreserve beim E3DC eingestellt wurde, wird jetzt die Objekt ID PARAM_EP_RESERVE_W verwendet. </li>
+
 <h3>Version: 1.0.17</h3>
 <li>Es wird geprüft, ob beim Hauskraftwerk eine Notstromreserve eingestellt wurde und wenn ja, wird die Einstellung Notstrom min und Notstrom Sockel
 in Charge-Control ignoriert und eine Warnung im LOG eingetragen </li>
-<li>Neue Konstante "BewoelkungsgradGrenzwert".Jetzt kann jeder seinen Grenzwert einstellen, der als Umschaltkriterium für die Einstellung 2-5 verwendet wird. 
+<li>Neue Konstante "BewoelkungsgradGrenzwert".Jetzt kann jeder seinen Grenzwert einstellen, der als Umschaltkriterium für die Einstellung 2-5 verwendet wird.</li> 
 
 <h3>Version: 1.0.16</h3>
 <li>Ein-/ Ausschaltkriterium der Lade/Entladeleistung E3DC geändert. Es wird jetzt die Astro-Funktion "sunset" verwendet</li>
