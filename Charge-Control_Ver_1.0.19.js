@@ -43,7 +43,7 @@ const sID_Power_Grid_W = 'modbus.0.holdingRegisters.40074_Netz_Leistung'        
 const sID_Power_Home_W = 'modbus.0.holdingRegisters.40072_Hausverbrauch_Leistung'                   // Pfad Modul ModBus aktueller Hausverbrauch
 //************************************** Einstellungen Modul e3dc.rscp **************************************
 const sID_Bat_Discharge_Limit = 'e3dc-rscp.0.EMS.BAT_DISCHARGE_LIMIT'                               // Batterie Entladelimit (negativer Wert)
-const sID_Bat_Charge_Limit = 'e3dc-rscp.0.EMS.BAT_CHARGE_LIMIT'                                     // Batterie Ladelimit
+const sID_Bat_Charge_Limit = 'e3dc-rscp.0.EMS.SYS_SPECS.maxBatChargePower'                          // Batterie Ladelimit
 const sID_Notrom_Status = 'e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS'                                  // 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
 const sID_installed_Battery_Capacity ='e3dc-rscp.0.EMS.SYS_SPECS.installedBatteryCapacity'          // Installierte Batterie Kapazität E3DC
 const sID_SET_POWER_MODE = 'e3dc-rscp.0.EMS.SET_POWER_MODE'                                         // Lademodus
@@ -173,7 +173,7 @@ clearSchedule(Timer3);
 async function ScriptStart()
 {
     await CreateState();
-    log('-==== Jetzt sind alle States abgearbeitet Charge-Control Version 1.0.18 ====-');
+    log('-==== Jetzt sind alle States abgearbeitet Charge-Control Version 1.0.19 ====-');
     AutomatikAnwahl = getState(sID_Automatik).val;
     PrognoseAnwahl = getState(sID_PrognoseAnwahl).val;
     setState(sID_Anwahl_MEZ_MESZ, dst());  
@@ -1016,7 +1016,7 @@ async function PrognosedatenAbrufen(){
 // Prognose Proplanta abrufen.
 async function InterrogateProplanta(){
     return new Promise(function(resolve, reject){
-        xhr.onreadystatechange = function(){
+        xhr.onload = function(){
             if (xhr.readyState ==4){
                 if(xhr.status < 200 || xhr.status > 206 || xhr.responseText == null){
                     reject('Error Proplanta, status code = '+ xhr.status)
@@ -1025,9 +1025,6 @@ async function InterrogateProplanta(){
                 }
             }
         }
-        xhr.ontimeout = function (e) {
-            reject('Timeout beim abrufen der Daten von Proplanta')
-        };
         xhr.open("GET",baseurl, true);
         xhr.responseType = "text";
 		xhr.send();
@@ -1056,14 +1053,14 @@ async function SheduleProplanta() {
         await InterrogateProplanta().then(async function(result0){
             let GlobalstrahlungTag0,GlobalstrahlungTag1,GlobalstrahlungTag2,GlobalstrahlungTag3;
             if (LogAusgabe){log('Rueckmeldung InterrogateProplanta XHR.Status= '+ xhr.status)}
-            let ArrayBereinig = await HTML_CleanUp(result0,0)    
+            let ArrayBereinig = await HTML_CleanUp(result0)    
             if (DebugAusgabe){
                 for (let i in ArrayBereinig) {
                     log("i ="+i+' Wert ab Tag0=' + ArrayBereinig[i]);
                 }
             } 
             // Prüfen ob Globalstrahlung für heute in eine Zahl umgewandelt werden kann,wenn nicht noch mal nach 1 Stunde abrufen
-            if (isNaN(parseFloat(ArrayBereinig[11]))){
+            if (isNaN(parseFloat(ArrayBereinig[13]))){
                 GlobalstrahlungTag0 = 0;
                 xhr.abort
                 let d = new Date();
@@ -1074,20 +1071,20 @@ async function SheduleProplanta() {
             }else{
                 let Tag0 = nextDayDate(0).slice(8,10), Tag1 = nextDayDate(1).slice(8,10),Tag2 = nextDayDate(2).slice(8,10), Tag3 =nextDayDate(3).slice(8,10);
                 // Prüfen ob Werte in eine Zahl umgewandelt werden können,wenn nicht 0 zuweisen     
-                if (isNaN(parseFloat(ArrayBereinig[11]))){GlobalstrahlungTag0 = 0;}else{GlobalstrahlungTag0 = parseFloat(ArrayBereinig[11]);}      
-                if (isNaN(parseFloat(ArrayBereinig[12]))){GlobalstrahlungTag1 = 0;}else{GlobalstrahlungTag1 = parseFloat(ArrayBereinig[12]);}      
-                if (isNaN(parseFloat(ArrayBereinig[13]))){GlobalstrahlungTag2 = 0;}else{GlobalstrahlungTag2 = parseFloat(ArrayBereinig[13]);}      
-                if (isNaN(parseFloat(ArrayBereinig[14]))){GlobalstrahlungTag3 = 0;}else{GlobalstrahlungTag3 = parseFloat(ArrayBereinig[14]);}      
-                if (isNaN(parseFloat(ArrayBereinig[41]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_12', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_12', parseFloat(ArrayBereinig[41]));}      
-                if (isNaN(parseFloat(ArrayBereinig[46]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_15', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_15', parseFloat(ArrayBereinig[46]));}      
+                if (isNaN(parseFloat(ArrayBereinig[13]))){GlobalstrahlungTag0 = 0;}else{GlobalstrahlungTag0 = parseFloat(ArrayBereinig[13]);}      
+                if (isNaN(parseFloat(ArrayBereinig[14]))){GlobalstrahlungTag1 = 0;}else{GlobalstrahlungTag1 = parseFloat(ArrayBereinig[14]);}      
+                if (isNaN(parseFloat(ArrayBereinig[15]))){GlobalstrahlungTag2 = 0;}else{GlobalstrahlungTag2 = parseFloat(ArrayBereinig[15]);}      
+                if (isNaN(parseFloat(ArrayBereinig[16]))){GlobalstrahlungTag3 = 0;}else{GlobalstrahlungTag3 = parseFloat(ArrayBereinig[16]);}      
+                if (isNaN(parseFloat(ArrayBereinig[19]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_12', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_12', parseFloat(ArrayBereinig[19]));}      
+                if (isNaN(parseFloat(ArrayBereinig[25]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_15', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_15', parseFloat(ArrayBereinig[25]));}      
                 if (isNaN(parseFloat(ArrayBereinig[1]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_0', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_0', parseFloat(ArrayBereinig[1]));}      
                 if (isNaN(parseFloat(ArrayBereinig[2]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_1', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_1', parseFloat(ArrayBereinig[2]));}      
                 if (isNaN(parseFloat(ArrayBereinig[3]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_2', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_2', parseFloat(ArrayBereinig[3]));}      
                 if (isNaN(parseFloat(ArrayBereinig[4]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_3', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_3', parseFloat(ArrayBereinig[4]));}      
-                if (isNaN(parseFloat(ArrayBereinig[6]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_0', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_0', parseFloat(ArrayBereinig[6]));}      
-                if (isNaN(parseFloat(ArrayBereinig[7]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_1', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_1', parseFloat(ArrayBereinig[7]));}      
-                if (isNaN(parseFloat(ArrayBereinig[8]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_2', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_2', parseFloat(ArrayBereinig[8]));}      
-                if (isNaN(parseFloat(ArrayBereinig[9]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_3', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_3', parseFloat(ArrayBereinig[9]));}      
+                if (isNaN(parseFloat(ArrayBereinig[7]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_0', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_0', parseFloat(ArrayBereinig[7]));}      
+                if (isNaN(parseFloat(ArrayBereinig[8]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_1', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_1', parseFloat(ArrayBereinig[8]));}      
+                if (isNaN(parseFloat(ArrayBereinig[9]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_2', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_2', parseFloat(ArrayBereinig[9]));}      
+                if (isNaN(parseFloat(ArrayBereinig[10]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_3', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_3', parseFloat(ArrayBereinig[10]));}      
         
                 // Proplanta Globalstrahlung in kWh umrechnen und in History speichern *********************************************************  
                 if(LogAusgabe){log('Globalstrahlung Tag0 ='+GlobalstrahlungTag0+'  Globalstrahlung Tag1 ='+GlobalstrahlungTag1+'  Globalstrahlung Tag2 ='+GlobalstrahlungTag2+'  Globalstrahlung Tag3 ='+GlobalstrahlungTag3)}
@@ -1105,12 +1102,12 @@ async function SheduleProplanta() {
                         }
                     }
                 }
-                setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_0', ArrayBereinig[16].slice(0, 11));
-                setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_1', ArrayBereinig[17].slice(0, 11));
-                setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_2', ArrayBereinig[18].slice(0, 11));
-                setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_3', ArrayBereinig[19].slice(0, 11));
-                await setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'NaesteAktualisierung',ArrayBereinig[60].slice(64, 69).replace(".",":"));
-                if(LogAusgabe){log('Näste Aktualisierung Wetterdaten ='+ArrayBereinig[60].slice(64, 69).replace(".",":") +' Uhr')}
+                setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_0', ArrayBereinig[31]);
+                setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_1', ArrayBereinig[33]);
+                setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_2', ArrayBereinig[35]);
+                setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_3', ArrayBereinig[37]);
+                await setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'NaesteAktualisierung',ArrayBereinig[39].replace(".",":"));
+                if(LogAusgabe){log('Näste Aktualisierung Wetterdaten ='+ArrayBereinig[39].replace(".",":") +' Uhr')}
             
             }
         }, function(error) {
@@ -1129,7 +1126,7 @@ async function SheduleProplanta() {
         await InterrogateProplanta().then(async function(result4){
             let GlobalstrahlungTag4,GlobalstrahlungTag5,GlobalstrahlungTag6;
             if (LogAusgabe){log('Rueckmeldung InterrogateProplanta XHR.Status= '+ xhr.status)}
-            let ArrayBereinig = await HTML_CleanUp(result4,4)    
+            let ArrayBereinig = await HTML_CleanUp(result4)    
             if (DebugAusgabe){
                 for (let i in ArrayBereinig) {
                     log("i ="+i+' Wert ab Tag 4=' + ArrayBereinig[i]);
@@ -1137,9 +1134,9 @@ async function SheduleProplanta() {
             } 
             let Tag0 = nextDayDate(4).slice(8,10), Tag1 = nextDayDate(5).slice(8,10),Tag2 = nextDayDate(6).slice(8,10);
             // Prüfen ob Werte in eine Zahl umgewandelt werden können,wenn nicht 0 zuweisen     
-            if (isNaN(parseFloat(ArrayBereinig[9]))){GlobalstrahlungTag4 = 0;}else{GlobalstrahlungTag4 = parseFloat(ArrayBereinig[9]);}      
-            if (isNaN(parseFloat(ArrayBereinig[10]))){GlobalstrahlungTag5 = 0;}else{GlobalstrahlungTag5 = parseFloat(ArrayBereinig[10]);}      
-            if (isNaN(parseFloat(ArrayBereinig[11]))){GlobalstrahlungTag6 = 0;}else{GlobalstrahlungTag6 = parseFloat(ArrayBereinig[11]);}      
+            if (isNaN(parseFloat(ArrayBereinig[11]))){GlobalstrahlungTag4 = 0;}else{GlobalstrahlungTag4 = parseFloat(ArrayBereinig[11]);}      
+            if (isNaN(parseFloat(ArrayBereinig[12]))){GlobalstrahlungTag5 = 0;}else{GlobalstrahlungTag5 = parseFloat(ArrayBereinig[12]);}      
+            if (isNaN(parseFloat(ArrayBereinig[13]))){GlobalstrahlungTag6 = 0;}else{GlobalstrahlungTag6 = parseFloat(ArrayBereinig[13]);}      
                 
             // Proplanta Globalstrahlung in kWh umrechnen und in History speichern *********************************************************  
             if(LogAusgabe){log('Globalstrahlung Tag4 ='+GlobalstrahlungTag4+'  Globalstrahlung Tag5 ='+GlobalstrahlungTag5+'  Globalstrahlung Tag6 ='+GlobalstrahlungTag6)}
@@ -1155,9 +1152,9 @@ async function SheduleProplanta() {
                     }
                 }
             }
-            setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_4', ArrayBereinig[13].slice(0, 11));
-            setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_5', ArrayBereinig[14].slice(0, 11));
-            setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_6', ArrayBereinig[15].slice(0, 11));
+            setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_4', ArrayBereinig[26]);
+            setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_5', ArrayBereinig[28]);
+            setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_6', ArrayBereinig[30]);
         
         }, function(error) {
                 log ('Error in der function InterrogateProplanta. Fehler = '+error, 'warn')
@@ -1168,88 +1165,62 @@ async function SheduleProplanta() {
                 setState(instanz + PfadEbene1 + PfadEbene2[3]+'NaesteAktualisierung',uhrzeit);
                 if(LogAusgabe){log('Näste Aktualisierung Wetterdaten ='+uhrzeit +' Uhr')}
         })
-
-
-
-
     }
 }
 
 // Proplanta HTML Tags löschen und Daten bereinigen
-async function HTML_CleanUp(data,abTag) {
-    //Alles bis max. Temperatur löschen
-    let idx = data.indexOf('<tr id="TMAX" class="">');
-    data = data.replace(data.substring(0, idx), "");
-    
-    // Von min. Temp. der darauf folgenden Nacht bis Globalstrahlung löschen
-    let idx1 = data.indexOf('<tr id="NMIN" class="">');
-    let idx2 = data.indexOf('Globalstrahlung');
-    data = data.replace(data.substring(idx1, idx2), "");
-        
-    // Von Wetterzustand bis Bedeckungsgrad löschen
-    idx1 = data.indexOf('<tr id="WETTERZUSTAND">');
-    idx2 = data.indexOf('<tr id="BEDECKUNGSGRAD">');
-    data = data.replace(data.substring(idx1, idx2), "");
-        
-    // Von Windrichtungkompass bis letzte Aktualisierung löschen
-    idx1 = data.indexOf('<tr class="WINDRICHTUNGKOMPASS">');
-    idx2 = data.indexOf('letzte');
-    data = data.replace(data.substring(idx1, idx2), "");
-        
-    // Nach der letzten Uhrzeit "letzte Aktualisierung" bis zum Ende löschen
-    idx = data.indexOf('Uhr');
-    data = data.replace(data.substring(idx+45, data.length), "");
-        
+async function HTML_CleanUp(data) {
+    //index von "max. Temperatur" 
+    let idx_MaxTempStart = data.indexOf('max. Temperatur');
+    let idx_MaxTempEnde = data.indexOf('gef&uuml;hlte max. Temp.');
+    let maxTemperatur = data.slice(idx_MaxTempStart,idx_MaxTempEnde)
+    //log('maxTemperatur = '+maxTemperatur)
+    //index von "max. Temperatur" 
+    let idx_MinTempStart = data.indexOf('min. Temperatur');
+    let idx_MinTempEnde = data.indexOf('gef&uuml;hlte min. Temp.');
+    let minTemperatur = data.slice(idx_MinTempStart,idx_MinTempEnde)
+    //log('Temperatur = '+Temperatur)
+    //index von "Globalstrahlung"
+    let idx_GlobalstrahlungStart = data.indexOf('Globalstrahlung');
+    let idx_GlobalstrahlungEnde = data.indexOf('<b>Wetterzustand</b>');
+    let Globalstrahlung = data.slice(idx_GlobalstrahlungStart,idx_GlobalstrahlungEnde)
+    //log('Globalstrahlung = '+Globalstrahlung)
+    //index von "Bedeckungsgrad"
+    let idx_BedeckungsgradStart = data.indexOf('<tr id="BD_12" class="BEDECKUNGSGRAD">');
+    let idx_BedeckungsgradEnde = data.indexOf('<tr id="BD_18" class="BEDECKUNGSGRAD">');
+    let Bedeckungsgrad = data.slice(idx_BedeckungsgradStart,idx_BedeckungsgradEnde)
+    //log('Bedeckungsgrad = '+Bedeckungsgrad)
+    //index von "Datum"
+    let idx_DatumStart = data.indexOf('<b>Datum</b');
+    let idx_DatumEnde = data.indexOf('<style>',idx_DatumStart);
+    let Datum = data.slice(idx_DatumStart,idx_DatumEnde)
+    //log('Datum = '+Datum)
+    //index von "nächste Aktualisierung"
+    let idx_nextAktStart = data.indexOf('n&auml;chste Aktualisierung');
+    let idx_nextAktEnde = idx_nextAktStart+38;
+    let nextAktZeit = data.slice(idx_nextAktStart+28,idx_nextAktEnde-3)
+    //log('nextAktZeit = '+nextAktZeit)
+    let StringProplanta = maxTemperatur + minTemperatur + Globalstrahlung + Bedeckungsgrad + Datum + nextAktZeit
     // HTML Tags löschen und Daten bereinigen 
-    data = data.replace(/<\/tr>/ig, "\n").replace(/<\/table>/ig, "").replace(/<\/td>/ig, "|").replace(/&deg;C/ig, "");
-    //entfernt allt tags, bei img tags, lässt es die srcr stehen:
-    data = data.replace(/(<script(.|\n|\r)+?(?=<\/sc)<\/script>|<style(.|\n|\r)+?(?=<\/)<\/style>)/ig, "");
-    data = data.replace( /<img([^>]+)>/ig,
-        function ($0, $1) {
-            if ($0.indexOf('symbole/') >0) {
-                let src = $0.indexOf('src=');
-                let alt = $0.indexOf('alt=');
-                if ((alt > -1) && (src > -1)) {
-                    let srcs = $0.substring(src + 5).split(/["']/)[0];
-                    let altss = $0.substring(alt + 5).split(/["']/)[0];
-                    return srcs + '##' + altss;
-                }
-            }
-            return ""; 
-        }
-    );
-    data = data.replace(/(&nbsp;|<([^>]+)>)/ig, '');
-    data = data.replace(/&#48;/g, '0').replace(/&#49;/g, '1').replace(/&#50;/g, '2').replace(/&#51;/g, '3').replace(/&#52;/g, '4').replace(/&#53;/g, '5').replace(/&#54;/g, '6').replace(/&#55;/g, '7').replace(/&#56;/g, '8').replace(/&#57;/g, '9');
-    data = data.replace(/&#([^;]+);/g, '|');
-    data = data.replace(/(\s*\t|<\s*\/*br\s*>)\s*/g, '|');
-    data = data.replace(/(%|\r)/g, '').replace(/(kWh\/qm|\r)/g, '').replace(/,/g, '.');
+    StringProplanta = StringProplanta.replace(/<\/tr>/ig, "\n").replace(/<\/table>/ig, "").replace(/<\/td>/ig, "|").replace(/&deg;C/ig, "");
+    StringProplanta = StringProplanta.replace(/(<script(.|\n|\r)+?(?=<\/sc)<\/script>|<style(.|\n|\r)+?(?=<\/)<\/style>)/ig, "");
+    StringProplanta = StringProplanta.replace(/(&nbsp;|<([^>]+)>)/ig, '|');
+    StringProplanta = StringProplanta.replace(/&#48;/g, '0').replace(/&#49;/g, '1').replace(/&#50;/g, '2').replace(/&#51;/g, '3').replace(/&#52;/g, '4').replace(/&#53;/g, '5').replace(/&#54;/g, '6').replace(/&#55;/g, '7').replace(/&#56;/g, '8').replace(/&#57;/g, '9');
+    StringProplanta = StringProplanta.replace(/&#([^;]+);/g, '|');
+    StringProplanta = StringProplanta.replace(/(%|\r)/g, '').replace(/(kWh\/qm|\r)/g, '').replace(/,/g, '.');
+    //log('StringProplanta = '+StringProplanta)
     // Array aus restlichen Daten erstellen     
-    let SrtingSplit = data.split('|');    
+    let ArrayProplanta = StringProplanta.split('|');    
     // Alle Werte löschen die leer sind       
-    let ArrayBereinig = SrtingSplit.filter(function(e){ return e.replace(/(\r\n|\n|\r)/gm,"")});
-    if (DebugAusgabe){
-        for (let i in ArrayBereinig) {
-            log("i ="+i+' array bereinigt vor splice=' + ArrayBereinig[i]);
-        }
-    } 
-    // Restlichen Werte die nicht benötigt werden entfernen
-    if(abTag == 0){
-        ArrayBereinig.splice(5,5)
-        ArrayBereinig.splice(10,5)
-        ArrayBereinig.splice(15,2)
-        ArrayBereinig.splice(60,2)
-    }else if (abTag == 4){
-        ArrayBereinig.splice(4,4)
-        ArrayBereinig.splice(8,4)
-        ArrayBereinig.splice(12,2)
-        ArrayBereinig.splice(48,2)
-    }
+    let ArrayBereinig = ArrayProplanta.filter(function(e){ return e.replace(/(\r\n|\n|\r)/gm,"")});
     return ArrayBereinig;
-}
+}    
+
+
 // Prognose Solcast PV-Leistung in kW je Dachfläche abrufen.
 async function InterrogateSolcast(DachFl){
     return new Promise(function(resolve, reject){
-        xhr2.onreadystatechange = function(){
+        xhr2.onload = function(){
             if (xhr2.readyState ==4){
                 if(xhr2.status < 200 || xhr2.status > 206 || xhr2.responseText == null){
                     reject('Error, status code = '+ xhr2.status)
@@ -1258,9 +1229,6 @@ async function InterrogateSolcast(DachFl){
                 }
             }
         }
-        xhr2.ontimeout = function (e) {
-            reject('Timeout beim abrufen der Daten von Solcast')
-        };
         if (DachFl==1 || DachFl==2){
             xhr2.open("GET",'https://api.solcast.com.au/rooftop_sites/'+Resource_Id_Dach[DachFl]+'/forecasts?format=json&api_key='+SolcastAPI_key, true);
             xhr2.responseType = "json";
