@@ -75,6 +75,9 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.0.20</h3>
+<li>Bereinigung der HTML-Daten Proplanta an die HTML Seite nach 2:00 Uhr angepasst, da nicht alle Werte um diese Zeit zur Verfügung stehen </li>
+
 <h3>Version: 1.0.19</h3>
 <li>Für die maximale Ladeleistung der Batterie wird jetzt das Objekt e3dc-rscp.0.EMS.SYS_SPECS.maxBatChargePower verwendet.</li>
 <li>Bereinigung der html Daten Proplanta geändert</li>
