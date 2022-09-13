@@ -144,7 +144,7 @@ let Speichergroesse_kWh                                                         
 
 let AutomatikAnwahl,ZeitAnwahl_MEZ_MESZ,EinstellungAnwahl,PrognoseAnwahl,count0 = 0, count1 = 0, count2 = 0, Summe0 = 0, Summe1 = 0, Summe2 = 0;
 let tRegelende,tSommerladeende,tRegelbeginn,tRegelende_alt,tRegelbeginn_alt,Zeit_alt_UTC_sek=0,ZeitE3DC_SetPower_alt=0;
-let M_Power,M_Power_alt =0,BAT_Notstrom_SOC=true,E3DC_Set_Power_Mode=0,E3DC_Set_Power_Mode_alt=0,Set_Power_Value_W=0,Batterie_SOC_alt_Proz=0;
+let M_Power,M_Power_alt=0,BAT_Notstrom_SOC=true,E3DC_Set_Power_Mode=0,E3DC_Set_Power_Mode_alt=0,Set_Power_Value_W=0,Batterie_SOC_alt_Proz=0;
 let Notstrom_SOC_Proz = 0, M_Abriegelung=false;
 let Timer0 = null, Timer1 = null,Timer2 = null,Timer3 = null;
 let CheckConfig = true, Schritt = 0;
@@ -173,7 +173,7 @@ clearSchedule(Timer3);
 async function ScriptStart()
 {
     await CreateState();
-    log('-==== Jetzt sind alle States abgearbeitet Charge-Control Version 1.0.19 ====-');
+    log('-==== Jetzt sind alle States abgearbeitet Charge-Control Version 1.0.20 ====-');
     AutomatikAnwahl = getState(sID_Automatik).val;
     PrognoseAnwahl = getState(sID_PrognoseAnwahl).val;
     setState(sID_Anwahl_MEZ_MESZ, dst());  
@@ -1054,11 +1054,7 @@ async function SheduleProplanta() {
             let GlobalstrahlungTag0,GlobalstrahlungTag1,GlobalstrahlungTag2,GlobalstrahlungTag3;
             if (LogAusgabe){log('Rueckmeldung InterrogateProplanta XHR.Status= '+ xhr.status)}
             let ArrayBereinig = await HTML_CleanUp(result0)    
-            if (DebugAusgabe){
-                for (let i in ArrayBereinig) {
-                    log("i ="+i+' Wert ab Tag0=' + ArrayBereinig[i]);
-                }
-            } 
+            
             // Prüfen ob Globalstrahlung für heute in eine Zahl umgewandelt werden kann,wenn nicht noch mal nach 1 Stunde abrufen
             if (isNaN(parseFloat(ArrayBereinig[13]))){
                 GlobalstrahlungTag0 = 0;
@@ -1071,21 +1067,40 @@ async function SheduleProplanta() {
             }else{
                 let Tag0 = nextDayDate(0).slice(8,10), Tag1 = nextDayDate(1).slice(8,10),Tag2 = nextDayDate(2).slice(8,10), Tag3 =nextDayDate(3).slice(8,10);
                 // Prüfen ob Werte in eine Zahl umgewandelt werden können,wenn nicht 0 zuweisen     
-                if (isNaN(parseFloat(ArrayBereinig[13]))){GlobalstrahlungTag0 = 0;}else{GlobalstrahlungTag0 = parseFloat(ArrayBereinig[13]);}      
-                if (isNaN(parseFloat(ArrayBereinig[14]))){GlobalstrahlungTag1 = 0;}else{GlobalstrahlungTag1 = parseFloat(ArrayBereinig[14]);}      
-                if (isNaN(parseFloat(ArrayBereinig[15]))){GlobalstrahlungTag2 = 0;}else{GlobalstrahlungTag2 = parseFloat(ArrayBereinig[15]);}      
-                if (isNaN(parseFloat(ArrayBereinig[16]))){GlobalstrahlungTag3 = 0;}else{GlobalstrahlungTag3 = parseFloat(ArrayBereinig[16]);}      
-                if (isNaN(parseFloat(ArrayBereinig[19]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_12', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_12', parseFloat(ArrayBereinig[19]));}      
-                if (isNaN(parseFloat(ArrayBereinig[25]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_15', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_15', parseFloat(ArrayBereinig[25]));}      
-                if (isNaN(parseFloat(ArrayBereinig[1]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_0', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_0', parseFloat(ArrayBereinig[1]));}      
-                if (isNaN(parseFloat(ArrayBereinig[2]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_1', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_1', parseFloat(ArrayBereinig[2]));}      
-                if (isNaN(parseFloat(ArrayBereinig[3]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_2', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_2', parseFloat(ArrayBereinig[3]));}      
-                if (isNaN(parseFloat(ArrayBereinig[4]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_3', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_3', parseFloat(ArrayBereinig[4]));}      
-                if (isNaN(parseFloat(ArrayBereinig[7]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_0', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_0', parseFloat(ArrayBereinig[7]));}      
-                if (isNaN(parseFloat(ArrayBereinig[8]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_1', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_1', parseFloat(ArrayBereinig[8]));}      
-                if (isNaN(parseFloat(ArrayBereinig[9]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_2', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_2', parseFloat(ArrayBereinig[9]));}      
-                if (isNaN(parseFloat(ArrayBereinig[10]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_3', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_3', parseFloat(ArrayBereinig[10]));}      
-        
+                for (let i=0; i < ArrayBereinig.length; i++) {
+                    if (DebugAusgabe){log("i ="+i+' Wert ab Tag 0=' + ArrayBereinig[i]);}
+                    
+                    if (ArrayBereinig[i] == 'Globalstrahlung'){
+                        if (isNaN(parseFloat(ArrayBereinig[i+1]))){GlobalstrahlungTag0 = 0;}else{GlobalstrahlungTag0 = parseFloat(ArrayBereinig[i+1]);}      
+                        if (isNaN(parseFloat(ArrayBereinig[i+2]))){GlobalstrahlungTag1 = 0;}else{GlobalstrahlungTag1 = parseFloat(ArrayBereinig[i+2]);}      
+                        if (isNaN(parseFloat(ArrayBereinig[i+3]))){GlobalstrahlungTag2 = 0;}else{GlobalstrahlungTag2 = parseFloat(ArrayBereinig[i+3]);}      
+                        if (isNaN(parseFloat(ArrayBereinig[i+4]))){GlobalstrahlungTag3 = 0;}else{GlobalstrahlungTag3 = parseFloat(ArrayBereinig[i+4]);}      
+                    }
+                    if (ArrayBereinig[i] == 'Datum'){
+                        if (/^\d{2}([./-])\d{2}\1\d{4}$/.test(ArrayBereinig[i+1] )){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_0', ArrayBereinig[i+1]);}
+                        if (/^\d{2}([./-])\d{2}\1\d{4}$/.test(ArrayBereinig[i+3] )){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_1', ArrayBereinig[i+3]);}
+                        if (/^\d{2}([./-])\d{2}\1\d{4}$/.test(ArrayBereinig[i+5] )){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_2', ArrayBereinig[i+5]);}
+                        if (/^\d{2}([./-])\d{2}\1\d{4}$/.test(ArrayBereinig[i+5] )){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_3', ArrayBereinig[i+7]);}
+                    }
+                    if (ArrayBereinig[i] == 'Bedeckungsgrad'){
+                        if (isNaN(parseFloat(ArrayBereinig[i+2]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_12', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_12', parseFloat(ArrayBereinig[i+2]));}      
+                        if (isNaN(parseFloat(ArrayBereinig[i+8]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_15', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Bewoelkungsgrad_15', parseFloat(ArrayBereinig[i+8]));}
+                    }
+                    if (ArrayBereinig[i] == 'max. Temperatur'){
+                        if (isNaN(parseFloat(ArrayBereinig[i+1]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_0', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_0', parseFloat(ArrayBereinig[i+1]));}      
+                        if (isNaN(parseFloat(ArrayBereinig[i+2]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_1', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_1', parseFloat(ArrayBereinig[i+2]));}      
+                        if (isNaN(parseFloat(ArrayBereinig[i+3]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_2', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_2', parseFloat(ArrayBereinig[i+3]));}      
+                        if (isNaN(parseFloat(ArrayBereinig[i+4]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_3', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Max_Temperatur_Tag_3', parseFloat(ArrayBereinig[i+4]));}      
+                    } 
+                    if (ArrayBereinig[i] == 'min. Temperatur'){
+                        if (isNaN(parseFloat(ArrayBereinig[i+1]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_0', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_0', parseFloat(ArrayBereinig[i+1]));}      
+                        if (isNaN(parseFloat(ArrayBereinig[i+2]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_1', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_1', parseFloat(ArrayBereinig[i+2]));}      
+                        if (isNaN(parseFloat(ArrayBereinig[i+3]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_2', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_2', parseFloat(ArrayBereinig[i+3]));}      
+                        if (isNaN(parseFloat(ArrayBereinig[i+4]))){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_3', 200);}else{setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Min_Temperatur_Tag_3', parseFloat(ArrayBereinig[i+4]));}      
+                    }
+                
+                }
+                      
                 // Proplanta Globalstrahlung in kWh umrechnen und in History speichern *********************************************************  
                 if(LogAusgabe){log('Globalstrahlung Tag0 ='+GlobalstrahlungTag0+'  Globalstrahlung Tag1 ='+GlobalstrahlungTag1+'  Globalstrahlung Tag2 ='+GlobalstrahlungTag2+'  Globalstrahlung Tag3 ='+GlobalstrahlungTag3)}
                 let PrognoseProplanta_kWh_Tag0 = (GlobalstrahlungTag0 * nModulFlaeche) * (nWirkungsgradModule/100);
@@ -1102,12 +1117,8 @@ async function SheduleProplanta() {
                         }
                     }
                 }
-                setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_0', ArrayBereinig[31]);
-                setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_1', ArrayBereinig[33]);
-                setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_2', ArrayBereinig[35]);
-                setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_3', ArrayBereinig[37]);
-                await setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'NaesteAktualisierung',ArrayBereinig[39].replace(".",":"));
-                if(LogAusgabe){log('Näste Aktualisierung Wetterdaten ='+ArrayBereinig[39].replace(".",":") +' Uhr')}
+                await setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'NaesteAktualisierung',ArrayBereinig[40].replace(".",":"));
+                if(LogAusgabe){log('Näste Aktualisierung Wetterdaten ='+ArrayBereinig[40].replace(".",":") +' Uhr')}
             
             }
         }, function(error) {
@@ -1127,17 +1138,24 @@ async function SheduleProplanta() {
             let GlobalstrahlungTag4,GlobalstrahlungTag5,GlobalstrahlungTag6;
             if (LogAusgabe){log('Rueckmeldung InterrogateProplanta XHR.Status= '+ xhr.status)}
             let ArrayBereinig = await HTML_CleanUp(result4)    
-            if (DebugAusgabe){
-                for (let i in ArrayBereinig) {
-                    log("i ="+i+' Wert ab Tag 4=' + ArrayBereinig[i]);
+            
+            for (let i=0; i < ArrayBereinig.length; i++) {
+                if (DebugAusgabe){log("i ="+i+' Wert ab Tag 4=' + ArrayBereinig[i]);}
+                if (ArrayBereinig[i] == 'Globalstrahlung'){
+                    if (isNaN(parseFloat(ArrayBereinig[i+1]))){GlobalstrahlungTag4 = 0;}else{GlobalstrahlungTag4 = parseFloat(ArrayBereinig[i+1]);}      
+                    if (isNaN(parseFloat(ArrayBereinig[i+2]))){GlobalstrahlungTag5 = 0;}else{GlobalstrahlungTag5 = parseFloat(ArrayBereinig[i+2]);}      
+                    if (isNaN(parseFloat(ArrayBereinig[i+3]))){GlobalstrahlungTag6 = 0;}else{GlobalstrahlungTag6 = parseFloat(ArrayBereinig[i+3]);} 
                 }
-            } 
+                if (ArrayBereinig[i] == 'Datum'){
+                    if (/^\d{2}([./-])\d{2}\1\d{4}$/.test(ArrayBereinig[i+1] )){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_4', ArrayBereinig[i+1]);}
+                    if (/^\d{2}([./-])\d{2}\1\d{4}$/.test(ArrayBereinig[i+3] )){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_5', ArrayBereinig[i+3]);}
+                    if (/^\d{2}([./-])\d{2}\1\d{4}$/.test(ArrayBereinig[i+5] )){setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_6', ArrayBereinig[i+5]);}
+                }
+            }
+            
             let Tag0 = nextDayDate(4).slice(8,10), Tag1 = nextDayDate(5).slice(8,10),Tag2 = nextDayDate(6).slice(8,10);
             // Prüfen ob Werte in eine Zahl umgewandelt werden können,wenn nicht 0 zuweisen     
-            if (isNaN(parseFloat(ArrayBereinig[11]))){GlobalstrahlungTag4 = 0;}else{GlobalstrahlungTag4 = parseFloat(ArrayBereinig[11]);}      
-            if (isNaN(parseFloat(ArrayBereinig[12]))){GlobalstrahlungTag5 = 0;}else{GlobalstrahlungTag5 = parseFloat(ArrayBereinig[12]);}      
-            if (isNaN(parseFloat(ArrayBereinig[13]))){GlobalstrahlungTag6 = 0;}else{GlobalstrahlungTag6 = parseFloat(ArrayBereinig[13]);}      
-                
+               
             // Proplanta Globalstrahlung in kWh umrechnen und in History speichern *********************************************************  
             if(LogAusgabe){log('Globalstrahlung Tag4 ='+GlobalstrahlungTag4+'  Globalstrahlung Tag5 ='+GlobalstrahlungTag5+'  Globalstrahlung Tag6 ='+GlobalstrahlungTag6)}
             let PrognoseProplanta_kWh_Tag4 = (GlobalstrahlungTag4 * nModulFlaeche) * (nWirkungsgradModule/100);
@@ -1152,9 +1170,7 @@ async function SheduleProplanta() {
                     }
                 }
             }
-            setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_4', ArrayBereinig[26]);
-            setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_5', ArrayBereinig[28]);
-            setStateAsync(instanz + PfadEbene1 + PfadEbene2[3]+'Datum_Tag_6', ArrayBereinig[30]);
+            
         
         }, function(error) {
                 log ('Error in der function InterrogateProplanta. Fehler = '+error, 'warn')
@@ -1169,7 +1185,7 @@ async function SheduleProplanta() {
 }
 
 // Proplanta HTML Tags löschen und Daten bereinigen
-async function HTML_CleanUp(data) {
+function HTML_CleanUp(data) {
     //index von "max. Temperatur" 
     let idx_MaxTempStart = data.indexOf('max. Temperatur');
     let idx_MaxTempEnde = data.indexOf('gef&uuml;hlte max. Temp.');
@@ -1189,6 +1205,7 @@ async function HTML_CleanUp(data) {
     let idx_BedeckungsgradStart = data.indexOf('<tr id="BD_12" class="BEDECKUNGSGRAD">');
     let idx_BedeckungsgradEnde = data.indexOf('<tr id="BD_18" class="BEDECKUNGSGRAD">');
     let Bedeckungsgrad = data.slice(idx_BedeckungsgradStart,idx_BedeckungsgradEnde)
+    Bedeckungsgrad = 'Bedeckungsgrad'+Bedeckungsgrad;
     //log('Bedeckungsgrad = '+Bedeckungsgrad)
     //index von "Datum"
     let idx_DatumStart = data.indexOf('<b>Datum</b');
