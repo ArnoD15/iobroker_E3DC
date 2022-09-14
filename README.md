@@ -75,6 +75,10 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.0.21</h3>
+<li>Fehler behoben, das Notstrom Reserve nicht berücksichtigt wurde </li>
+
+
 <h3>Version: 1.0.20</h3>
 <li>Bereinigung der HTML-Daten Proplanta an die HTML Seite nach 2:00 Uhr angepasst, da nicht alle Werte um diese Zeit zur Verfügung stehen </li>
 
