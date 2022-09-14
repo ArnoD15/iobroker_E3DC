@@ -153,8 +153,6 @@ let baseUrls = {
     "de" : "https://www.proplanta.de/Wetter/profi-wetter.php?SITEID=60&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=0",
     "at" : "https://www.proplanta.de/Wetter-Oesterreich/profi-wetter-at.php?SITEID=70&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=0",
     "ch" : "https://www.proplanta.de/Wetter-Schweiz/profi-wetter-ch.php?SITEID=80&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=0",
-    "fr" : "https://www.proplanta.de/Wetter-Frankreich/profi-wetter-fr.php?SITEID=50&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter-Frankreich&wT=0",
-    "it" : "https://www.proplanta.de/Wetter-Italien/profi-wetter-it.php?SITEID=40&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter-Italien&wT=0",
 };
 let baseurl = baseUrls[country];
 
@@ -173,7 +171,7 @@ clearSchedule(Timer3);
 async function ScriptStart()
 {
     await CreateState();
-    log('-==== Jetzt sind alle States abgearbeitet Charge-Control Version 1.0.20 ====-');
+    log('-==== Jetzt sind alle States abgearbeitet Charge-Control Version 1.0.21 ====-');
     AutomatikAnwahl = getState(sID_Automatik).val;
     PrognoseAnwahl = getState(sID_PrognoseAnwahl).val;
     setState(sID_Anwahl_MEZ_MESZ, dst());  
@@ -312,7 +310,7 @@ async function Ladesteuerung()
             log('-==== Notstrom Reserve erreicht, Laden/Entladen der Batterie ist ausgeschaltet ====-')
         }
     }                                        
-
+    
     // Merker BAT_Notstrom_SOC ob Notstrom SOC erreicht ist um nur das entladen der Batterie zu verhindern.
     if (Notstrom_Status == 1 || Notstrom_Status == 4 || Batterie_SOC_Proz > Notstrom_SOC_Proz){
         // Endladen einschalten
@@ -321,9 +319,9 @@ async function Ladesteuerung()
         // Endladen ausschalten
         BAT_Notstrom_SOC = true;
     }                                                                                        
-
+    
     // Nur wenn PV-Leistung vorhanden ist Regelung starten.
-    if(PV_Leistung_Summe_W > 0 ){
+    if(PV_Leistung_Summe_W > 0 || BAT_Notstrom_SOC){
         let Power = 0;
         let Unload_Proz = (await getStateAsync(sID_Unload_Proz[EinstellungAnwahl])).val;                            // Parameter Unload
         let Ladeende_Proz = (await getStateAsync(sID_Ladeende_Proz[EinstellungAnwahl])).val                         // Parameter Ladeende
@@ -452,11 +450,12 @@ async function Ladesteuerung()
         }
    }
     
-    
     // Leerlauf beibehalten bis sich der Wert M_Power ändert oder Notstrom SOC erreicht ist
     if(M_Power_alt != maximumLadeleistung_W || M_Power != maximumLadeleistung_W ){
         // Alle 6 sek. muss mindestens ein Steuerbefehl an e3dc.rscp Adapter gesendet werden sonst übernimmt E3DC die Steuerung
+        
         if(M_Power != M_Power_alt || E3DC_Set_Power_Mode != E3DC_Set_Power_Mode_alt || (Zeit_aktuell_UTC_sek- ZeitE3DC_SetPower_alt)> 5){
+            
             ZeitE3DC_SetPower_alt = Zeit_aktuell_UTC_sek;M_Power_alt = M_Power;
 
             if(M_Power == 0){
