@@ -171,7 +171,7 @@ clearSchedule(Timer3);
 async function ScriptStart()
 {
     await CreateState();
-    log('-==== Jetzt sind alle States abgearbeitet Charge-Control Version 1.0.21 ====-');
+    log('-==== Jetzt sind alle States abgearbeitet Charge-Control Version 1.0.22 ====-');
     AutomatikAnwahl = getState(sID_Automatik).val;
     PrognoseAnwahl = getState(sID_PrognoseAnwahl).val;
     setState(sID_Anwahl_MEZ_MESZ, dst());  
@@ -307,6 +307,8 @@ async function Ladesteuerung()
             await setStateAsync(sID_DISCHARGE_START_POWER, 0)
             await setStateAsync(sID_Max_Discharge_Power_W, 0)
             await setStateAsync(sID_Max_Charge_Power_W, 0)
+            // Notstrom SOC um 1% erhöhen, da die Batterieladung nach ausschalten wieder ansteigen kann.
+            ++Notstrom_SOC_Proz
             log('-==== Notstrom Reserve erreicht, Laden/Entladen der Batterie ist ausgeschaltet ====-')
         }
     }                                        
@@ -320,8 +322,8 @@ async function Ladesteuerung()
         BAT_Notstrom_SOC = true;
     }                                                                                        
     
-    // Nur wenn PV-Leistung vorhanden ist Regelung starten.
-    if(PV_Leistung_Summe_W > 0 || BAT_Notstrom_SOC){
+    // Nur wenn PV-Leistung vorhanden ist oder Entladen freigegeben ist Regelung starten.
+    if(PV_Leistung_Summe_W > 0 || getState(sID_DISCHARGE_START_POWER).val > 0){
         let Power = 0;
         let Unload_Proz = (await getStateAsync(sID_Unload_Proz[EinstellungAnwahl])).val;                            // Parameter Unload
         let Ladeende_Proz = (await getStateAsync(sID_Ladeende_Proz[EinstellungAnwahl])).val                         // Parameter Ladeende
