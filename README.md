@@ -75,10 +75,12 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.0.23</h3>
+<li>Mehrere kleiner Fehler korrigiert. Das einschalten der Lade-\Entladeleistung ist jetzt auch von "sunset" und "sunrise" abhängig, Sodas bei einem Neustart vom Script vor Sonnenaufgang die Lade-\Entladeleistung nicht eingeschalten wird. </li>
+
 <h3>Version: 1.0.22</h3>
 <li>Mit dem ausschalten der Batterieladung ist es möglich, dass der SOC Wert Batterie wieder um 1% ansteigt. Um ein ständiges ein und ausschalten zu verhindern, wird 
 der Notstrom SOC nach dem Ausschalten um 1% erhöht. </li>
-
 
 <h3>Version: 1.0.21</h3>
 <li>Fehler behoben, das Notstrom Reserve nicht berücksichtigt wurde </li>
