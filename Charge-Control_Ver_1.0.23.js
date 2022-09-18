@@ -144,7 +144,7 @@ let Speichergroesse_kWh                                                         
 
 let AutomatikAnwahl,ZeitAnwahl_MEZ_MESZ,EinstellungAnwahl,PrognoseAnwahl,count0 = 0, count1 = 0, count2 = 0, Summe0 = 0, Summe1 = 0, Summe2 = 0;
 let tRegelende,tSommerladeende,tRegelbeginn,tRegelende_alt,tRegelbeginn_alt,Zeit_alt_UTC_sek=0,ZeitE3DC_SetPower_alt=0;
-let M_Power,M_Power_alt=0,BAT_Notstrom_SOC=true,E3DC_Set_Power_Mode=0,E3DC_Set_Power_Mode_alt=0,Set_Power_Value_W=0,Batterie_SOC_alt_Proz=0;
+let M_Power=0,M_Power_alt=0,BAT_Notstrom_SOC=true,E3DC_Set_Power_Mode=0,E3DC_Set_Power_Mode_alt=0,Set_Power_Value_W=0,Batterie_SOC_alt_Proz=0;
 let Notstrom_SOC_Proz = 0, M_Abriegelung=false;
 let Timer0 = null, Timer1 = null,Timer2 = null,Timer3 = null;
 let CheckConfig = true, Schritt = 0;
@@ -171,7 +171,7 @@ clearSchedule(Timer3);
 async function ScriptStart()
 {
     await CreateState();
-    log('-==== Jetzt sind alle States abgearbeitet Charge-Control Version 1.0.22 ====-');
+    log('-==== Jetzt sind alle States abgearbeitet Charge-Control Version 1.0.23 ====-');
     AutomatikAnwahl = getState(sID_Automatik).val;
     PrognoseAnwahl = getState(sID_PrognoseAnwahl).val;
     setState(sID_Anwahl_MEZ_MESZ, dst());  
@@ -299,9 +299,10 @@ async function Ladesteuerung()
             await setStateAsync(sID_Max_Discharge_Power_W, Math.abs(Bat_Discharge_Limit_W))
             await setStateAsync(sID_DISCHARGE_START_POWER, startDischargeDefault)
             await setStateAsync(sID_Max_Charge_Power_W, maximumLadeleistung_W)
+            Notstrom_SOC_Proz = (await getStateAsync(sID_Notstrom_akt)).val
             log('-==== Laden/Entladen der Batterie ist eingeschaltet ====-')
         }
-    }else if(Batterie_SOC_Proz <= Notstrom_SOC_Proz && new Date() > getAstroDate("sunset")){
+    }else if(Batterie_SOC_Proz <= Notstrom_SOC_Proz && (new Date() > getAstroDate("sunset") || new Date() < getAstroDate("sunrise"))){
         // Laden/Endladen ausschalten nur wenn Notstrom SOC erreicht wurde und PV-Leistung = 0 W
         if((Akk_max_Discharge_Power_W != 0 || Akk_max_Charge_Power_W != 0) && Batterie_SOC_Proz !=0){
             await setStateAsync(sID_DISCHARGE_START_POWER, 0)
@@ -323,7 +324,7 @@ async function Ladesteuerung()
     }                                                                                        
     
     // Nur wenn PV-Leistung vorhanden ist oder Entladen freigegeben ist Regelung starten.
-    if(PV_Leistung_Summe_W > 0 || getState(sID_DISCHARGE_START_POWER).val > 0){
+    if(PV_Leistung_Summe_W > 0 || getState(sID_Max_Discharge_Power_W).val > 0 || getState(sID_Max_Charge_Power_W).val > 0){
         let Power = 0;
         let Unload_Proz = (await getStateAsync(sID_Unload_Proz[EinstellungAnwahl])).val;                            // Parameter Unload
         let Ladeende_Proz = (await getStateAsync(sID_Ladeende_Proz[EinstellungAnwahl])).val                         // Parameter Ladeende
@@ -450,65 +451,61 @@ async function Ladesteuerung()
             // Entladen der Batterie stoppen
             M_Power = 0    
         }
-   }
+   
     
-    // Leerlauf beibehalten bis sich der Wert M_Power ändert oder Notstrom SOC erreicht ist
-    if(M_Power_alt != maximumLadeleistung_W || M_Power != maximumLadeleistung_W ){
-        // Alle 6 sek. muss mindestens ein Steuerbefehl an e3dc.rscp Adapter gesendet werden sonst übernimmt E3DC die Steuerung
+        // Leerlauf beibehalten bis sich der Wert M_Power ändert oder Notstrom SOC erreicht ist
+        if(M_Power_alt != maximumLadeleistung_W || M_Power != maximumLadeleistung_W ){
+            // Alle 6 sek. muss mindestens ein Steuerbefehl an e3dc.rscp Adapter gesendet werden sonst übernimmt E3DC die Steuerung
         
-        if(M_Power != M_Power_alt || E3DC_Set_Power_Mode != E3DC_Set_Power_Mode_alt || (Zeit_aktuell_UTC_sek- ZeitE3DC_SetPower_alt)> 5){
+            if(M_Power != M_Power_alt || E3DC_Set_Power_Mode != E3DC_Set_Power_Mode_alt || (Zeit_aktuell_UTC_sek- ZeitE3DC_SetPower_alt)> 5){
             
-            ZeitE3DC_SetPower_alt = Zeit_aktuell_UTC_sek;M_Power_alt = M_Power;
+                ZeitE3DC_SetPower_alt = Zeit_aktuell_UTC_sek;M_Power_alt = M_Power;
 
-            if(M_Power == 0){
-                Set_Power_Value_W = 0;
-                await setStateAsync(sID_SET_POWER_MODE,1); // Idle
-                await setStateAsync(sID_SET_POWER_VALUE_W,0)
-                if (LogAusgabeSteuerung){log('Schritt = '+Schritt+' E3DC_Set_Power_Mode = 1');}
-            }else if(M_Power == maximumLadeleistung_W ){
+                if(M_Power == 0){
+                    Set_Power_Value_W = 0;
+                    await setStateAsync(sID_SET_POWER_MODE,1); // Idle
+                    await setStateAsync(sID_SET_POWER_VALUE_W,0)
+                    if (LogAusgabeSteuerung){log('Schritt = '+Schritt+' E3DC_Set_Power_Mode = 1');}
+                }else if(M_Power == maximumLadeleistung_W ){
                 // E3DC die Steuerung überlassen, dann wird mit der maximal möglichen Ladeleistung geladen oder entladen
-                Set_Power_Value_W = 0
-                await setStateAsync(sID_SET_POWER_MODE,0); // Normal
-                if(LogAusgabeSteuerung){log('-==== Schritt = '+Schritt+' keine Steuerung ====-')}
+                    Set_Power_Value_W = 0
+                    await setStateAsync(sID_SET_POWER_MODE,0); // Normal
+                    if(LogAusgabeSteuerung){log('-==== Schritt = '+Schritt+' keine Steuerung ====-')}
                 
-            }else if(M_Power > 0){
-                // Beim ersten aufruf Wert M_Power übernehmen oder wenn Einspeisegrenze erreicht wurde und erst dann langsam erhöhen oder senken
-                if(Set_Power_Value_W < 1 ){Set_Power_Value_W=M_Power}
-                if(M_Abriegelung){Set_Power_Value_W=M_Power+100;M_Abriegelung= false}
-                // Leistung langsam erhöhrn oder senken um Schwankungen auszugleichen
-                if(M_Power > Set_Power_Value_W){
-                    Set_Power_Value_W++
-                }else if(M_Power < Set_Power_Value_W){
-                    Set_Power_Value_W--
-                }
-                await setStateAsync(sID_SET_POWER_MODE,3); // Laden
-                await setStateAsync(sID_SET_POWER_VALUE_W,Set_Power_Value_W) // E3DC bleib beim Laden im Schnitt um ca 82 W unter der eingestellten Ladeleistung
-                if (LogAusgabeSteuerung){log('Schritt = '+Schritt+' E3DC_Set_Power_Mode = 3 (laden)  Set_Power_Value_W = '+Set_Power_Value_W+' M_Power = '+M_Power,'warn');}
-            
-            }else if(M_Power < 0 && Batterie_SOC_Proz > Notstrom_SOC_Proz){
-                // Beim ersten aufruf Wert M_Power übernehmen und erst dann langsam erhöhen oder senken
-                if(Set_Power_Value_W >= 0){Set_Power_Value_W=M_Power}
-                if(!CheckConfig){
-                    // Leistung langsam erhöhen oder senken um Schwankungen auszugleichen
+                }else if(M_Power > 0){
+                    // Beim ersten aufruf Wert M_Power übernehmen oder wenn Einspeisegrenze erreicht wurde und erst dann langsam erhöhen oder senken
+                    if(Set_Power_Value_W < 1 ){Set_Power_Value_W=M_Power}
+                    if(M_Abriegelung){Set_Power_Value_W=M_Power+100;M_Abriegelung= false}
+                    // Leistung langsam erhöhrn oder senken um Schwankungen auszugleichen
                     if(M_Power > Set_Power_Value_W){
                         Set_Power_Value_W++
                     }else if(M_Power < Set_Power_Value_W){
                         Set_Power_Value_W--
                     }
-                }else{
-                    Set_Power_Value_W = M_Power
+                    await setStateAsync(sID_SET_POWER_MODE,3); // Laden
+                    await setStateAsync(sID_SET_POWER_VALUE_W,Set_Power_Value_W) // E3DC bleib beim Laden im Schnitt um ca 82 W unter der eingestellten Ladeleistung
+                    if (LogAusgabeSteuerung){log('Schritt = '+Schritt+' E3DC_Set_Power_Mode = 3 (laden)  Set_Power_Value_W = '+Set_Power_Value_W+' M_Power = '+M_Power,'warn');}
+            
+                }else if(M_Power < 0 && Batterie_SOC_Proz > Notstrom_SOC_Proz){
+                    // Beim ersten aufruf Wert M_Power übernehmen und erst dann langsam erhöhen oder senken
+                    if(Set_Power_Value_W >= 0){Set_Power_Value_W=M_Power}
+                    if(!CheckConfig){
+                        // Leistung langsam erhöhen oder senken um Schwankungen auszugleichen
+                        if(M_Power > Set_Power_Value_W){
+                            Set_Power_Value_W++
+                        }else if(M_Power < Set_Power_Value_W){
+                            Set_Power_Value_W--
+                        }
+                    }else{
+                        Set_Power_Value_W = M_Power
+                    }
+                    await setStateAsync(sID_SET_POWER_MODE,2); // Entladen
+                    await setStateAsync(sID_SET_POWER_VALUE_W,Math.abs(Set_Power_Value_W)) // E3DC bleib beim Entladen im Schnitt um ca 65 W über der eingestellten Ladeleistung
+                    if (LogAusgabeSteuerung){log('Schritt = '+Schritt+' E3DC_Set_Power_Mode = 2 (entladen) Set_Power_Value_W = '+Set_Power_Value_W+' M_Power = '+M_Power,'warn');}
                 }
-                await setStateAsync(sID_SET_POWER_MODE,2); // Entladen
-                await setStateAsync(sID_SET_POWER_VALUE_W,Math.abs(Set_Power_Value_W)) // E3DC bleib beim Entladen im Schnitt um ca 65 W über der eingestellten Ladeleistung
-                if (LogAusgabeSteuerung){log('Schritt = '+Schritt+' E3DC_Set_Power_Mode = 2 (entladen) Set_Power_Value_W = '+Set_Power_Value_W+' M_Power = '+M_Power,'warn');}
-            
+                E3DC_Set_Power_Mode_alt=E3DC_Set_Power_Mode;
             }
-            
-            
-            E3DC_Set_Power_Mode_alt=E3DC_Set_Power_Mode;
-            
         }
-
     }
 }
 
