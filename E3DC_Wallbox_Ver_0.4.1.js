@@ -8,6 +8,7 @@ let sID_Charge_Control_Ladeschwelle=[];
 const MinLadestromAuto_A = 6                                                                        // minimaler Ladestrom in A der das Fahrzeug benötigt um zu Laden. (Darf nicht unterschritten werden)
 const MinLadestromStart_A = 8                                                                       // minimaler Ladestrom in A. Ab diesem Wert startet das Laden vom E-Auto
 const MaxLadestrom_A = 16                                                                           // maximaler Ladestrom in A
+const Phasen = 3 																					// Anzahl der Phasen mit denen das E-Auto geladen wird. 1Ph oder 3 Ph
 const Haltezeit1 = 30                                                                               // Haltezeit Lademodus 1 in min. Wenn PV-Leistung nicht mehr ausreicht wird diese Zeit weiter geladen bis das Laden pausiert.
 const Haltezeit2 = 60                                                                               // Haltezeit Lademodus 2 in min. Wenn PV-Leistung nicht mehr ausreicht wird diese Zeit weiter geladen bis das Laden pausiert.
 const Haltezeit4 = 30                                                                               // Haltezeit Lademodus 4 in min. Wenn PV-Leistung nicht mehr ausreicht wird diese Zeit weiter geladen bis das Laden pausiert.
@@ -62,6 +63,8 @@ ScriptStart();
 if ((typeof MinLadestromAuto_A != "number") || (typeof MinLadestromAuto_A == undefined)){console.error("MinLadestromAuto_A muss als Number eingegeben werden");}
 if ((typeof MinLadestromStart_A != "number") || (typeof MinLadestromStart_A == undefined)){console.error("MinLadestromStart_A muss als Number eingegeben werden");}
 if ((typeof MaxLadestrom_A != "number") || (typeof MaxLadestrom_A == undefined)){console.error("MaxLadestrom_A muss als Number eingegeben werden");}
+// @ts-ignore
+if ((typeof Phasen != "number") || (typeof Phasen == undefined)|| Phasen > 3 || Phasen == 2 ){console.error("Phasen muss als Number eingegeben werden und darf nicht > 3 oder 2 sein");}
 if ((typeof Haltezeit1 != "number") || (typeof Haltezeit1 == undefined)){console.error("Haltezeit1 muss als Number eingegeben werden");}
 if ((typeof Haltezeit2 != "number") || (typeof Haltezeit2 == undefined)){console.error("Haltezeit2 muss als Number eingegeben werden");}
 if ((typeof Haltezeit4 != "number") || (typeof Haltezeit4 == undefined)){console.error("Haltezeit4 muss als Number eingegeben werden");}
@@ -98,7 +101,7 @@ let FahrzeugAngesteckt = false,AutoLaden_aktiv = false,Automatik = false,NeuBere
 let Autobatterie_SoC = 0, AutoLadenBis_SoC = 100;
 let Tendenz_i=0;
 let Lademodus,Lademodus_alt,Ladeschwelle,MinBatterieSoC;
-let iAutoLadestrom_A=6;
+let iAutoLadestrom_A= MinLadestromAuto_A;
 let EinstellungAnwahl = getState(sID_Charge_Control_EinstellungAnwahl).val;
 let MaxEntladeLeistungBatterie_W = getState(sID_Max_Discharge_Power_W).val;
 let Min_SOC_Notstrom_E3DC_Proz = getState(sID_Charge_Control_Notstromreserve).val;
@@ -207,7 +210,7 @@ async function Lademodus1(){
     let BatterieSoC = (await getStateAsync(sID_Batterie_SoC)).val;
     Ladeschwelle = getState(sID_Charge_Control_Ladeschwelle[EinstellungAnwahl]).val
     // Prüfen ob ausreichend PV-Leistung erzeugt wird
-    if (StromA(PV_Leistung_W,3)>MinLadestromAuto_A || HaltezeitLaden1){
+    if (StromA(PV_Leistung_W,Phasen)>MinLadestromAuto_A || HaltezeitLaden1){
         
         // Prüfen ob Werte Netz oder Batterie negativ sind
         if (NetzLeistung_W <= -500 && BatterieLeistung_W < 0){
@@ -223,7 +226,7 @@ async function Lademodus1(){
         if (AutoLadeleistung_W<0){AutoLadeleistung_W =0}
         
         //AutoLadeleistung_W in AutoLadestrom_A umrechnen.
-        AutoLadestrom_A = await StromA(AutoLadeleistung_W,3);
+        AutoLadestrom_A = await StromA(AutoLadeleistung_W,Phasen);
         
         if (DebugAusgabe){log('NetzLeistung_W ='+NetzLeistung_W)};
         if (DebugAusgabe){log('BatterieLeistung_W ='+BatterieLeistung_W)};
@@ -311,7 +314,7 @@ async function Lademodus2(){
 
     
     // Prüfen ob ausreichend PV-Leistung erzeugt wird
-    if (StromA(PV_Leistung_W,3)>MinLadestromAuto_A || HaltezeitLaden2){
+    if (StromA(PV_Leistung_W,Phasen)>MinLadestromAuto_A || HaltezeitLaden2){
         
         // Prüfen ob Werte Netzleistung negativ ist
         if (NetzLeistung_W < 0 && BatterieLeistung_W < 0){
@@ -326,7 +329,7 @@ async function Lademodus2(){
         if (AutoLadeleistung_W < 0){AutoLadeleistung_W = 0}
         
         //AutoLadeleistung_W in AutoLadestrom_A umrechnen.
-        AutoLadestrom_A = await StromA(AutoLadeleistung_W,3);
+        AutoLadestrom_A = await StromA(AutoLadeleistung_W,Phasen);
         
         if (DebugAusgabe){log('NetzLeistung_W ='+NetzLeistung_W)};
         if (DebugAusgabe){log('BatterieLeistung_W ='+BatterieLeistung_W)};
@@ -415,7 +418,7 @@ async function Lademodus4(){
     let MaxLeistung = MaxEntladeLeistungBatterie_W+PV_Leistung_W
     
     // Prüfen ob ausreichend PV-Leistung erzeugt wird oder Batterie E3DC geladen ist
-    if ( (StromA(PV_Leistung_W,3)>MinLadestromAuto_A || BatterieSoC > Ladeschwelle || HaltezeitLaden2) && BatterieSoC > Min_SOC_Notstrom_E3DC_Proz){
+    if ( (StromA(PV_Leistung_W,Phasen)>MinLadestromAuto_A || BatterieSoC > Ladeschwelle || HaltezeitLaden2) && BatterieSoC > Min_SOC_Notstrom_E3DC_Proz){
         // prüfen ob max Leistung Wechselrichter eingehalten wird sonst Entladeleistung Batterie reduzieren
         if (MaxLeistung > MaxLeistungWR_W) {
             EntladeleistungBatterie = MaxEntladeLeistungBatterie_W-(MaxLeistung - MaxLeistungWR_W);
@@ -436,7 +439,7 @@ async function Lademodus4(){
         if (AutoLadeleistung_W < 0){AutoLadeleistung_W = 0}
         
         //AutoLadeleistung_W in AutoLadestrom_A umrechnen.
-        AutoLadestrom_A = await StromA(AutoLadeleistung_W,3);
+        AutoLadestrom_A = await StromA(AutoLadeleistung_W,Phasen);
         
         if (DebugAusgabe){log('NetzLeistung_W ='+NetzLeistung_W)};
         if (DebugAusgabe){log('BatterieLeistung_W ='+BatterieLeistung_W)};
