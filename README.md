@@ -75,6 +75,10 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.0.24</h3>
+<li>Für die maximale Entladeleistung der Batterie wird jetzt das Objekt e3dc-rscp.0.EMS.SYS_SPECS.maxBatDischargPower verwendet.</li>
+
+
 <h3>Version: 1.0.23</h3>
 <li>Mehrere kleinere Fehler korrigiert. Das Einschalten der Lade-\Entladeleistung ist jetzt auch von "sunset" und "sunrise" abhängig, sodass bei einem Neustart vom Script vor Sonnenaufgang die Lade-\Entladeleistung nicht eingeschalten wird.  </li>
 
