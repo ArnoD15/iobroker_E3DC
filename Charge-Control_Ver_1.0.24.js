@@ -42,18 +42,18 @@ const sID_BatterieLeistung_W ='modbus.0.holdingRegisters.40070_Batterie_Leistung
 const sID_Power_Grid_W = 'modbus.0.holdingRegisters.40074_Netz_Leistung'                            // Pfad Modul ModBus aktuelle Netz Leistung
 const sID_Power_Home_W = 'modbus.0.holdingRegisters.40072_Hausverbrauch_Leistung'                   // Pfad Modul ModBus aktueller Hausverbrauch
 //************************************** Einstellungen Modul e3dc.rscp **************************************
-const sID_Bat_Discharge_Limit = 'e3dc-rscp.0.EMS.BAT_DISCHARGE_LIMIT'                               // Batterie Entladelimit (negativer Wert)
+const sID_Bat_Discharge_Limit = 'e3dc-rscp.0.EMS.SYS_SPECS.maxBatDischargPower'                     // Batterie Entladelimit (negativer Wert)
 const sID_Bat_Charge_Limit = 'e3dc-rscp.0.EMS.SYS_SPECS.maxBatChargePower'                          // Batterie Ladelimit
+const sID_startDischargeDefault = 'e3dc-rscp.0.EMS.SYS_SPECS.startDischargeDefault'                 // Anfängliche Entladeleistung Standard
 const sID_Notrom_Status = 'e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS'                                  // 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
 const sID_installed_Battery_Capacity ='e3dc-rscp.0.EMS.SYS_SPECS.installedBatteryCapacity'          // Installierte Batterie Kapazität E3DC
 const sID_SET_POWER_MODE = 'e3dc-rscp.0.EMS.SET_POWER_MODE'                                         // Lademodus
 const sID_SET_POWER_VALUE_W ='e3dc-rscp.0.EMS.SET_POWER_VALUE'                                      // Eingestellte Ladeleistung
-const sID_Max_Discharge_Power_W = 'e3dc-rscp.0.EMS.MAX_DISCHARGE_POWER'                             // Eingestellte maximale Batterie-Entladeleistung. (Variable Einstellung E3DC)
-const sID_Max_Charge_Power_W = 'e3dc-rscp.0.EMS.MAX_CHARGE_POWER'                                   // Eingestellte maximale Batterie-Ladeleistung. (Variable Einstellung E3DC)
-const sID_startDischargeDefault = 'e3dc-rscp.0.EMS.SYS_SPECS.startDischargeDefault'                 // Anfängliche Entladeleistung Standard
 const sID_Max_wrleistung_W = 'e3dc-rscp.0.EMS.SYS_SPECS.maxAcPower'                                 // Maximale Wechselrichter Leistung
 const sID_Einspeiselimit_W = 'e3dc-rscp.0.EMS.DERATE_AT_POWER_VALUE'                                // Eingestellte Einspeisegrenze E3DC
 const sID_BAT0_Alterungszustand = 'e3dc-rscp.0.BAT.BAT_0.ASOC'                                      // Batterie ASOC e3dc-rscp
+const sID_Max_Discharge_Power_W = 'e3dc-rscp.0.EMS.MAX_DISCHARGE_POWER'                             // Eingestellte maximale Batterie-Entladeleistung. (Variable Einstellung E3DC)
+const sID_Max_Charge_Power_W = 'e3dc-rscp.0.EMS.MAX_CHARGE_POWER'                                   // Eingestellte maximale Batterie-Ladeleistung. (Variable Einstellung E3DC)
 const sID_DISCHARGE_START_POWER = 'e3dc-rscp.0.EMS.DISCHARGE_START_POWER'                           // Anfängliche Batterie-Entladeleistung
 const sID_PARAM_EP_RESERVE_W = 'e3dc-rscp.0.EP.PARAM_0.PARAM_EP_RESERVE_W'                          // Eingestellte Notstrom Reserve E3DC
 //******************************* Einstellungen Instanz Script Charge-Control *******************************
@@ -137,8 +137,9 @@ let xhr2 = new XMLHttpRequest();
 let Max_wrleistung_W = getState(sID_Max_wrleistung_W).val - 200;                // Maximale Wechselrichter Leistung (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
 let Einspeiselimit_kWh = (getState(sID_Einspeiselimit_W).val - 200)/1000;       // Einspeiselimit (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
 let maximumLadeleistung_W = getState(sID_Bat_Charge_Limit).val;                 // Maximal mögliche Batterie Ladeleistung
-let Bat_Discharge_Limit_W = getState(sID_Bat_Discharge_Limit).val;              // Maximal mögliche Batterie Entladeleistung (negativer Wert)
+let Bat_Discharge_Limit_W = getState(sID_Bat_Discharge_Limit).val;                     // Maximal mögliche Batterie Entladeleistung (negativer Wert)
 let startDischargeDefault = getState(sID_startDischargeDefault).val;            // Anfängliche Entladeleistung Standard
+
 let Speichergroesse_kWh                                                         // Installierte Batterie Speicher Kapazität wird in Funktion Speichergroesse() berechnet
 
 
@@ -171,7 +172,7 @@ clearSchedule(Timer3);
 async function ScriptStart()
 {
     await CreateState();
-    log('-==== Jetzt sind alle States abgearbeitet Charge-Control Version 1.0.23 ====-');
+    log('-==== Jetzt sind alle States abgearbeitet Charge-Control Version 1.0.24 ====-');
     AutomatikAnwahl = getState(sID_Automatik).val;
     PrognoseAnwahl = getState(sID_PrognoseAnwahl).val;
     setState(sID_Anwahl_MEZ_MESZ, dst());  
@@ -288,7 +289,6 @@ async function Ladesteuerung()
     let Akk_max_Charge_Power_W = (await getStateAsync(sID_Max_Charge_Power_W)).val;                     // Aktuell eingestellte Ladeleistung   
     let Power_Home_W = (await getStateAsync(sID_Power_Home_W)).val;                                     // Aktueller Hausverbrauch E3DC   
     let UntererLadekorridor_W = (await getStateAsync(sID_UntererLadekorridor_W[EinstellungAnwahl])).val // Parameter UntererLadekorridor
-
     
     // Das Entladen aus dem Speicher wird freigegeben wenn
     // Notstrom oder Inselbetrieb aktiv ist oder der Batterie SOC > der berechneten Reserve liegt oder PV-Leistung > 100W ist und vor Sonnenuntergang
@@ -296,7 +296,7 @@ async function Ladesteuerung()
     if (Notstrom_Status == 1 || Notstrom_Status == 4 || Batterie_SOC_Proz > Notstrom_SOC_Proz || (PV_Leistung_E3DC_W > 100 && new Date() < getAstroDate("sunset")) ){
         // Laden/Endladen einschalten
         if(Akk_max_Discharge_Power_W == 0 || Akk_max_Charge_Power_W == 0){
-            await setStateAsync(sID_Max_Discharge_Power_W, Math.abs(Bat_Discharge_Limit_W))
+            await setStateAsync(sID_Max_Discharge_Power_W, Bat_Discharge_Limit_W)
             await setStateAsync(sID_DISCHARGE_START_POWER, startDischargeDefault)
             await setStateAsync(sID_Max_Charge_Power_W, maximumLadeleistung_W)
             Notstrom_SOC_Proz = (await getStateAsync(sID_Notstrom_akt)).val
@@ -426,7 +426,7 @@ async function Ladesteuerung()
             }
         
             // Prüfen ob Berechnete Ladeleistung innerhalb der min. und max. Grenze ist
-            if (M_Power < Bat_Discharge_Limit_W){M_Power = Bat_Discharge_Limit_W;} 
+            if (M_Power < Bat_Discharge_Limit_W*-1){M_Power = Bat_Discharge_Limit_W*-1;} 
             if (M_Power > maximumLadeleistung_W){M_Power = maximumLadeleistung_W;}
         
             //Prüfen ob berechnete Ladeleistung M_Power zu Netzbezug führt
