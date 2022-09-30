@@ -139,10 +139,10 @@ async function CreateState(){
 async function ScriptStart()
 {
     await CreateState();
-    log('-==== Jetzt sind alle States abgearbeitet ====-');
+    log('-==== Jetzt sind alle States abgearbeitet Version: 0.4.2 ====-');
     Lademodus = getState(sID_Lademodus_Wallbox).val;
     MinBatterieSoC = getState(sID_min_SoC_Batterie_E3DC).val;
-    if (getState(sID_Ladestatus_1).val === 67 || getState(sID_Ladestatus_1).val === 66) {FahrzeugAngesteckt = true;}
+    if (getState(sID_Ladestatus_1).val === 67 || getState(sID_Ladestatus_1).val === 66 ) {FahrzeugAngesteckt = true;}
     if (getState(sID_Automatik).val === true) {Automatik = true;}
     if (getState(sID_Ladevorgang_aktiv).val === true) {AutoLaden_aktiv = true;}
     
@@ -186,6 +186,7 @@ async function main()
         break;
     case 4:
         // Lademodus 4= Laden über Batterie E3DC ohne Netzbezug bis zu einem eingestellten SoC Wert der Batterie E3DC
+        log('Lademodus 4 aufgerufen')
         Lademodus4();
         Lademodus_alt = Lademodus
         break;
@@ -210,12 +211,11 @@ async function Lademodus1(){
     let BatterieSoC = (await getStateAsync(sID_Batterie_SoC)).val;
     Ladeschwelle = getState(sID_Charge_Control_Ladeschwelle[EinstellungAnwahl]).val
     // Prüfen ob ausreichend PV-Leistung erzeugt wird
-    if (StromA(PV_Leistung_W,Phasen)>MinLadestromAuto_A || HaltezeitLaden1){
-        
+    if ((StromA(PV_Leistung_W,Phasen)>MinLadestromAuto_A || (HaltezeitLaden1 && BatterieSoC > MinBatterieSoC && BatterieSoC > Min_SOC_Notstrom_E3DC_Proz)) && Autobatterie_SoC < AutoLadenBis_SoC){
         // Prüfen ob Werte Netz oder Batterie negativ sind
-        if (NetzLeistung_W <= -500 && BatterieLeistung_W < 0){
+        if (NetzLeistung_W <= -500 && BatterieLeistung_W <= 0){
             AutoLadeleistung_W = (PV_Leistung_W-Hausverbrauch_W+BatterieLeistung_W-NetzLeistung_W)-2070;
-        }else if (NetzLeistung_W > -500 && BatterieLeistung_W < 0) {
+        }else if (NetzLeistung_W > -500 && BatterieLeistung_W <= 0) {
             AutoLadeleistung_W = (PV_Leistung_W-Hausverbrauch_W+BatterieLeistung_W)-2070;                 // 2070 W Trägheitsreserve bei Netzbezug
         }else if (NetzLeistung_W > -500 && BatterieLeistung_W > 0) {
             AutoLadeleistung_W = (PV_Leistung_W-Hausverbrauch_W-BatterieLeistung_W);                                    // 2070 W Trägheitsreserve bei Netzbezug
@@ -239,42 +239,21 @@ async function Lademodus1(){
         if (AutoLadestrom_A > MaxLadestrom_A){ AutoLadestrom_A = MaxLadestrom_A;}
         
         // Prüfen ob mögliche AutoLadestrom_A höher als MinLadestromStart_A, wenn ja Haltezeit starten
-        // Wenn Hausspeicher Batterie unter MinBatterieSoC ist soll das laden vom E-Auto beendet werden.
-        // Wenn Hausspeicher Batterie unter Parameter min_SOC_Notstrom_E3DC ist soll das laden vom E-Auto beendet werden.
-        // Wenn Hausspeicher Batterie unter Ladeschwelle Charge-Control ist soll das E-Auto nicht geladen werden.
-        // Wenn die Autobatterie bis zum eingestellten SoC geladen ist soll das Laden abgebrochen werden
-        if (existsState(sID_Autobatterie_SoC)){
-            if (AutoLadestrom_A > MinLadestromStart_A && BatterieSoC > MinBatterieSoC && BatterieSoC > Min_SOC_Notstrom_E3DC_Proz && BatterieSoC > Ladeschwelle &&  Autobatterie_SoC < AutoLadenBis_SoC ){
-                if (HaltezeitLaden1){clearTimeout(HaltezeitLaden1)}
-                HaltezeitLaden1 = setTimeout(function () {HaltezeitLaden1 = null;}, Haltezeit1*60000);
-                await setStateAsync(sID_Ladevorgang_Pause_1,false);
-                await setStateAsync(sID_Ladevorgang_Freigeben_1,true);
-            }else{
-                if (HaltezeitLaden1 && Autobatterie_SoC < AutoLadenBis_SoC) {
-                    AutoLadestrom_A = MinLadestromAuto_A;    
-                }else{
-                    AutoLadestrom_A = MinLadestromAuto_A;
-                    await setStateAsync(sID_Ladevorgang_Pause_1,true);
-                    await setStateAsync(sID_Ladevorgang_Freigeben_1,false);
-                }
-            }
+        if (AutoLadestrom_A > MinLadestromStart_A ){
+            if (HaltezeitLaden1){clearTimeout(HaltezeitLaden1)}
+            HaltezeitLaden1 = setTimeout(function () {HaltezeitLaden1 = null;}, Haltezeit1*60000);
+            await setStateAsync(sID_Ladevorgang_Pause_1,false);
+            await setStateAsync(sID_Ladevorgang_Freigeben_1,true);
         }else{
-            if (AutoLadestrom_A > MinLadestromStart_A && BatterieSoC > MinBatterieSoC && BatterieSoC > Min_SOC_Notstrom_E3DC_Proz && BatterieSoC > Ladeschwelle ){
-                if (HaltezeitLaden1){clearTimeout(HaltezeitLaden1)}
-                HaltezeitLaden1 = setTimeout(function () {HaltezeitLaden1 = null;}, Haltezeit1*60000);
-                await setStateAsync(sID_Ladevorgang_Pause_1,false);
-                await setStateAsync(sID_Ladevorgang_Freigeben_1,true);
+            if (HaltezeitLaden1) {
+                AutoLadestrom_A = MinLadestromAuto_A;    
             }else{
-                if (HaltezeitLaden1) {
-                    AutoLadestrom_A = MinLadestromAuto_A;    
-                }else{
-                    AutoLadestrom_A = MinLadestromAuto_A;
-                    await setStateAsync(sID_Ladevorgang_Pause_1,true);
-                    await setStateAsync(sID_Ladevorgang_Freigeben_1,false);
-                }
+                AutoLadestrom_A = MinLadestromAuto_A;
+                await setStateAsync(sID_Ladevorgang_Pause_1,true);
+                await setStateAsync(sID_Ladevorgang_Freigeben_1,false);
             }
         }
-        
+                
         //Schnelle Wechsel beim Laden verhindern und nur in 1 A Schritte erhöhen/verringern
         //Ladeleistung Wallbox über Tendenz Zähler möglichst konstant halten. 
         if (AutoLadestrom_A > iAutoLadestrom_A && !timerPause1 && !timerPause2 ){
@@ -295,7 +274,7 @@ async function Lademodus1(){
         if (DebugAusgabe){log('HaltezeitLaden1 ist  = '+ HaltezeitLaden1);}
         if (DebugAusgabe){log('Autobatterie_SoC ist  = '+ Autobatterie_SoC);}
         if (DebugAusgabe){log('AutoLadenBis_SoC ist  = '+ AutoLadenBis_SoC);}
-    }else if (!getState(sID_Ladevorgang_Pause_1)){ 
+    }else if (!getState(sID_Ladevorgang_Pause_1).val){ 
         AutoLadestrom_A = MinLadestromAuto_A;
         await setStateAsync(sID_Ladevorgang_Pause_1,true);
         await setStateAsync(sID_Ladevorgang_Freigeben_1,false);
@@ -314,16 +293,15 @@ async function Lademodus2(){
 
     
     // Prüfen ob ausreichend PV-Leistung erzeugt wird
-    if (StromA(PV_Leistung_W,Phasen)>MinLadestromAuto_A || HaltezeitLaden2){
-        
+    if ((StromA(PV_Leistung_W,Phasen)>MinLadestromAuto_A || (HaltezeitLaden2 && BatterieSoC > MinBatterieSoC && BatterieSoC > Min_SOC_Notstrom_E3DC_Proz)) && Autobatterie_SoC < AutoLadenBis_SoC){
         // Prüfen ob Werte Netzleistung negativ ist
-        if (NetzLeistung_W < 0 && BatterieLeistung_W < 0){
+        if (NetzLeistung_W < 0 && BatterieLeistung_W <= 0){
             AutoLadeleistung_W = PV_Leistung_W-Hausverbrauch_W-(NetzLeistung_W+1380);                       // 1380 W Trägheitsreserve bei Netzbezug
-        }else if (NetzLeistung_W > 0 && BatterieLeistung_W < 0) {
+        }else if (NetzLeistung_W > 0 && BatterieLeistung_W <= 0) {
             AutoLadeleistung_W = PV_Leistung_W-Hausverbrauch_W-NetzLeistung_W-1380;                         // 1380 W Trägheitsreserve bei Netzbezug
-        }else if (NetzLeistung_W > 0 && BatterieLeistung_W > 0) {
+        }else if (NetzLeistung_W > 0 && BatterieLeistung_W >= 0) {
             AutoLadeleistung_W = PV_Leistung_W-Hausverbrauch_W+BatterieLeistung_W-NetzLeistung_W-1380;      // 1380 W Trägheitsreserve bei Netzbezug
-        }else if (NetzLeistung_W < 0 && BatterieLeistung_W > 0){
+        }else if (NetzLeistung_W < 0 && BatterieLeistung_W >= 0){
             AutoLadeleistung_W = PV_Leistung_W-Hausverbrauch_W+BatterieLeistung_W-(NetzLeistung_W+1380);    // 1380 W Trägheitsreserve bei Netzbezug
         }
         if (AutoLadeleistung_W < 0){AutoLadeleistung_W = 0}
@@ -341,40 +319,21 @@ async function Lademodus2(){
         if (AutoLadestrom_A > MaxLadestrom_A){ AutoLadestrom_A = MaxLadestrom_A;}
         
         // Prüfen ob mögliche AutoLadestrom_A höher als MinLadestromStart_A, wenn ja Haltezeit starten
-        // Wenn Hausspeicher Batterie unter Parameter min_SOC_Notstrom_E3DC ist soll das laden vom E-Auto beendet werden.
-        // Wenn die Autobatterie bis zum eingestellten SoC geladen ist soll das Laden abgebrochen werden
-        if (existsState(sID_Autobatterie_SoC)){
-            if (AutoLadestrom_A > MinLadestromStart_A && BatterieSoC > Min_SOC_Notstrom_E3DC_Proz && Autobatterie_SoC < AutoLadenBis_SoC){
-                if (HaltezeitLaden2){clearTimeout(HaltezeitLaden2)}
-                HaltezeitLaden2 = setTimeout(function () {HaltezeitLaden2 = null;}, Haltezeit2*60000);
-                await setStateAsync(sID_Ladevorgang_Pause_1,false);
-                await setStateAsync(sID_Ladevorgang_Freigeben_1,true);
-            }else{
-                if (HaltezeitLaden2 && Autobatterie_SoC < AutoLadenBis_SoC) {
-                    AutoLadestrom_A = MinLadestromAuto_A;    
-                }else{
-                    AutoLadestrom_A = MinLadestromAuto_A;
-                    await setStateAsync(sID_Ladevorgang_Pause_1,true);
-                    await setStateAsync(sID_Ladevorgang_Freigeben_1,false);
-                }
-            }
+        if (AutoLadestrom_A > MinLadestromStart_A ){
+            if (HaltezeitLaden2){clearTimeout(HaltezeitLaden2)}
+            HaltezeitLaden2 = setTimeout(function () {HaltezeitLaden2 = null;}, Haltezeit2*60000);
+            await setStateAsync(sID_Ladevorgang_Pause_1,false);
+            await setStateAsync(sID_Ladevorgang_Freigeben_1,true);
         }else{
-            if (AutoLadestrom_A > MinLadestromStart_A && BatterieSoC > Min_SOC_Notstrom_E3DC_Proz){
-                if (HaltezeitLaden2){clearTimeout(HaltezeitLaden2)}
-                HaltezeitLaden2 = setTimeout(function () {HaltezeitLaden2 = null;}, Haltezeit2*60000);
-                await setStateAsync(sID_Ladevorgang_Pause_1,false);
-                await setStateAsync(sID_Ladevorgang_Freigeben_1,true);
+            if (HaltezeitLaden2) {
+                AutoLadestrom_A = MinLadestromAuto_A;    
             }else{
-                if (HaltezeitLaden2) {
-                    AutoLadestrom_A = MinLadestromAuto_A;    
-                }else{
-                    AutoLadestrom_A = MinLadestromAuto_A;
-                    await setStateAsync(sID_Ladevorgang_Pause_1,true);
-                    await setStateAsync(sID_Ladevorgang_Freigeben_1,false);
-                }
+                AutoLadestrom_A = MinLadestromAuto_A;
+                await setStateAsync(sID_Ladevorgang_Pause_1,true);
+                await setStateAsync(sID_Ladevorgang_Freigeben_1,false);
             }
         }
-        
+                
         //Schnelle Wechsel beim Laden verhindern und nur in 1 A Schritte erhöhen/verringern
         //Ladeleistung Wallbox über Tendenz Zähler möglichst konstant halten. 
         if (AutoLadestrom_A > iAutoLadestrom_A && !timerPause1 && !timerPause2 ){
@@ -395,7 +354,7 @@ async function Lademodus2(){
         if (DebugAusgabe){log('HaltezeitLaden2 ist  = '+ HaltezeitLaden2);}
         if (DebugAusgabe){log('Autobatterie_SoC ist  = '+ Autobatterie_SoC);}
         if (DebugAusgabe){log('AutoLadenBis_SoC ist  = '+ AutoLadenBis_SoC);}
-    }else if (!getState(sID_Ladevorgang_Pause_1)){ 
+    }else if (!getState(sID_Ladevorgang_Pause_1).val){ 
         AutoLadestrom_A = MinLadestromAuto_A;
         await setStateAsync(sID_Ladevorgang_Pause_1,true);
         await setStateAsync(sID_Ladevorgang_Freigeben_1,false);
@@ -416,9 +375,9 @@ async function Lademodus4(){
     
     // Die max. mögliche Ladeleistung berechnen
     let MaxLeistung = MaxEntladeLeistungBatterie_W+PV_Leistung_W
-    
+    if(DebugAusgabe){log('Lademodus 4 aufgerufen StromA='+StromA(PV_Leistung_W,Phasen)+' MinLadestromAuto_A='+MinLadestromAuto_A+' HaltezeitLaden4='+HaltezeitLaden4+' BatterieSoC='+BatterieSoC+' MinBatterieSoC='+MinBatterieSoC+' Min_SOC_Notstrom_E3DC_Proz='+Min_SOC_Notstrom_E3DC_Proz+' Autobatterie_SoC='+Autobatterie_SoC+' AutoLadenBis_SoC='+AutoLadenBis_SoC)}
     // Prüfen ob ausreichend PV-Leistung erzeugt wird oder Batterie E3DC geladen ist
-    if ( (StromA(PV_Leistung_W,Phasen)>MinLadestromAuto_A || BatterieSoC > Ladeschwelle || HaltezeitLaden2) && BatterieSoC > Min_SOC_Notstrom_E3DC_Proz){
+    if ((StromA(PV_Leistung_W,Phasen)>MinLadestromAuto_A || HaltezeitLaden4 || BatterieSoC > MinBatterieSoC)&& BatterieSoC > MinBatterieSoC && BatterieSoC > Min_SOC_Notstrom_E3DC_Proz && Autobatterie_SoC < AutoLadenBis_SoC){
         // prüfen ob max Leistung Wechselrichter eingehalten wird sonst Entladeleistung Batterie reduzieren
         if (MaxLeistung > MaxLeistungWR_W) {
             EntladeleistungBatterie = MaxEntladeLeistungBatterie_W-(MaxLeistung - MaxLeistungWR_W);
@@ -452,40 +411,21 @@ async function Lademodus4(){
         
         // Prüfen ob mögliche AutoLadestrom_A höher als MinLadestromStart_A, wenn ja Haltezeit starten
         // Wenn Hausspeicher Batterie unter Parameter min_SOC_Notstrom_E3DC ist soll das laden vom E-Auto beendet werden.
-        // Wenn die Autobatterie bis zum eingestellten SoC geladen ist soll das Laden abgebrochen werden
-        if (existsState(sID_Autobatterie_SoC)){
-            if (AutoLadestrom_A > MinLadestromStart_A && BatterieSoC > Min_SOC_Notstrom_E3DC_Proz && BatterieSoC > MinBatterieSoC  && Autobatterie_SoC < AutoLadenBis_SoC ){
-                if (HaltezeitLaden4){clearTimeout(HaltezeitLaden4)}
-                HaltezeitLaden4 = setTimeout(function () {HaltezeitLaden4 = null;}, Haltezeit4*60000);
-                await setStateAsync(sID_Ladevorgang_Pause_1,false);
-                await setStateAsync(sID_Ladevorgang_Freigeben_1,true);
-            }else{
-                if (HaltezeitLaden4 && BatterieSoC > MinBatterieSoC && Autobatterie_SoC < AutoLadenBis_SoC) {
-                    AutoLadestrom_A = MinLadestromAuto_A;    
-                }else{
-                    AutoLadestrom_A = MinLadestromAuto_A;
-                    await setStateAsync(sID_Ladevorgang_Pause_1,true);
-                    await setStateAsync(sID_Ladevorgang_Freigeben_1,false);
-                }
-            }
+        if (AutoLadestrom_A > MinLadestromStart_A){
+            if (HaltezeitLaden4){clearTimeout(HaltezeitLaden4)}
+            HaltezeitLaden4 = setTimeout(function () {HaltezeitLaden4 = null;}, Haltezeit4*60000);
+            await setStateAsync(sID_Ladevorgang_Pause_1,false);
+            await setStateAsync(sID_Ladevorgang_Freigeben_1,true);
         }else{
-            
-            if (AutoLadestrom_A > MinLadestromStart_A && BatterieSoC > Min_SOC_Notstrom_E3DC_Proz && BatterieSoC > MinBatterieSoC){
-                if (HaltezeitLaden4){clearTimeout(HaltezeitLaden4)}
-                HaltezeitLaden4 = setTimeout(function () {HaltezeitLaden4 = null;}, Haltezeit4*60000);
-                await setStateAsync(sID_Ladevorgang_Pause_1,false);
-                await setStateAsync(sID_Ladevorgang_Freigeben_1,true);
+            if (HaltezeitLaden4) {
+                AutoLadestrom_A = MinLadestromAuto_A;    
             }else{
-                log('HaltezeitLaden4= '+HaltezeitLaden4)
-                if (HaltezeitLaden4) {
-                    AutoLadestrom_A = MinLadestromAuto_A;    
-                }else{
-                    AutoLadestrom_A = MinLadestromAuto_A;
-                    await setStateAsync(sID_Ladevorgang_Pause_1,true);
-                    await setStateAsync(sID_Ladevorgang_Freigeben_1,false);
-                }
+                AutoLadestrom_A = MinLadestromAuto_A;
+                await setStateAsync(sID_Ladevorgang_Pause_1,true);
+                await setStateAsync(sID_Ladevorgang_Freigeben_1,false);
             }
         }
+        
         
         //Schnelle Wechsel beim Laden verhindern und nur in 1 A Schritte erhöhen/verringern
         //Ladeleistung Wallbox über Tendenz Zähler möglichst konstant halten. 
@@ -503,11 +443,8 @@ async function Lademodus4(){
         if(NeuBerechnen){iAutoLadestrom_A=AutoLadestrom_A;NeuBerechnen = false}
         // Vorgabe Ladestrom an Wallbox übermitteln
         await setStateAsync(sID_Ladestrom_Wallbox_1,iAutoLadestrom_A);
-        if (DebugAusgabe){log('Lademodus = '+ Lademodus);}
-        if (DebugAusgabe){log('HaltezeitLaden2 ist  = '+ HaltezeitLaden2);}
-        if (DebugAusgabe){log('Autobatterie_SoC ist  = '+ Autobatterie_SoC);}
-        if (DebugAusgabe){log('AutoLadenBis_SoC ist  = '+ AutoLadenBis_SoC);}
-    }else{
+        
+    }else if (!getState(sID_Ladevorgang_Pause_1).val){ 
         AutoLadestrom_A = MinLadestromAuto_A;
         await setStateAsync(sID_Ladevorgang_Pause_1,true);
         await setStateAsync(sID_Ladevorgang_Freigeben_1,false);
@@ -726,6 +663,8 @@ schedule('*/3 * * * * *', async function() {
         Tendenz_i = 0
         NeuBerechnen = true
     }
+    if (DebugAusgabe){log('Schedule läuft FahrzeugAngesteckt='+FahrzeugAngesteckt+' Automatik='+Automatik+' Lademodus='+Lademodus)}
+    
     if (FahrzeugAngesteckt == true && Automatik && (Lademodus == 0 || Lademodus == 1 || Lademodus == 2 || Lademodus == 3 || Lademodus == 4))
     {
         main();
