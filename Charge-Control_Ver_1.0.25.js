@@ -1245,7 +1245,7 @@ async function InterrogateSolcast(DachFl){
             }
         }
         if (DachFl==1 || DachFl==2){
-            xhr2.open("GET",'https://api.solcast.com.au/rooftop_sites/'+Resource_Id_Dach[DachFl]+'/forecasts?format=json&api_key='+SolcastAPI_key, true);
+            xhr2.open("GET",'https://api.solcast.com.au/rooftop_sites/'+Resource_Id_Dach[DachFl]+'/forecasts?format=json&api_key='+SolcastAPI_key+'&hours=168', true);
             xhr2.responseType = "json";
             xhr2.send();
         }
