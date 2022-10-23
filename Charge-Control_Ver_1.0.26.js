@@ -1,38 +1,6 @@
 'use strict';
-let Resource_Id_Dach=[];
-let sID_UntererLadekorridor_W =[],sID_Ladeschwelle_Proz =[],sID_Ladeende_Proz=[],sID_Ladeende2_Proz=[],sID_Winterminimum=[],sID_Sommermaximum=[],sID_Sommerladeende=[],sID_Unload_Proz=[];
 //-----------------------------------------------------------------------------------------------------------
 //++++++++++++++++++++++++++++++++++++++++++++  USER ANPASSUNGEN ++++++++++++++++++++++++++++++++++++++++++++
-
-//*************************************** Einstellungen Charge-Control **************************************
-let logflag = true;                                                                                 // History Daten in Lokaler Datei speichern 
-const sLogPath = "/home/iobroker/HistoryPV_Leistung.json";                                          // Pfad zur Sicherungsdatei History 
-const LogAusgabe = true                                                                             // Zusätzliche allgemeine LOG Ausgaben 
-const DebugAusgabe = false                                                                          // Debug Ausgabe im LOG zur Fehlersuche
-const LogAusgabeSteuerung = false                                                                   // Zusätzliche LOG Ausgaben der Lade-Steuerung
-
-//***************************************** Einstellungen Proplanta ***************************************
-const country = "de"                                                                                // Ländercode de,at, ch, fr, it
-const ProplantaOrt = 'xxxxxxxxxxxxxxxx'                                                             // Welcher Wohnort soll abgefragt werden
-const ProplantaPlz = 'xxxxx'                                                                        // Postleitzahl
-const BewoelkungsgradGrenzwert = 90                                                                 // wird als Umschaltkriterium für die Einstellung 2-5 verwendet
-//***************************************** Einstellungen Solcast *****************************************
-const Solcast = true;                                                                               // History Daten in Lokaler Datei speichern 
-const SolcastDachflaechen = 2;                                                                      // Aktuell max. zwei Dachflächen möglich
-Resource_Id_Dach[1] = 'xxxx-xxxx-xxxx-xxxx'                                                         // Rooftop 1 Id von der Homepage Solcast
-Resource_Id_Dach[2] = 'xxxx-xxxx-xxxx-xxxx'                                                         // Rooftop 2 Id von der Homepage Solcast
-const SolcastAPI_key = 'xxxxxxxx-xx-xxxxxxxxxxxxxxxxxxxx'                                           // Solcast API Key
-
-//******************************************** Einstellungen E3DC *******************************************
-const Entladetiefe_Pro = 90;                                                                        // Die Entladetiefe der Batterie in % aus den technischen Daten E3DC
-
-//************************************* Einstellungen Diagramm Prognose *************************************
-const nModulFlaeche = 73;                                                                           // 73 Installierte Modulfläche in m² (Silizium-Zelle 156x156x60 Zellen x 50 Module)
-const nWirkungsgradModule = 18;                                                                     // Wirkungsgrad / Effizienzgrad der Solarmodule in % bezogen auf die Globalstrahlung (aktuelle Module haben max. 24 %)
-const nKorrFaktor = 0                                                                               // nKorrFaktor in Prozent. Reduziert die berechnete Prognose um diese anzugleichen.nKorrFaktor= 0 ohne Korrektur 
-const nMinPvLeistungTag_kWh = 3                                                                     // minimal Mögliche PV-Leistung. Wenn Prognose niedriger ist wird mit diesem Wert gerechnet
-const nMaxPvLeistungTag_kWh = 105                                                                   // max. Mögliche PV-Leistung. Wenn Prognose höher ist wird mit diesem Wert gerechnet
-
 
 //**************************************** Einstellungen Modul Modbus ***************************************
 const sID_Batterie_SOC = 'modbus.0.holdingRegisters.40083_Batterie_SOC';                            // Pfad Modul ModBus aktueller Batterie_SOC'
@@ -42,7 +10,8 @@ const sID_BatterieLeistung_W ='modbus.0.holdingRegisters.40070_Batterie_Leistung
 const sID_Power_Grid_W = 'modbus.0.holdingRegisters.40074_Netz_Leistung'                            // Pfad Modul ModBus aktuelle Netz Leistung
 const sID_Power_Home_W = 'modbus.0.holdingRegisters.40072_Hausverbrauch_Leistung'                   // Pfad Modul ModBus aktueller Hausverbrauch
 //************************************** Einstellungen Modul e3dc.rscp **************************************
-const sID_Bat_Discharge_Limit = 'e3dc-rscp.0.EMS.SYS_SPECS.maxBatDischargPower'                     // Batterie Entladelimit (negativer Wert)
+const sID_Installed_Peak_Power = 'e3dc-rscp.0.EMS.INSTALLED_PEAK_POWER'                             // Wp der installierten PV Module
+const sID_Bat_Discharge_Limit = 'e3dc-rscp.0.EMS.SYS_SPECS.maxBatDischargPower'                     // Batterie Entladelimit
 const sID_Bat_Charge_Limit = 'e3dc-rscp.0.EMS.SYS_SPECS.maxBatChargePower'                          // Batterie Ladelimit
 const sID_startDischargeDefault = 'e3dc-rscp.0.EMS.SYS_SPECS.startDischargeDefault'                 // Anfängliche Entladeleistung Standard
 const sID_Notrom_Status = 'e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS'                                  // 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
@@ -50,44 +19,21 @@ const sID_installed_Battery_Capacity ='e3dc-rscp.0.EMS.SYS_SPECS.installedBatter
 const sID_SET_POWER_MODE = 'e3dc-rscp.0.EMS.SET_POWER_MODE'                                         // Lademodus
 const sID_SET_POWER_VALUE_W ='e3dc-rscp.0.EMS.SET_POWER_VALUE'                                      // Eingestellte Ladeleistung
 const sID_Max_wrleistung_W = 'e3dc-rscp.0.EMS.SYS_SPECS.maxAcPower'                                 // Maximale Wechselrichter Leistung
-const sID_Einspeiselimit_W = 'e3dc-rscp.0.EMS.DERATE_AT_POWER_VALUE'                                // Eingestellte Einspeisegrenze E3DC
+const sID_Einspeiselimit_W = 'e3dc-rscp.0.EMS.DERATE_AT_POWER_VALUE'                                // Eingestellte Einspeisegrenze E3DC in W
+const sID_Einspeiselimit_Pro = 'e3dc-rscp.0.EMS.DERATE_AT_PERCENT_VALUE'                            // Eingestellte Einspeisegrenze E3DC in Prozent
 const sID_BAT0_Alterungszustand = 'e3dc-rscp.0.BAT.BAT_0.ASOC'                                      // Batterie ASOC e3dc-rscp
 const sID_Max_Discharge_Power_W = 'e3dc-rscp.0.EMS.MAX_DISCHARGE_POWER'                             // Eingestellte maximale Batterie-Entladeleistung. (Variable Einstellung E3DC)
 const sID_Max_Charge_Power_W = 'e3dc-rscp.0.EMS.MAX_CHARGE_POWER'                                   // Eingestellte maximale Batterie-Ladeleistung. (Variable Einstellung E3DC)
 const sID_DISCHARGE_START_POWER = 'e3dc-rscp.0.EMS.DISCHARGE_START_POWER'                           // Anfängliche Batterie-Entladeleistung
 const sID_PARAM_EP_RESERVE_W = 'e3dc-rscp.0.EP.PARAM_0.PARAM_EP_RESERVE_W'                          // Eingestellte Notstrom Reserve E3DC
 //******************************* Einstellungen Instanz Script Charge-Control *******************************
-let instanz = '0_userdata.0.';                                                                      // Instanz
+const instanz = '0_userdata.0.';                                                                      // Instanz
 let PfadEbene1 = 'Charge_Control.';                                                                 // Pfad innerhalb der Instanz
-let PfadEbene2 = ['Parameter.','Allgemein.','History.','Proplanta.']                                // Pfad innerhalb der Instanz
+let PfadEbene2 = ['Parameter.','Allgemein.','History.','Proplanta.','USER_ANPASSUNGEN.']             // Pfad innerhalb PfadEbene1
 
 //++++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN ++++++++++++++++++++++++++++++++++++++++++
 //-----------------------------------------------------------------------------------------------------------
 
-//***************************************************************************************************
-//*********************************** User Eingaben prüfen ******************************************
-//***************************************************************************************************
-let Start = true
-ScriptStart();
-if ((typeof nModulFlaeche != "number") || (typeof nModulFlaeche == undefined)){console.error("nModulFlaeche muss als Number eingegeben werden");}
-if ((typeof nWirkungsgradModule != "number") || (typeof nWirkungsgradModule == undefined)){console.error("nWirkungsgradModule muss als Number eingegeben werden");}
-if (typeof country != 'string' || typeof country == 'undefined') {console.error('country muss als String eingegeben werden');}
-if ((typeof Entladetiefe_Pro != "number") || (typeof Entladetiefe_Pro == undefined)){console.error("Entladetiefe Batterie muss als Number eingegeben werden");}
-if(Entladetiefe_Pro < 0 || Entladetiefe_Pro >100){console.error("Entladetiefe Batterie muss zwischen 0% und 100% sein");}
-if (Solcast){
-    if ((typeof SolcastDachflaechen != "number") || (typeof SolcastDachflaechen == "undefined")){console.error("SolcastDachflaechen muss als Type Number eingegeben werden");}
-    if ((typeof Resource_Id_Dach[1] != "string") || (typeof Resource_Id_Dach[1] == "undefined")){console.error("Resource_Id_Dach[1] muss als String eingegeben werden");}
-    if ((typeof Resource_Id_Dach[2] != "string") || (typeof Resource_Id_Dach[2] == "undefined")){console.error("Resource_Id_Dach[2] muss als String eingegeben werden");}
-    if ((typeof SolcastAPI_key != "string") || (typeof SolcastAPI_key == "undefined")){console.error("SolcastAPI_key muss als String eingegeben werden");}
-}
-
-const PruefeID = [sID_Batterie_SOC,sID_PvLeistung_E3DC_W,sID_PvLeistung_ADD_W,sID_BatterieLeistung_W,sID_Power_Grid_W,
-sID_Power_Home_W,sID_Bat_Discharge_Limit,sID_Bat_Charge_Limit,sID_Notrom_Status,sID_installed_Battery_Capacity,sID_SET_POWER_MODE,
-sID_SET_POWER_VALUE_W,sID_Max_Discharge_Power_W,sID_Max_Charge_Power_W,sID_startDischargeDefault,sID_Max_wrleistung_W,
-sID_Einspeiselimit_W,sID_BAT0_Alterungszustand,sID_DISCHARGE_START_POWER,sID_PARAM_EP_RESERVE_W];
-for (let i = 0; i < PruefeID.length; i++) {
-    if (!existsObject(PruefeID[i])){log('Pfad ='+PruefeID[i]+' existiert nicht, bitte prüfen','error');}
-}
 
 //***************************************************************************************************
 //************************************ Deklaration Variablen ****************************************
@@ -97,6 +43,14 @@ const dst = require('is-it-bst');
 const fsw = require('fs');
 // @ts-ignore
 const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
+
+let Resource_Id_Dach=[];
+let sID_UntererLadekorridor_W =[],sID_Ladeschwelle_Proz =[],sID_Ladeende_Proz=[],sID_Ladeende2_Proz=[],sID_Winterminimum=[],sID_Sommermaximum=[],sID_Sommerladeende=[],sID_Unload_Proz=[];
+let logflag,sLogPath,LogAusgabe,DebugAusgabe,LogAusgabeSteuerung,NotstromEntladen,minWertPrognose_kWh;
+let country,ProplantaOrt,ProplantaPlz,BewoelkungsgradGrenzwert;
+let Solcast,SolcastDachflaechen,SolcastAPI_key,Entladetiefe_Pro;
+let nModulFlaeche,nWirkungsgradModule,nKorrFaktor,nMinPvLeistungTag_kWh,nMaxPvLeistungTag_kWh;     
+let Start = true
 
 const sID_Saved_Power_W = instanz + PfadEbene1 + PfadEbene2[1] + 'Saved_Power_W'            // Leistung die mit Charge-Control gerettet wurde
 const sID_PVErtragLM2 = instanz + PfadEbene1 + PfadEbene2[1] + 'Saved_PowerLM2_kWh';        // Leistungszähler für PV Leistung die mit Charge-Control gerettet wurde
@@ -134,13 +88,16 @@ const arrayID_Parameter5 =[sID_UntererLadekorridor_W[5],sID_Ladeschwelle_Proz[5]
 let xhr = new XMLHttpRequest();
 let xhr2 = new XMLHttpRequest();
 
-let Max_wrleistung_W = getState(sID_Max_wrleistung_W).val - 200;                // Maximale Wechselrichter Leistung (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
-let Einspeiselimit_kWh = (getState(sID_Einspeiselimit_W).val - 200)/1000;       // Einspeiselimit (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
-let maximumLadeleistung_W = getState(sID_Bat_Charge_Limit).val;                 // Maximal mögliche Batterie Ladeleistung
-let Bat_Discharge_Limit_W = getState(sID_Bat_Discharge_Limit).val;                     // Maximal mögliche Batterie Entladeleistung (negativer Wert)
-let startDischargeDefault = getState(sID_startDischargeDefault).val;            // Anfängliche Entladeleistung Standard
+let Max_wrleistung_W = getState(sID_Max_wrleistung_W).val - 200;                        // Maximale Wechselrichter Leistung (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
+let InstalliertPeakLeistung = getState(sID_Installed_Peak_Power).val;                   // Installierte Peak Leistung der PV-Module
+let Einspeiselimit_Pro = getState(sID_Einspeiselimit_Pro).val;                          // Einspeiselimit in Prozent
+let Einspeiselimit_kWh = ((InstalliertPeakLeistung/100)*Einspeiselimit_Pro-200)/1000    // Einspeiselimit (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
+//let Einspeiselimit_kWh = (getState(sID_Einspeiselimit_W).val - 200)/1000;             // Einspeiselimit (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
+let maximumLadeleistung_W = getState(sID_Bat_Charge_Limit).val;                         // Maximal mögliche Batterie Ladeleistung
+let Bat_Discharge_Limit_W = getState(sID_Bat_Discharge_Limit).val;                      // Maximal mögliche Batterie Entladeleistung
+let startDischargeDefault = getState(sID_startDischargeDefault).val;                    // Anfängliche Entladeleistung Standard
 
-let Speichergroesse_kWh                                                         // Installierte Batterie Speicher Kapazität wird in Funktion Speichergroesse() berechnet
+let Speichergroesse_kWh                                                                 // Installierte Batterie Speicher Kapazität wird in Funktion Speichergroesse() berechnet
 
 
 let AutomatikAnwahl,ZeitAnwahl_MEZ_MESZ,EinstellungAnwahl,PrognoseAnwahl,count0 = 0, count1 = 0, count2 = 0, Summe0 = 0, Summe1 = 0, Summe2 = 0;
@@ -155,7 +112,7 @@ let baseUrls = {
     "at" : "https://www.proplanta.de/Wetter-Oesterreich/profi-wetter-at.php?SITEID=70&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=0",
     "ch" : "https://www.proplanta.de/Wetter-Schweiz/profi-wetter-ch.php?SITEID=80&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=0",
 };
-let baseurl = baseUrls[country];
+let baseurl
 
 
 // Wenn noch vom Script gestartet Schedules aktiv sind, dann diese beenden.
@@ -164,6 +121,7 @@ clearSchedule(Timer1);
 clearSchedule(Timer2);
 clearSchedule(Timer3);
 
+ScriptStart();
 //***************************************************************************************************
 //**************************************** Function Bereich *****************************************
 //***************************************************************************************************
@@ -172,15 +130,15 @@ clearSchedule(Timer3);
 async function ScriptStart()
 {
     await CreateState();
-    log('-==== Jetzt sind alle States abgearbeitet Charge-Control Version 1.0.24 ====-');
+    log('-==== Charge-Control Version 1.0.26 ====-');
+    log('-==== alle Objekt ID\'s angelegt ====-');
+    await CheckState();
+    log('-==== alle Objekte ID\'s überprüft ====-');
     AutomatikAnwahl = getState(sID_Automatik).val;
     PrognoseAnwahl = getState(sID_PrognoseAnwahl).val;
     setState(sID_Anwahl_MEZ_MESZ, dst());  
     ZeitAnwahl_MEZ_MESZ = getState(sID_Anwahl_MEZ_MESZ).val
     EinstellungAnwahl = getState(sID_EinstellungAnwahl).val
-    Wh_Leistungsmesser0();                                              // Leistungsmesser PV Leistung E3DC starten
-    Wh_Leistungsmesser1();                                              // Leistungsmesser PV Leistung zusätzliche Einspeiser starten
-    Wh_Leistungsmesser2();                                              // Leistungsmesser Überschussleistung starten
     // Wetterdaten beim Programmstart aktualisieren und Timer starten.
     await Speichergroesse()                                             // aktuell verfügbare Batterie Speichergröße berechnen
     if (Solcast) {await SheduleSolcast(SolcastDachflaechen);}           // Wetterdaten Solcast abrufen
@@ -226,6 +184,28 @@ async function CreateState(){
     createStateAsync(instanz+PfadEbene1 + PfadEbene2[3] + 'Min_Temperatur_Tag_1', {'def':0, 'name':'Min Temperatur Morgen' ,'type':'number', 'unit':'°C'});
     createStateAsync(instanz+PfadEbene1 + PfadEbene2[3] + 'Min_Temperatur_Tag_2', {'def':0, 'name':'Min Temperatur Übermorgen' ,'type':'number', 'unit':'°C'});
     createStateAsync(instanz+PfadEbene1 + PfadEbene2[3] + 'Min_Temperatur_Tag_3', {'def':0, 'name':'Min Temperatur in vier Tagen' ,'type':'number', 'unit':'°C'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_LogHistoryLokal', {'def':false,'name':'History Daten in Lokaler Datei speichern' ,'type':'boolean', 'unit':'','role':'state'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_LogHistoryPath', {'name':'Pfad zur Sicherungsdatei History ' ,'type':'string', 'unit':'','role':'state'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_LogAusgabe', {'def':false,'name':'Zusätzliche allgemeine LOG Ausgaben' ,'type':'boolean', 'unit':'','role':'state'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_DebugAusgabe', {'def':false,'name':'Debug Ausgabe im LOG zur Fehlersuche' ,'type':'boolean', 'unit':'','role':'State'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_LogAusgabeRegelung', {'def':false,'name':'Zusätzliche LOG Ausgaben der Lade-Regelung' ,'type':'boolean', 'unit':'','role':'state'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_NotstromEntladen', {'def':false,'name':'Wenn true wird auch die Notstromreserve verwendet, wenn ausreichend PV-Leistung für den nächsten Tag laut Prognose erwartet wird' ,'type':'boolean', 'unit':'','role':'state'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_minWertPrognose_kWh', {'name':'Wenn Prognose nächster Tag > als minWertPrognode_kWh wird die Notstromreserve freigegeben' ,'type':'number', 'unit':'kWh','role':'value'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_maxEntladetiefeBatterie', {'name':'Die Entladetiefe der Batterie in % aus den technischen Daten E3DC' ,'type':'number', 'unit':'%','role':'value'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '20_ProplantaCountry', {'def':'de','name':'Ländercode für Proplanta de,at, ch, fr, it' ,'type':'string', 'unit':'','role':'state'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '20_ProplantaOrt', {'name':'Wohnort für Abfrage Wetterdaten Proplanta' ,'type':'string', 'unit':'','role':'state'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '20_ProplantaPlz', {'name':'Postleitzahl für Abfrage Wetterdaten Proplanta' ,'type':'string', 'unit':'','role':'state'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '20_BewoelkungsgradGrenzwert', {'name':'wird als Umschaltkriterium für die Einstellung 2-5 verwendet' ,'type':'number', 'unit':'%','role':'value'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '30_AbfrageSolcast', {'def':false,'name':'true = Daten Solcast werden abgerufen false = Daten Solcast werden nicht abgerufen' ,'type':'boolean', 'unit':'','role':'state'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '30_SolcastDachflaechen', {'name':'Aktuell max. zwei Dachflächen möglich' ,'type':'number', 'unit':'Stück','role':'value'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '30_SolcastResource_Id_Dach1', {'name':'Rooftop 1 Id von der Homepage Solcast' ,'type':'string', 'unit':'','role':'state'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '30_SolcastResource_Id_Dach2', {'name':'Rooftop 2 Id von der Homepage Solcast' ,'type':'string', 'unit':'','role':'state'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '30_SolcastAPI_key', {'name':'API Key von der Homepage Solcast' ,'type':'string', 'unit':'','role':'state'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '40_ModulFlaeche', {'name':'Installierte Modulfläche in m² (Silizium-Zelle 156x156x60 Zellen x 50 Module)' ,'type':'number', 'unit':'m²','role':'value'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '40_WirkungsgradModule', {'name':'Wirkungsgrad / Effizienzgrad der Solarmodule in % bezogen auf die Globalstrahlung (aktuelle Module haben max. 24 %)' ,'type':'number', 'unit':'%','role':'value'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '40_KorrekturFaktor', {'name':'Korrektur Faktor in Prozent. Reduziert die berechnete Prognose um diese anzugleichen.nKorrFaktor= 0 ohne Korrektur' ,'type':'number', 'unit':'%','role':'value'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '40_minPvLeistungTag_kWh', {'name':'minimal Mögliche PV-Leistung. Wenn Prognose niedriger ist wird mit diesem Wert gerechnet' ,'type':'number', 'unit':'kWh','role':'value'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '40_maxPvLeistungTag_kWh', {'name':'max. Mögliche PV-Leistung. Wenn Prognose höher ist wird mit diesem Wert gerechnet' ,'type':'number', 'unit':'kWh','role':'value'});
     for (let i = 0; i <= 31; i++) {
         if(i <=6){
             createStateAsync(instanz+PfadEbene1 + PfadEbene2[3] + 'Datum_Tag_'+i, {'def':'0', 'name':'Datum Proplanta' ,'type':'string'});
@@ -256,6 +236,90 @@ async function CreateState(){
     }
 }
 
+async function CheckState()
+{
+    logflag = (await getStateAsync(instanz +PfadEbene1 + PfadEbene2[4] + '10_LogHistoryLokal')).val
+    if(logflag == undefined){log('Die Objekt ID ='+instanz +PfadEbene1 + PfadEbene2[4] + '10_LogHistoryLokal enthält keinen gültigen Wert, bitte prüfen','error');}
+        
+    sLogPath = (await getStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_LogHistoryPath')).val
+    if(sLogPath == undefined){log('Die Objekt ID ='+instanz +PfadEbene1 + PfadEbene2[4] + '10_LogHistoryPath enthält keinen gültigen Wert, bitte prüfen','error');}
+    
+    LogAusgabe = (await getStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_LogAusgabe')).val
+    if(LogAusgabe == undefined){log('Die Objekt ID ='+instanz +PfadEbene1 + PfadEbene2[4] + '10_LogAusgabe enthält keinen gültigen Wert, bitte prüfen','error');}
+    
+    DebugAusgabe = (await getStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_DebugAusgabe')).val
+    if(DebugAusgabe == undefined){log('Die Objekt ID ='+instanz +PfadEbene1 + PfadEbene2[4] + '10_DebugAusgabe enthält keinen gültigen Wert, bitte prüfen','error');}
+    
+    LogAusgabeSteuerung = (await getStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_LogAusgabeRegelung')).val
+    if(LogAusgabeSteuerung == undefined){log('Die Objekt ID ='+instanz +PfadEbene1 + PfadEbene2[4] + '10_LogAusgabeRegelung enthält keinen gültigen Wert, bitte prüfen','error');}
+    
+    NotstromEntladen = (await getStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_NotstromEntladen')).val
+    if(NotstromEntladen == undefined){log('Die Objekt ID ='+instanz +PfadEbene1 + PfadEbene2[4] + '10_NotstromEntladen enthält keinen gültigen Wert, bitte prüfen','error');}
+    
+    minWertPrognose_kWh = (await getStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_minWertPrognose_kWh')).val
+    if(minWertPrognose_kWh == undefined){log('Die Objekt ID ='+instanz +PfadEbene1 + PfadEbene2[4] + '10_minWertPrognose_kWh enthält keinen gültigen Wert, bitte prüfen','error');}
+    
+    Entladetiefe_Pro = (await getStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_maxEntladetiefeBatterie')).val
+    if(Entladetiefe_Pro == undefined){log('Die Objekt ID ='+instanz +PfadEbene1 + PfadEbene2[4] + '10_maxEntladetiefeBatterie enthält keinen gültigen Wert, bitte prüfen','error');}
+    if(Entladetiefe_Pro < 0 || Entladetiefe_Pro >100){console.error("Entladetiefe Batterie muss zwischen 0% und 100% sein");}
+
+    country = (await getStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '20_ProplantaCountry')).val
+    if(country == undefined){log('Die Objekt ID ='+instanz +PfadEbene1 + PfadEbene2[4] + '20_ProplantaCountry enthält keinen gültigen Wert, bitte prüfen','error');}
+    baseurl = baseUrls[country];
+
+    ProplantaOrt = (await getStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '20_ProplantaOrt')).val
+    if(ProplantaOrt == undefined){log('Die Objekt ID ='+instanz +PfadEbene1 + PfadEbene2[4] + '20_ProplantaOrt enthält keinen gültigen Wert, bitte prüfen','error');}
+    
+    ProplantaPlz = (await getStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '20_ProplantaPlz')).val
+    if(ProplantaPlz == undefined){log('Die Objekt ID ='+instanz +PfadEbene1 + PfadEbene2[4] + '20_ProplantaPlz enthält keinen gültigen Wert, bitte prüfen','error');}
+    
+    BewoelkungsgradGrenzwert = (await getStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '20_BewoelkungsgradGrenzwert')).val
+    if(BewoelkungsgradGrenzwert == undefined){log('Die Objekt ID ='+instanz +PfadEbene1 + PfadEbene2[4] + '20_BewoelkungsgradGrenzwert enthält keinen gültigen Wert, bitte prüfen','error');}
+    
+    Solcast = (await getStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '30_AbfrageSolcast')).val
+    if(Solcast == undefined){log('Die Objekt ID ='+instanz +PfadEbene1 + PfadEbene2[4] + '30_AbfrageSolcast enthält keinen gültigen Wert, bitte prüfen','error');}
+    
+    if (Solcast){
+        SolcastDachflaechen = (await getStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '30_SolcastDachflaechen')).val
+        if(SolcastDachflaechen == undefined){log('Die Objekt ID ='+instanz +PfadEbene1 + PfadEbene2[4] + '30_SolcastDachflaechen enthält keinen gültigen Wert, bitte prüfen','error');}
+    
+        Resource_Id_Dach[1] = (await getStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '30_SolcastResource_Id_Dach1')).val
+        if(Resource_Id_Dach[1] == undefined){log('Die Objekt ID ='+instanz +PfadEbene1 + PfadEbene2[4] + '30_SolcastResource_Id_Dach1 enthält keinen gültigen Wert, bitte prüfen','error');}
+    
+        if(SolcastDachflaechen == 2){
+            Resource_Id_Dach[2] = (await getStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '30_SolcastResource_Id_Dach2')).val
+            if(Resource_Id_Dach[2] == undefined){log('Die Objekt ID ='+instanz +PfadEbene1 + PfadEbene2[4] + '30_SolcastResource_Id_Dach2 enthält keinen gültigen Wert, bitte prüfen','error');}
+        }
+
+        SolcastAPI_key = (await getStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '30_SolcastAPI_key')).val
+        if(SolcastAPI_key == undefined){log('Die Objekt ID ='+instanz +PfadEbene1 + PfadEbene2[4] + '30_SolcastAPI_key enthält keinen gültigen Wert, bitte prüfen','error');}
+    
+    }
+    
+    nModulFlaeche = (await getStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '40_ModulFlaeche')).val
+    if(nModulFlaeche == undefined){log('Die Objekt ID ='+instanz +PfadEbene1 + PfadEbene2[4] + '40_ModulFlaeche enthält keinen gültigen Wert, bitte prüfen','error');}
+    
+    nWirkungsgradModule = (await getStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '40_WirkungsgradModule')).val
+    if(nWirkungsgradModule == undefined){log('Die Objekt ID ='+instanz +PfadEbene1 + PfadEbene2[4] + '40_WirkungsgradModule enthält keinen gültigen Wert, bitte prüfen','error');}
+    
+    nKorrFaktor = (await getStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '40_KorrekturFaktor')).val
+    if(nKorrFaktor == undefined){log('Die Objekt ID ='+instanz +PfadEbene1 + PfadEbene2[4] + '40_KorrekturFaktor enthält keinen gültigen Wert, bitte prüfen','error');}
+    
+    nMinPvLeistungTag_kWh = (await getStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '40_minPvLeistungTag_kWh')).val
+    if(nMinPvLeistungTag_kWh == undefined){log('Die Objekt ID ='+instanz +PfadEbene1 + PfadEbene2[4] + '40_minPvLeistungTag_kWh enthält keinen gültigen Wert, bitte prüfen','error');}
+    
+    nMaxPvLeistungTag_kWh = (await getStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '40_maxPvLeistungTag_kWh')).val
+    if(nMaxPvLeistungTag_kWh == undefined){log('Die Objekt ID ='+instanz +PfadEbene1 + PfadEbene2[4] + '40_maxPvLeistungTag_kWh enthält keinen gültigen Wert, bitte prüfen','error');}
+    
+    // Pfadangaben zu den Modulen Modbus und e3dc-rscp überprüfen
+    const PruefeID = [sID_Batterie_SOC,sID_PvLeistung_E3DC_W,sID_PvLeistung_ADD_W,sID_BatterieLeistung_W,sID_Power_Grid_W,
+    sID_Power_Home_W,sID_Bat_Discharge_Limit,sID_Bat_Charge_Limit,sID_Notrom_Status,sID_installed_Battery_Capacity,sID_SET_POWER_MODE,
+    sID_SET_POWER_VALUE_W,sID_Max_Discharge_Power_W,sID_Max_Charge_Power_W,sID_startDischargeDefault,sID_Max_wrleistung_W,
+    sID_Einspeiselimit_W,sID_BAT0_Alterungszustand,sID_DISCHARGE_START_POWER,sID_PARAM_EP_RESERVE_W];
+    for (let i = 0; i < PruefeID.length; i++) {
+        if (!existsObject(PruefeID[i])){log('Pfad ='+PruefeID[i]+' existiert nicht, bitte prüfen','error');}
+    }
+}
 
 async function main()
 {
@@ -321,6 +385,7 @@ async function Ladesteuerung()
     }else{
         // Endladen ausschalten
         BAT_Notstrom_SOC = true;
+        if(NotstromEntladen){CheckPrognose()}
     }                                                                                        
     
     // Nur wenn PV-Leistung vorhanden ist oder Entladen freigegeben ist Regelung starten.
@@ -1414,6 +1479,26 @@ function Wh_Leistungsmesser0(){
     });
 }
 
+// Prüfen ob Notstrom verwendet werden kann bei hoher PV Prognose für den nächsten Tag
+async function CheckPrognose(){
+    // prüfen ob vor Sonnenaufgang und ob die Notstromreserve beim durchschnittsverbrauch der letzten zwei Stunden bis zum Sonnenaufgang ausreicht.
+    
+    let Tag = nextDayDate(1).slice(8,10);
+    let PrgnoseMorgen_kWh = (await getStateAsync(instanz + PfadEbene1 + PfadEbene2[2] + 'PrognoseAuto_kWh_'+Tag)).val
+    if(PrgnoseMorgen_kWh > minWertPrognose_kWh){
+        // Notromreserve kann verwendet werden.
+
+
+
+    }
+  
+
+
+
+
+
+}
+
 // Leistungsmesser1 jede minute in W/h umrechen W = P*t
 // Autor:smartboart (ioBroker)
 function Wh_Leistungsmesser1(){
@@ -1546,6 +1631,12 @@ on({id: /\.HistoryJSON_/, change: "ne"}, async function (){
     }else{
         log('State '+instanz + PfadEbene1 + PfadEbene2[2] + 'HistorySelect darf nicht > 12 sein ', 'warn');
     }
+});
+
+// Wird aufgerufen wenn sich an den States .USER_ANPASSUNGEN was ändert
+on({id: /\.USER_ANPASSUNGEN/, change: "ne"}, async function (obj){	
+    log('User Parameter "'+obj.id.split('.')[4]+'" wurde in "'+obj.state.val+'" geändert','warn')
+    await CheckState();
 });
 
 // manuelle Änderung der ME(S)Z Zeitanzeige in VIS
@@ -1704,6 +1795,4 @@ onStop(function () {
     clearSchedule(Timer2);
     clearSchedule(Timer3);
 }, 100);
-
-
 
