@@ -75,13 +75,16 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.0.27</h3>
+<li>Die Instanz vom Modbus Adapter und e3dc-rscp Adater können jetzt über die beiden neuen Kontanten "instanzModbus" und "instanzE3DC_RSCP" im Script eingestellt werden</li>
+<li>Mit der neuen Konstante "LogparserSyntax" kann die Logausgabe vom Script an den Adapter Logparser angepasst werden. Wenn diese auf true eingestellt wird, wird der Log Text im Format ##{"from":"Charge-Control", "message":""}##' ausgegeben. </li>
+
 <h3>Version: 1.0.26</h3>
 <li>Doppelter Aufruf der Timer bei Scriptstart korrigiert. Danke an @smartboart, für den Hinweis .</li>
 <li>Das Einspeiselimit wird aus "e3dc-rscp.0.EMS.DERATE_AT_PERCENT_VALUE" und "e3dc-rscp.0.EMS.INSTALLED_PEAK_POWER" berechnet, da im e3dc-rscp Adapter seit dem Update E3DC keine W Werte mehr übertragen werden </li>
 <li>Für die User Parameter werden jetzt eigene Objekt ID's angelegt. Somit kann das Script immer komplett kopiert werden, ohne das die Einstellungen angepasst werden müssen.
 Die Einstellungen im Script in eine andere Datei kopieren, dann die neue Version kopieren und die alte Überschreiben und das Script starten. Es werden einige Fehler angezeigt, die beim ersten Start ignoriert werden können.
 Anschließen unter 0_userdata.0.Charge_Control.USER_ANPASSUNGEN die Werte wieder eintragen. Wenn jetzt das Script neu gestartet wird, sollten keine Fehler mehr angezeigt werden.  </li>
-
 
 <h3>Version: 1.0.25</h3>
 <li>URL korrigiert, sodas die Prognose wieder für 7 Tage von Solcast abgerufen wird. Danke an @bluebean für den Tipp .</li>
