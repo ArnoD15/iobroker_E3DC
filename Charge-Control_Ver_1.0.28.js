@@ -196,7 +196,7 @@ async function CreateState(){
     createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_LogAusgabeRegelung', {'def':false,'name':'Zusätzliche LOG Ausgaben der Lade-Regelung' ,'type':'boolean', 'unit':'','role':'state'});
     createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_NotstromEntladen', {'def':false,'name':'Wenn true wird auch die Notstromreserve verwendet, wenn ausreichend PV-Leistung für den nächsten Tag laut Prognose erwartet wird' ,'type':'boolean', 'unit':'','role':'state'});
     createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_minWertPrognose_kWh', {'name':'Wenn Prognose nächster Tag > als minWertPrognode_kWh wird die Notstromreserve freigegeben' ,'type':'number', 'unit':'kWh','role':'value'});
-    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_maxEntladetiefeBatterie', {'name':'Die Entladetiefe der Batterie in % aus den technischen Daten E3DC (beim S10E pro 90%)' ,'type':'number', 'unit':'%','role':'value'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_maxEntladetiefeBatterie', {'def':100,'name':'Die Entladetiefe der Batterie in % aus den technischen Daten E3DC (beim S10E pro 90%)' ,'type':'number', 'unit':'%','role':'value'});
     createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '20_ProplantaCountry', {'def':'de','name':'Ländercode für Proplanta de,at, ch, fr, it' ,'type':'string', 'unit':'','role':'state'});
     createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '20_ProplantaOrt', {'name':'Wohnort für Abfrage Wetterdaten Proplanta' ,'type':'string', 'unit':'','role':'state'});
     createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '20_ProplantaPlz', {'name':'Postleitzahl für Abfrage Wetterdaten Proplanta' ,'type':'string', 'unit':'','role':'state'});
