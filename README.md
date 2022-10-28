@@ -75,6 +75,11 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.0.28</h3>
+<li>Wenn die PV-Erzeugung die Prognose übersteigt, wird diese nicht mehr bei der Überschussberechnung abgezogen. Damit soll verhindert werden, dass die Einstellung sich ändert, wenn die 
+Prognose zu gering war. </li>
+<li>Wenn Ladeende erreicht ist und der Batterie SOC den Ladeende2 SOC erreicht hat, wird das Laden der Batterie gestoppt</li>
+
 <h3>Version: 1.0.27</h3>
 <li>Die Instanz vom Modbus Adapter und e3dc-rscp Adater können jetzt über die beiden neuen Kontanten "instanzModbus" und "instanzE3DC_RSCP" im Script eingestellt werden</li>
 <li>Mit der neuen Konstante "LogparserSyntax" kann die Logausgabe vom Script an den Adapter Logparser angepasst werden. Wenn diese auf true eingestellt wird, wird der Log Text im Format ##{"from":"Charge-Control", "message":""}##' ausgegeben. </li>
