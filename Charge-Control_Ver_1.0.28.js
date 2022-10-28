@@ -1,7 +1,7 @@
 'use strict';
 //------------------------------------------------------------------------------------------------------
 //++++++++++++++++++++++++++++++++++++++++++  USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++++
-const LogparserSyntax = false                                                                           // Soll die LOG Ausgabe an Adapter Logparser angepasst werden
+const LogparserSyntax = true                                                                            // Wenn true wird die LOG Ausgabe an Adapter Logparser angepasst
 const instanzModbus = 'modbus.0.'                                                                       // Instanz Modbus Adater
 const instanzE3DC_RSCP = 'e3dc-rscp.0.'                                                                 // Instanz e3dc-rscp Adapter
 
@@ -135,7 +135,7 @@ ScriptStart();
 async function ScriptStart()
 {
     await CreateState();
-    log(Logparser1+'-==== Charge-Control Version 1.0.27 ====-'+Logparser2);
+    log(Logparser1+'-==== Charge-Control Version 1.0.28 ====-'+Logparser2);
     log(Logparser1+'-==== alle Objekt ID\'s angelegt ====-'+Logparser2);
     await CheckState();
     log(Logparser1+'-==== alle Objekte ID\'s überprüft ====-'+Logparser2);
@@ -196,7 +196,7 @@ async function CreateState(){
     createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_LogAusgabeRegelung', {'def':false,'name':'Zusätzliche LOG Ausgaben der Lade-Regelung' ,'type':'boolean', 'unit':'','role':'state'});
     createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_NotstromEntladen', {'def':false,'name':'Wenn true wird auch die Notstromreserve verwendet, wenn ausreichend PV-Leistung für den nächsten Tag laut Prognose erwartet wird' ,'type':'boolean', 'unit':'','role':'state'});
     createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_minWertPrognose_kWh', {'name':'Wenn Prognose nächster Tag > als minWertPrognode_kWh wird die Notstromreserve freigegeben' ,'type':'number', 'unit':'kWh','role':'value'});
-    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_maxEntladetiefeBatterie', {'name':'Die Entladetiefe der Batterie in % aus den technischen Daten E3DC' ,'type':'number', 'unit':'%','role':'value'});
+    createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '10_maxEntladetiefeBatterie', {'name':'Die Entladetiefe der Batterie in % aus den technischen Daten E3DC (beim S10E pro 90%)' ,'type':'number', 'unit':'%','role':'value'});
     createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '20_ProplantaCountry', {'def':'de','name':'Ländercode für Proplanta de,at, ch, fr, it' ,'type':'string', 'unit':'','role':'state'});
     createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '20_ProplantaOrt', {'name':'Wohnort für Abfrage Wetterdaten Proplanta' ,'type':'string', 'unit':'','role':'state'});
     createStateAsync(instanz+PfadEbene1 + PfadEbene2[4] + '20_ProplantaPlz', {'name':'Postleitzahl für Abfrage Wetterdaten Proplanta' ,'type':'string', 'unit':'','role':'state'});
@@ -469,7 +469,14 @@ async function Ladesteuerung()
                 }else if(Zeit_aktuell_UTC_sek > tSommerladeende){// Nach Sommerladeende
                     // Wurde Batterie SOC Ladeende2 erreicht, dann Ladung beenden ansonsten mit maximal möglicher Ladeleistung Laden.
                     if(LogAusgabeSteuerung && Schritt != 4){log(Logparser1+'-==== Sommerladeende überschritten ====-'+Logparser2,'warn');Schritt=4;}
-                    M_Power = maximumLadeleistung_W;
+                    if (Batterie_SOC_Proz < Ladeende2_Proz && PV_Leistung_E3DC_W > UntererLadekorridor_W){
+                        M_Power = maximumLadeleistung_W;
+                    }else if(PV_Leistung_Summe_W > 0){
+                        M_Power = 0;
+                    }
+                
+                
+                
                 }
             }else{ // SOC Ladeschwelle wurde nicht erreicht. 
                 M_Power = maximumLadeleistung_W;
@@ -501,7 +508,7 @@ async function Ladesteuerung()
             //Prüfen ob berechnete Ladeleistung M_Power zu Netzbezug führt
             if(M_Power >= 0){   
                 let PowerGrid = PV_Leistung_Summe_W -(Power_Home_W + M_Power)
-                if(PowerGrid < 500 && M_Power != maximumLadeleistung_W){// Führt zu Netzbezug, Steuerung ausschalten
+                if(PowerGrid < 100 && M_Power != maximumLadeleistung_W){// Führt zu Netzbezug, Steuerung ausschalten
                     M_Power = maximumLadeleistung_W
                     if(LogAusgabeSteuerung){log(Logparser1+'-==== Ladesteuerung gestoppt ====-'+Logparser2,'warn');}
                 }   
@@ -740,12 +747,15 @@ async function Prognosen_Berechnen()
     }
     if (LogAusgabe){log(Logparser1+'Prognose_kWh nach Abzug Korrekturfaktor  = '+ Prognose_kWh_Tag[0]+Logparser2);}
        
-    // Bereits produzierte PV-Leistung muss von der Tagesprognose abgezogen werden
-    Prognose_kWh_Tag[0] = Prognose_kWh_Tag[0]-IstSummePvLeistung_kWh;
+    // Bereits produzierte PV-Leistung muss von der Tagesprognose abgezogen werden 
+    // wenn die produzierte PV-Leistung < als Prognose ist.
+    if (Prognose_kWh_Tag[0] > IstSummePvLeistung_kWh) {
+        Prognose_kWh_Tag[0] = Prognose_kWh_Tag[0]-IstSummePvLeistung_kWh;
+        setStateAsync(instanz + PfadEbene1 + PfadEbene2[2] + 'PrognoseAuto_kWh_'+Tag[0], Prognose_kWh_Tag[0]+IstSummePvLeistung_kWh);
+    }else{
+        setStateAsync(instanz + PfadEbene1 + PfadEbene2[2] + 'PrognoseAuto_kWh_'+Tag[0], Prognose_kWh_Tag[0]);
+    }
     if (LogAusgabe){log(Logparser1+'Bereits produzierte PV-Leistung  = '+IstSummePvLeistung_kWh+Logparser2);}
-
-
-    setStateAsync(instanz + PfadEbene1 + PfadEbene2[2] + 'PrognoseAuto_kWh_'+Tag[0], Prognose_kWh_Tag[0]+IstSummePvLeistung_kWh);
     await setStateAsync(instanz + PfadEbene1 + PfadEbene2[1] + 'PrognoseBerechnung_kWh_heute', Prognose_kWh_Tag[0]);
     // Nur bis ende vom aktuellen Monat werte eintragen, sonst werden die ersten Tage vom aktuellen Monat mit den Werten vom nächsten Monat überschrieben. 
     for (let i = 1; i < 7 ; i++){
@@ -973,8 +983,9 @@ async function Speichergroesse()
     // E3DC verwendet ca. 10% der Batteriekapazität um sicherzustellen das diese nie ganz entladen wird.
     Kapa_Bat_Wh = Kapa_Bat_Wh * (Entladetiefe_Pro/100);
     Speichergroesse_kWh = round(((Kapa_Bat_Wh/100)*ASOC_Bat_Pro)/1000,0);
-}
+    log('Speichergroesse_kWh='+Speichergroesse_kWh)
 
+}
 // Freie Batterie Speicherkapazität in kWh berechnen, Parameter BatterieSoC in %
 function Batterie_kWh(BatterieSoC)
 {
@@ -1074,8 +1085,8 @@ async function PrognosedatenAbrufen(){
         let t = StateZeit.split(':')
         Timer2 = schedule({hour: t[0], minute: t[1]}, function(){PrognosedatenAbrufen();});
     }else{
-        Timer2 = schedule({hour: 5, minute: 25}, function(){PrognosedatenAbrufen();});
-        log(Logparser1+'Nächste Aktualisierung Wetterdaten 5:25 Uhr'+Logparser2)
+        Timer2 = schedule({hour: 3, minute: 0}, function(){PrognosedatenAbrufen();});
+        log(Logparser1+'Nächste Aktualisierung Wetterdaten 3:00 Uhr'+Logparser2)
     }
     main();
 }
