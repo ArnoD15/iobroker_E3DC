@@ -1,5 +1,7 @@
 'use strict';
 /*****************************************************************************************
+Version: 0.4.3      Wenn die PV-Erzeugung die Prognose übersteigt, wird diese nicht mehr bei der Überschussberechnung abgezogen.
+					Damit soll verhindert werden, dass die Einstellung sich ändert, wenn die Prognose zu gering war.
 Version: 0.4.2      Fehler in der Prognoseberechnung und Fehler das Timer bei Scriptende nicht beendet werden korrigiert.
 Version: 0.4.1      Fehler in der Prognoseberechnung korrigiert.
 Version: 0.4.0      Die Solar Prognose Forecast wurde entfernt und dafür die Prognose Solcast integriert.
@@ -513,13 +515,16 @@ async function Prognosen_Berechnen()
     }
     if (LogAusgabe){log('Prognose_kWh nach Abzug Korrekturfaktor  = '+ Prognose_kWh_Tag[0]);}
        
-    // Bereits produzierte PV-Leistung muss von der Tagesprognose abgezogen werden
-    Prognose_kWh_Tag[0] = Prognose_kWh_Tag[0]-IstSummePvLeistung_kWh;
-    if (LogAusgabe){log('Bereits produzierte PV-Leistung  = '+IstSummePvLeistung_kWh);}
-
-
-    setStateAsync(instanz + PfadEbene1 + PfadEbene2[2] + 'PrognoseAuto_kWh_'+Tag[0], Prognose_kWh_Tag[0]+IstSummePvLeistung_kWh);
-    await setStateAsync(instanz + PfadEbene1 + PfadEbene2[1] + 'PrognoseBerechnung_kWh_heute', Prognose_kWh_Tag[0]);
+    // Bereits produzierte PV-Leistung muss von der Tagesprognose abgezogen werden 
+    // wenn die produzierte PV-Leistung < als Prognose ist.
+    if (Prognose_kWh_Tag[0] > IstSummePvLeistung_kWh) {
+        Prognose_kWh_Tag[0] = Prognose_kWh_Tag[0]-IstSummePvLeistung_kWh;
+        setStateAsync(instanz + PfadEbene1 + PfadEbene2[2] + 'PrognoseAuto_kWh_'+Tag[0], Prognose_kWh_Tag[0]+IstSummePvLeistung_kWh);
+    }else{
+        setStateAsync(instanz + PfadEbene1 + PfadEbene2[2] + 'PrognoseAuto_kWh_'+Tag[0], Prognose_kWh_Tag[0]);
+    }
+	if (LogAusgabe){log('Bereits produzierte PV-Leistung  = '+IstSummePvLeistung_kWh);}
+	await setStateAsync(instanz + PfadEbene1 + PfadEbene2[1] + 'PrognoseBerechnung_kWh_heute', Prognose_kWh_Tag[0]);
     // Nur bis ende vom aktuellen Monat werte eintragen, sonst werden die ersten Tage vom aktuellen Monat mit den Werten vom nächsten Monat überschrieben. 
     for (let i = 1; i < 7 ; i++){
         if (Tag[i] == '01'){break;}
