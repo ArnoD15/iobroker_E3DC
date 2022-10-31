@@ -1681,7 +1681,7 @@ schedule("0 0 1 * *", async function() {
 // Automatische Umschaltung von MEZ / MESZ
 schedule("0 4 24-31 3,10 7", function() {
     setState(sID_Anwahl_MEZ_MESZ, dst());  /*true = MESZ ,false = MEZ*/
-    if(LogAusgabe)log('-==== MESZ Status '+dst+' ====-');
+    if(LogAusgabe)log('-==== MESZ Status ====-');
 });
 
 // jeden Tag um 00:01 Tageswert nullen.
