@@ -75,6 +75,9 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.0.29</h3>
+<li>Ablaufproblem, das durch die Auslagerung der User Parameter entstanden ist, behoben. Solcast Daten sollten jetzt wieder um 4:00 Uhr aktualisiert werden.</li>
+
 <h3>Version: 1.0.28</h3>
 <li>Wenn die PV-Erzeugung die Prognose übersteigt, wird diese nicht mehr bei der Überschussberechnung abgezogen. Damit soll verhindert werden, dass die Einstellung sich ändert, wenn die 
 Prognose zu gering war. </li>
