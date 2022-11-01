@@ -1,5 +1,6 @@
 'use strict';
 /*****************************************************************************************
+Version: 0.4.4      URL Solcast geändert, so das wieder 7 Tage abgerufen werden.
 Version: 0.4.3      Wenn die PV-Erzeugung die Prognose übersteigt, wird diese nicht mehr bei der Überschussberechnung abgezogen.
 					Damit soll verhindert werden, dass die Einstellung sich ändert, wenn die Prognose zu gering war.
 Version: 0.4.2      Fehler in der Prognoseberechnung und Fehler das Timer bei Scriptende nicht beendet werden korrigiert.
@@ -1266,7 +1267,7 @@ function InterrogateSolcast(DachFl){
             reject('Timeout beim abrufen der Daten von Solcast')
         };
         if (DachFl==1 || DachFl==2){
-            xhr2.open("GET",'https://api.solcast.com.au/rooftop_sites/'+Resource_Id_Dach[DachFl]+'/forecasts?format=json&api_key='+SolcastAPI_key, true);
+            xhr2.open("GET",'https://api.solcast.com.au/rooftop_sites/'+Resource_Id_Dach[DachFl]+'/forecasts?format=json&api_key='+SolcastAPI_key+'&hours=168', true);
             xhr2.responseType = "json";
             xhr2.send();
         }
