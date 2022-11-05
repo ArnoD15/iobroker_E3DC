@@ -83,8 +83,8 @@ EigenverbrauchAbend_kWh summiert den Eigenverbrauch von 0:00 Uhr bis 8:00 Uhr un
 Wenn der Notstrom SOC erreicht ist und 10_NotstromEntladen= true und die Prognose am nächsten Tag über dem eingestellten Wert in 10_minWertPrognose_kWh liegt, wird anhand vom Durchschnittsverbrauch berechnet, wie lange der Notstrom SOC den Eigenverbrauch abdecken kann.
 Ab dem Zeitpunkt, wo die Notstromreserve bis zum Sonnenaufgang reicht, wird das Entladen der Batterie freigegeben. Bitte beachten das, wenn die Prognose nicht stimmt, kann es vorkommen, dass bei Stromausfall eventuell keine Notstromreserve mehr vorhanden ist.
 Danke an @zelkin für diese Idee</li>
-<li>Fehler behoben,das der Falsche Timer verwendet wurde. Danke an @icke-pp</li>
-<li>LOG Texte optimiert. Wenn das Script regelt werden jetzt Warnungen ausgegeben um das besser unterscheiden zu können. Natürlich nur wenn 10_LogAusgabeRegelung = true ist </li>
+<li>Fehler behoben, dass der falsche Timer verwendet wurde. Danke an @icke-pp</li>
+<li>LOG Texte optimiert, wenn das Script regelt, werden jetzt Warnungen ausgegeben, um das besser unterscheiden zu können. Natürlich, nur wenn 10_LogAusgabeRegelung = true ist </li>
 
 <h3>Version: 1.0.29</h3>
 <li>Ablaufproblem, das durch die Auslagerung der User Parameter entstanden ist, behoben. Solcast Daten sollten jetzt wieder um 4:00 Uhr aktualisiert werden.</li>
