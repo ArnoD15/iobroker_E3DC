@@ -17,7 +17,7 @@ let PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUNGE
 //******************************************************************************************************
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.1.0 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.1.1 ====- ${Logparser2}`);
 //********************************************* Modul Modbus *******************************************
 const sID_Batterie_SOC =`${instanzModbus}.holdingRegisters.40083_Batterie_SOC`;                         // Pfad Modul ModBus aktueller Batterie_SOC'
 const sID_PvLeistung_E3DC_W =`${instanzModbus}.holdingRegisters.40068_PV_Leistung`;                     // Pfad Modul ModBus aktuelle PV_Leistung'
@@ -1511,22 +1511,25 @@ async function CheckPrognose(){
     reichweiteZeit.setMinutes(heute.getMinutes()+Reichweite_mm)
     // Prüfen ob aktuelle Zeit vor oder nach sunriseEnd liegt
     freigabe_notstrom = false
-    if (getAstroDate("sunriseEnd").getTime()<heute.getTime()){
+    if (getAstroDate("sunriseEnd").getTime()+3600000 < heute.getTime()){
         // Nach Sonnenaufgang
         let Tag = nextDayDate(1).slice(8,10);
         let PrognoseMorgen_kWh = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseAuto_kWh_${Tag}`)).val
-        if(reichweiteZeit.getTime() > getAstroDate("sunriseEnd",morgen).getTime() && PrognoseMorgen_kWh > minWertPrognose_kWh && NotstromEntladen){
+        // Prüfen ob die Reichweite Batterie SOC größer ist als Sonnenaufgang + 1 h
+        if(reichweiteZeit.getTime() > getAstroDate("sunriseEnd",morgen).getTime()+3600000 && PrognoseMorgen_kWh > minWertPrognose_kWh && NotstromEntladen){
             // Batterie reicht bis zum Sonnenaufgang, es kann entladen werden
-            if (LogAusgabeSteuerung&&BAT_Notstrom_SOC){log(`${Logparser1}-==== Freigabe Notstrom. PrognoseMorgen_kWh =${PrognoseMorgen_kWh}  KapBatterie_kWh = ${KapBatterie_Wh} Reichweite_hh = ${Reichweite_hh} Reichweite_mm = ${Reichweite_mm} Startzeit_PV_Leistung= ${arryStartzeit_PV_Leistung[0]}:${arryStartzeit_PV_Leistung[1]} ====-${Logparser2}`)}
+            if (LogAusgabeSteuerung&&BAT_Notstrom_SOC){log(`${Logparser1}-==== Freigabe Notstrom. PrognoseMorgen_kWh =${PrognoseMorgen_kWh} Durchschnittsverbrauch Wh =${Durschnitt_Wh} KapBatterie_Wh = ${KapBatterie_Wh} Reichweite_hh = ${Reichweite_hh} Reichweite_mm = ${Reichweite_mm} Startzeit_PV_Leistung= ${arryStartzeit_PV_Leistung[0]}:${arryStartzeit_PV_Leistung[1]} ====-${Logparser2}`)}
+            
             freigabe_notstrom = true
         }
     }else{
         // Vor Sonnenaufgang
         let Tag = nextDayDate(0).slice(8,10);
         let PrognoseMorgen_kWh = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseAuto_kWh_${Tag}`)).val
-        if(reichweiteZeit.getTime() > getAstroDate("sunriseEnd").getTime() && PrognoseMorgen_kWh > minWertPrognose_kWh && NotstromEntladen){
+        // Prüfen ob die Reichweite Batterie SOC größer ist als Sonnenaufgang + 1 h
+        if(reichweiteZeit.getTime() > getAstroDate("sunriseEnd").getTime()+3600000 && PrognoseMorgen_kWh > minWertPrognose_kWh && NotstromEntladen){
             // Batterie reicht bis zum Sonnenaufgang, es kann entladen werden
-            if (LogAusgabeSteuerung&&BAT_Notstrom_SOC){log(`${Logparser1}-==== Freigabe Notstrom. PrgnoseMorgen_kWh =${PrognoseMorgen_kWh}  KapBatterie_kWh = ${KapBatterie_Wh} Reichweite_hh = ${Reichweite_hh} Reichweite_mm = ${Reichweite_mm} Startzeit_PV_Leistung= ${arryStartzeit_PV_Leistung[0]}:${arryStartzeit_PV_Leistung[1]} ====-${Logparser2}`)}
+            if (LogAusgabeSteuerung&&BAT_Notstrom_SOC){log(`${Logparser1}-==== Freigabe Notstrom. PrgnoseMorgen_kWh =${PrognoseMorgen_kWh} Durchschnittsverbrauch Wh =${Durschnitt_Wh} KapBatterie_kWh = ${KapBatterie_Wh} Reichweite_hh = ${Reichweite_hh} Reichweite_mm = ${Reichweite_mm} Startzeit_PV_Leistung= ${arryStartzeit_PV_Leistung[0]}:${arryStartzeit_PV_Leistung[1]} ====-${Logparser2}`)}
             freigabe_notstrom = true
         }
     
@@ -1680,7 +1683,10 @@ on(sID_Power_Home_W, function(obj) {
 	    }
     }else if(getState(sID_PVErtragLM3).val > 0){
         setState(sID_EigenverbrauchDurchschnitt_kWh,round(getState(sID_PVErtragLM3).val/8,3))
+        clearSchedule(Timer3);
+		Timer3 = null;
         setState(sID_PVErtragLM3,0)
+    
     }
 });
 
