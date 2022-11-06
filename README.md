@@ -75,6 +75,11 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.1.1</h3>
+<li>Fehler das Timer3 um 8:00 nicht beendet wurde behoben.</li>
+<li>Zeitpunkt, wie lange die Notstromreserve reichen muss um 1 Stunde nach Sonnenaufgang verschoben, da bei Sonnenaufgang noch keine ausreichende PV-Leistung vorhanden ist.</li>
+
+
 <h3>Version: 1.1.0</h3>
 <li>Neue Funktion Notstromreserve verwenden, wenn die Prognose am nächsten Tag über einem einstellbaren Wert liegt.
 Es wurden zwei neue User und zwei allgemein Parameter erstellt, 10_NotstromEntladen, 10_minWertPrognose_kWh, EigenverbrauchAbend_kWh,EigenverbrauchDurchschnitt_kWh.
