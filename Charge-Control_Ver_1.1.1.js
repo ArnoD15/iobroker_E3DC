@@ -7,7 +7,7 @@ const instanzE3DC_RSCP = 'e3dc-rscp.0'                                          
 
 const instanz = '0_userdata.0';                                                                        	// Instanz Script Charge-Control
 let PfadEbene1 = 'Charge_Control';                                                                     	// Pfad innerhalb der Instanz
-let PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUNGEN']                		// Pfad innerhalb PfadEbene1
+let PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUNGEN']						// Pfad innerhalb PfadEbene1
 
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
 //------------------------------------------------------------------------------------------------------
