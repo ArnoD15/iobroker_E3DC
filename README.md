@@ -77,7 +77,7 @@ verbunden sein.
 <ul>
 <h3>Version: 1.1.3</h3>
 <li>Fehler behoben, dass der Parameter 10_Offset_sunriseEnd nicht bei allen Abfragen im Skript verwendet wurde.</li>
-<li>Einige Fehler in der Zeitberechnung der Funktion CheckPrognose behoben. Bitte die Versionen 1.1.0 bis 1.1.2 nicht verwenden</li>
+<li>Einige Fehler in der Zeitberechnung der Funktion CheckPrognose behoben. Bitte die Versionen 1.1.0 bis 1.1.2 nicht mehr verwenden</li>
 
 <h3>Version: 1.1.2</h3>
 <li>User Parameter 10_NotstromEntladen wird nicht mehr benötig und kann gelöscht werden. Wenn 10_minWertPrognose_kWh = 0, ist die Funktion: "Notstrom freigeben, wenn Prognose erreicht wird" deaktiviert.</li>
