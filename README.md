@@ -76,7 +76,7 @@ verbunden sein.
 
 <ul>
 <h3>Version: 1.1.4</h3>
-<li>Fehler behoben, dass mit start PV-Leistung die Batterie entladen wurde ohne das die Notstromreserve freigegeben war.</li>
+<li>Fehler behoben, dass mit Start PV-Leistung die Batterie entladen wurde, ohne dass die Notstromreserve freigegeben war.</li>
 
 <h3>Version: 1.1.3</h3>
 <li>Fehler behoben, dass der Parameter 10_Offset_sunriseEnd nicht bei allen Abfragen im Skript verwendet wurde.</li>
