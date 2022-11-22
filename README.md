@@ -75,6 +75,9 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.1.4</h3>
+<li>Fehler behoben, dass mit start PV-Leistung die Batterie entladen wurde ohne das die Notstromreserve freigegeben war.</li>
+
 <h3>Version: 1.1.3</h3>
 <li>Fehler behoben, dass der Parameter 10_Offset_sunriseEnd nicht bei allen Abfragen im Skript verwendet wurde.</li>
 <li>Einige Fehler in der Zeitberechnung der Funktion CheckPrognose behoben. Bitte die Versionen 1.1.0 bis 1.1.2 nicht mehr verwenden</li>
