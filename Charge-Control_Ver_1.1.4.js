@@ -17,7 +17,7 @@ let PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUNGE
 //******************************************************************************************************
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.1.3 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.1.4 ====- ${Logparser2}`);
 //********************************************* Modul Modbus *******************************************
 const sID_Batterie_SOC =`${instanzModbus}.holdingRegisters.40083_Batterie_SOC`;                         // Pfad Modul ModBus aktueller Batterie_SOC'
 const sID_PvLeistung_E3DC_W =`${instanzModbus}.holdingRegisters.40068_PV_Leistung`;                     // Pfad Modul ModBus aktuelle PV_Leistung'
@@ -48,6 +48,8 @@ const dst = require('is-it-bst');
 const fsw = require('fs');
 // @ts-ignore
 const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
+let xhr = new XMLHttpRequest();
+let xhr2 = new XMLHttpRequest();
 
 let Resource_Id_Dach=[];
 let sID_UntererLadekorridor_W =[],sID_Ladeschwelle_Proz =[],sID_Ladeende_Proz=[],sID_Ladeende2_Proz=[],sID_Winterminimum=[],sID_Sommermaximum=[],sID_Sommerladeende=[],sID_Unload_Proz=[];
@@ -55,7 +57,7 @@ let logflag,sLogPath,LogAusgabe,DebugAusgabe,LogAusgabeRegelung,Offset_sunriseEn
 let country,ProplantaOrt,ProplantaPlz,BewoelkungsgradGrenzwert;
 let Solcast,SolcastDachflaechen,SolcastAPI_key,Entladetiefe_Pro;
 let nModulFlaeche,nWirkungsgradModule,nKorrFaktor,nMinPvLeistungTag_kWh,nMaxPvLeistungTag_kWh;     
-let Start = true,NotstromVerwenden=false;
+let Start = true
 
 const sID_Saved_Power_W =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Saved_Power_W`;         // Leistung die mit Charge-Control gerettet wurde
 const sID_PVErtragLM2 =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Saved_PowerLM2_kWh`;      // Leistungszähler für PV Leistung die mit Charge-Control gerettet wurde
@@ -91,9 +93,6 @@ const arrayID_Parameter2 =[sID_UntererLadekorridor_W[2],sID_Ladeschwelle_Proz[2]
 const arrayID_Parameter3 =[sID_UntererLadekorridor_W[3],sID_Ladeschwelle_Proz[3],sID_Ladeende_Proz[3],sID_Ladeende2_Proz[2],sID_Winterminimum[3],sID_Sommerladeende[3],sID_Sommermaximum[3],sID_Unload_Proz[3]];
 const arrayID_Parameter4 =[sID_UntererLadekorridor_W[4],sID_Ladeschwelle_Proz[4],sID_Ladeende_Proz[4],sID_Ladeende2_Proz[2],sID_Winterminimum[4],sID_Sommerladeende[4],sID_Sommermaximum[4],sID_Unload_Proz[4]];
 const arrayID_Parameter5 =[sID_UntererLadekorridor_W[5],sID_Ladeschwelle_Proz[5],sID_Ladeende_Proz[5],sID_Ladeende2_Proz[2],sID_Winterminimum[5],sID_Sommerladeende[5],sID_Sommermaximum[5],sID_Unload_Proz[5]];
-
-let xhr = new XMLHttpRequest();
-let xhr2 = new XMLHttpRequest();
 
 let Max_wrleistung_W = getState(sID_Max_wrleistung_W).val - 200;                        // Maximale Wechselrichter Leistung (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
 let InstalliertPeakLeistung = getState(sID_Installed_Peak_Power).val;                   // Installierte Peak Leistung der PV-Module
@@ -148,6 +147,7 @@ async function ScriptStart()
     Start = false;
 }   
 
+// Alle nötigen Objekt ID's anlegen 
 async function CreateState(){
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Notstrom_min`, {'def':30, 'name':'Speicherreserve in % bei Wintersonnenwende 21.12', 'type':'number', 'role':'value', 'desc':'Speicherreserve in % bei winterminimum', 'unit':'%'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Notstrom_sockel`, {'def':20, 'name':'min. SOC Wert bei Tag-/Nachtgleiche 21.3./21.9.', 'type':'number', 'role':'value', 'desc':'min. SOC Wert bei Tag-/Nachtgleiche 21.3./21.9.', 'unit':'%'});
@@ -237,6 +237,7 @@ async function CreateState(){
     }
 }
 
+// Alle User Eingaben prüfen ob Werte eingetragen wurden
 async function CheckState()
 {
     logflag = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_LogHistoryLokal`)).val
@@ -335,7 +336,6 @@ async function main()
     await makeJson();
     // Einstellungen 1-5 je nach Überschuss PV Leistung Wetterprognose und Bewölkung anwählen 
     Einstellung(await Ueberschuss_Prozent());
-
 }
 
 
@@ -343,15 +343,12 @@ async function main()
 async function Ladesteuerung()
 {
     let dAkt = new Date();
-    let jjjj= dAkt.getUTCFullYear();
-    let dd = dAkt.getUTCDate();
-    let mm = dAkt.getUTCMonth()+1;
-    let dAkt_UTC = Date.UTC(jjjj, mm,dd, dAkt.getUTCHours(),dAkt.getUTCMinutes(),dAkt.getUTCSeconds());
-    let tStart_UTC = Date.UTC(jjjj,mm,dd,0,0,0);
+    let dAkt_UTC = Date.UTC(dAkt.getUTCFullYear(), dAkt.getUTCMonth()+1,dAkt.getUTCDate(), dAkt.getUTCHours(),dAkt.getUTCMinutes(),dAkt.getUTCSeconds());
+    let dStart_UTC = Date.UTC(dAkt.getUTCFullYear(),dAkt.getUTCMonth()+1,dAkt.getUTCDate(),0,0,0);
     // @ts-ignore
-    let Zeit_aktuell_UTC_sek = Math.round(Math.abs(dAkt_UTC - tStart_UTC) / 1000);                      // sek von 0:00 Uhr bis aktuelle Zeit 
+    let Zeit_aktuell_UTC_sek = Math.round(Math.abs(dAkt_UTC - dStart_UTC) / 1000);                      // sek von 0:00 Uhr bis aktuelle Zeit 
     let Notstrom_Status = (await getStateAsync(sID_Notrom_Status)).val;                                 // aktueller Notstrom Status E3DC 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
-    Batterie_SOC_Proz = (await getStateAsync(sID_Batterie_SOC)).val;                                // Aktueller Batterie SOC E3DC
+    Batterie_SOC_Proz = (await getStateAsync(sID_Batterie_SOC)).val;                                    // Aktueller Batterie SOC E3DC
     let PV_Leistung_ADD_W = (await getStateAsync(sID_PvLeistung_ADD_W)).val;                            // Aktuelle zusätzliche PV Leistung externer WR         
     let PV_Leistung_E3DC_W = (await getStateAsync(sID_PvLeistung_E3DC_W)).val;                          // Aktuelle PV Leistung E3DC
     let PV_Leistung_Summe_W = PV_Leistung_E3DC_W + Math.abs(PV_Leistung_ADD_W);                         // Summe PV Leistung, PV_Leistung_ADD_W (negativer Wert)
@@ -359,10 +356,11 @@ async function Ladesteuerung()
     let Akk_max_Charge_Power_W = (await getStateAsync(sID_Max_Charge_Power_W)).val;                     // Aktuell eingestellte Ladeleistung   
     let Power_Home_W = (await getStateAsync(sID_Power_Home_W)).val;                                     // Aktueller Hausverbrauch E3DC   
     let UntererLadekorridor_W = (await getStateAsync(sID_UntererLadekorridor_W[EinstellungAnwahl])).val // Parameter UntererLadekorridor
-    await CheckPrognose();
+    let NotstromVerwenden = await CheckPrognose();
+    
     // Das Entladen aus dem Speicher wird freigegeben wenn
     // Notstrom oder Inselbetrieb aktiv ist oder der Batterie SOC > der berechneten Reserve liegt oder PV-Leistung > 100W ist und vor Sonnenuntergang
-    // Notstrom_Status 0=nicht möglich 1=active 2= nicht Active 3= nicht verfügbar 4= Inselbetrieb
+    // Notstrom_Status 0=nicht möglich 1=active 2= nicht active 3= nicht verfügbar 4= Inselbetrieb
     if (Notstrom_Status == 1 || Notstrom_Status == 4 || NotstromVerwenden || Batterie_SOC_Proz > Notstrom_SOC_Proz || (PV_Leistung_E3DC_W > 100 && new Date() < getAstroDate("sunset"))){
         // Laden/Endladen einschalten
         if(Akk_max_Discharge_Power_W == 0 || Akk_max_Charge_Power_W == 0){
@@ -391,8 +389,9 @@ async function Ladesteuerung()
     }else{
         // Endladen ausschalten
         BAT_Notstrom_SOC = true;
-        
     }                                                                                        
+    
+    
     
     // Nur wenn PV-Leistung vorhanden ist oder Entladen freigegeben ist Regelung starten.
     if(PV_Leistung_Summe_W > 0 || getState(sID_Max_Discharge_Power_W).val > 0 || getState(sID_Max_Charge_Power_W).val > 0){
@@ -401,6 +400,7 @@ async function Ladesteuerung()
         let Ladeende_Proz = (await getStateAsync(sID_Ladeende_Proz[EinstellungAnwahl])).val                         // Parameter Ladeende
         let Ladeende2_Proz = (await getStateAsync(sID_Ladeende2_Proz[EinstellungAnwahl])).val                       // Parameter Ladeende2
         let Ladeschwelle_Proz = (await getStateAsync(sID_Ladeschwelle_Proz[EinstellungAnwahl])).val                 // Parameter Ladeschwelle
+        
         // Wenn Notstrom SOC nicht erreicht ist oder Notstrom SOC erreicht wurde und mehr PV-Leistung als benötigt vorhanden ist (Überschuss) regelung starten
         if((BAT_Notstrom_SOC && (PV_Leistung_Summe_W - Power_Home_W) > 0 ) || !BAT_Notstrom_SOC ){
             // Prüfen ob SOC Batterie > Ladeschwelle.Bis zu diesem SoC Wert wird sofort mit der gesamten überschüssigen PV-Leistung geladen. Erst wenn die ladeschwelle erreicht wird, wird mit dem geregelten Laden begonnen  
@@ -523,7 +523,7 @@ async function Ladesteuerung()
                     if(LogAusgabeRegelung){log(`${Logparser1} Entladeleistung PowerGrid =${PowerGrid}${Logparser2}`);}
                 }   
             }
-       }else{
+        }else{
             // Notstrom SOC erreicht und nicht ausreichend PV-Leistung vorhanden
             // Entladen der Batterie stoppen
             M_Power = 0    
@@ -590,8 +590,7 @@ async function Ladesteuerung()
 async function Notstromreserve()
 {
     let dAkt = new Date();
-    let jjjj= dAkt.getFullYear();
-    let dStart = new Date(jjjj+',1,1');
+    let dStart = new Date(dAkt.getFullYear()+',1,1');
     if ((await getStateAsync(sID_PARAM_EP_RESERVE_W)).val == 0){
         // @ts-ignore
         let tm_yday = Math.round(Math.abs(dAkt - dStart) / (1000 * 60 * 60 * 24 ));
@@ -1202,8 +1201,8 @@ async function SheduleProplanta() {
         }, function(error) {
                 log (`${Logparser1} Error in der function InterrogateProplanta. Fehler = ${error} ${Logparser2}`, 'warn')
                 // Nach einer Stunde neuer Versuch die Daten abzurufen
-                let d = new Date(), Stunde = d.getHours();
-                d.setHours (Stunde + 1);
+                let d = new Date();
+                d.setHours (d.getHours() + 1);
                 let  uhrzeit = `${d.getHours()}:${d.getMinutes()}`;
                 setState(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.NaesteAktualisierung`,uhrzeit);
                 if(LogAusgabe){log(`${Logparser1} Näste Aktualisierung Wetterdaten =${uhrzeit} Uhr ${Logparser2}`)}
@@ -1443,8 +1442,7 @@ function Zeitbereich(startTime,endTime) {
 // Zeiten Start und Ende Regelung von eba
 async function MEZ_Regelzeiten(){
     let dAkt = new Date();
-    let jjjj= dAkt.getFullYear();
-    let dStart = new Date(jjjj+',1,1');
+    let dStart = new Date(dAkt.getFullYear()+',1,1');
     // @ts-ignore
     let tm_yday = Math.round(Math.abs(dAkt - dStart) / (1000 * 60 * 60 * 24 ));
     let ZeitAnwahl_MEZ_MESZ = (await getStateAsync(sID_Anwahl_MEZ_MESZ)).val
@@ -1496,14 +1494,13 @@ async function MEZ_Regelzeiten(){
 }
 
 // Prüfen ob Notstrom verwendet werden kann bei hoher PV Prognose für den nächsten Tag
-async function CheckPrognose(){
-    NotstromVerwenden = false
-    Notstrom_SOC_Proz = (await getStateAsync(sID_Notstrom_akt)).val
-    if (DebugAusgabe){log(`CheckPrognose: Batterie SOC = ${Batterie_SOC_Proz} Notstrom_SOC_Proz= ${Notstrom_SOC_Proz}`)}
+function CheckPrognose(){
+    Notstrom_SOC_Proz = getState(sID_Notstrom_akt).val
+    //if (DebugAusgabe){log(`CheckPrognose: Batterie SOC = ${Batterie_SOC_Proz} Notstrom_SOC_Proz= ${Notstrom_SOC_Proz}`)}
     if (Batterie_SOC_Proz <= Notstrom_SOC_Proz){
         let heute = new Date
         let morgen = new Date(heute.getFullYear(), heute.getMonth(), heute.getDate() + 1);
-        let Durschnitt_Wh = (await getStateAsync(sID_EigenverbrauchDurchschnitt_kWh)).val*1000
+        let Durschnitt_Wh = getState(sID_EigenverbrauchDurchschnitt_kWh).val*1000
         let KapBatterie_Wh = (Speichergroesse_kWh/100)*Batterie_SOC_Proz*1000;
         let sunriseEndTimeHeute_ms = getAstroDate("sunriseEnd").getTime()+Offset_sunriseEnd_min*60000;
         let sunriseEndTimeMorgen_ms = getAstroDate("sunriseEnd",morgen).getTime()+Offset_sunriseEnd_min*60000;
@@ -1511,36 +1508,35 @@ async function CheckPrognose(){
         let ReichweiteTime_ms = new Date(heute.getTime() + ReichweiteMinuten*60000).getTime()
         
         // Prüfen ob aktuelle Zeit vor oder nach sunriseEnd liegt
-        if (DebugAusgabe){log(`CheckPrognose: sunriseEnd ms = ${sunriseEndTimeHeute_ms} Aktuelle Zeit ms = ${heute.getTime()}`)}  
+        //if (DebugAusgabe){log(`CheckPrognose: sunriseEnd ms = ${sunriseEndTimeHeute_ms} Aktuelle Zeit ms = ${heute.getTime()}`)}  
         if (sunriseEndTimeHeute_ms < heute.getTime()){
             // Nach Sonnenaufgang
-            if (DebugAusgabe){log(`CheckPrognose: Nach Sonnenaufgang`)}
+            //if (DebugAusgabe){log(`CheckPrognose: Nach Sonnenaufgang`)}
             let Tag = nextDayDate(1).slice(8,10);
-            let PrognoseMorgen_kWh = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseAuto_kWh_${Tag}`)).val
-            if (DebugAusgabe){log(`CheckPrognose: Reichweite ms =${ReichweiteTime_ms} Reichweite Stunden =${round((ReichweiteTime_ms-heute.getTime())/3600000,2)} sunriseEndTimeMorgen_ms = ${sunriseEndTimeMorgen_ms} sunriseEndTimeMorgen Stunden =${round((sunriseEndTimeMorgen_ms-heute.getTime())/3600000,2)} PrognoseMorgen_kWh =${PrognoseMorgen_kWh} minWertPrognose_kWh =${minWertPrognose_kWh}`)}
+            let PrognoseMorgen_kWh = getState(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseAuto_kWh_${Tag}`).val
+            //if (DebugAusgabe){log(`CheckPrognose: Reichweite ms =${ReichweiteTime_ms} Reichweite Stunden =${round((ReichweiteTime_ms-heute.getTime())/3600000,2)} sunriseEndTimeMorgen_ms = ${sunriseEndTimeMorgen_ms} sunriseEndTimeMorgen Stunden =${round((sunriseEndTimeMorgen_ms-heute.getTime())/3600000,2)} PrognoseMorgen_kWh =${PrognoseMorgen_kWh} minWertPrognose_kWh =${minWertPrognose_kWh}`)}
             // Prüfen ob die Reichweite Batterie SOC größer ist als Sonnenaufgang + offset
             if(ReichweiteTime_ms > sunriseEndTimeMorgen_ms && PrognoseMorgen_kWh > minWertPrognose_kWh && minWertPrognose_kWh > 0){
                 // Batterie reicht bis zum Sonnenaufgang, es kann entladen werden
-                NotstromVerwenden = true
-                if (LogAusgabe && BAT_Notstrom_SOC){log(`${Logparser1}-==== Freigabe Notstrom nach Sonnenaufgang. NotstromVerwenden= ${NotstromVerwenden} ====-${Logparser2}`)}
+                if (LogAusgabe && BAT_Notstrom_SOC){log(`${Logparser1}-==== Freigabe Notstrom nach Sonnenaufgang. ====-${Logparser2}`)}
                 return true
             }
         }else{
             // Vor Sonnenaufgang
-            if (DebugAusgabe){log(`CheckPrognose: Vor Sonnenaufgang`)}
+            //if (DebugAusgabe){log(`CheckPrognose: Vor Sonnenaufgang`)}
             let Tag = nextDayDate(0).slice(8,10);
-            let PrognoseMorgen_kWh = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseAuto_kWh_${Tag}`)).val
-            if (DebugAusgabe){log(`CheckPrognose: Reichweite ms =${ReichweiteTime_ms} Reichweite Stunden =${round((ReichweiteTime_ms-heute.getTime())/3600000,2)} sunriseEndTimeHeute_ms = ${sunriseEndTimeHeute_ms} sunriseEndTimeHeute Stunden =${round((sunriseEndTimeHeute_ms-heute.getTime())/3600000,2)} PrognoseMorgen_kWh =${PrognoseMorgen_kWh} minWertPrognose_kWh =${minWertPrognose_kWh}`)}
+            let PrognoseMorgen_kWh = getState(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseAuto_kWh_${Tag}`).val
+            //if (DebugAusgabe){log(`CheckPrognose: Reichweite ms =${ReichweiteTime_ms} Reichweite Stunden =${round((ReichweiteTime_ms-heute.getTime())/3600000,2)} sunriseEndTimeHeute_ms = ${sunriseEndTimeHeute_ms} sunriseEndTimeHeute Stunden =${round((sunriseEndTimeHeute_ms-heute.getTime())/3600000,2)} PrognoseMorgen_kWh =${PrognoseMorgen_kWh} minWertPrognose_kWh =${minWertPrognose_kWh}`)}
             // Prüfen ob die Reichweite Batterie SOC größer ist als Sonnenaufgang + offset
             if(ReichweiteTime_ms > sunriseEndTimeHeute_ms && PrognoseMorgen_kWh > minWertPrognose_kWh && minWertPrognose_kWh > 0){
                 // Batterie reicht bis zum Sonnenaufgang, es kann entladen werden
-                NotstromVerwenden = true
-                if (LogAusgabe && BAT_Notstrom_SOC){log(`${Logparser1}-==== Freigabe Notstrom vor Sonnenaufgang. NotstromVerwenden= ${NotstromVerwenden} ====-${Logparser2}`)}
+                if (LogAusgabe && BAT_Notstrom_SOC){log(`${Logparser1}-==== Freigabe Notstrom vor Sonnenaufgang. ====-${Logparser2}`)}
                 return true
             }
     
         }
     }
+    return false
 }
 
 
