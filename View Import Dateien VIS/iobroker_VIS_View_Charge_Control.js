@@ -303,11 +303,11 @@
                 "lc-zindex": 0,
                 "valueOff": "false",
                 "valueOn": "true",
-                "labelFalse": "Automatik",
+                "labelFalse": "Automatik Einstellung",
                 "colorSwitchThumb": "#fa0000",
                 "colorSwitchTrue": "#51fb18",
                 "colorSwitchTrack": "#fa0000",
-                "labelTrue": "Automatik",
+                "labelTrue": "Automatik Einstellung",
                 "labelColorFalse": "#ff2929",
                 "labelColorTrue": "#5aed31",
                 "colorSwitchHover": "",
@@ -317,10 +317,10 @@
                 "lockIconColor": "{mode:vis-materialdesign.0.colors.darkTheme;light:vis-materialdesign.0.colors.light.switch.lock_icon;dark:vis-materialdesign.0.colors.dark.switch.lock_icon; mode === \"true\" ? dark : light}"
             },
             "style": {
-                "left": "87px",
-                "top": "178px",
+                "left": "4px",
+                "top": "161px",
                 "z-index": "20",
-                "width": "150px",
+                "width": "259px",
                 "height": "25px",
                 "font-size": "18px"
             },
@@ -531,7 +531,7 @@
             },
             "style": {
                 "left": "642px",
-                "top": "609px",
+                "top": "634px",
                 "z-index": "30",
                 "color": "#ffffff",
                 "width": "90px",
@@ -608,7 +608,7 @@
             },
             "style": {
                 "left": "642px",
-                "top": "561px",
+                "top": "586px",
                 "z-index": "30",
                 "color": "#ffffff",
                 "width": "90px",
@@ -677,11 +677,11 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "html": "&nbsp;Prognose für Berechnung:\n<br>&nbsp;Eigenverbrauch:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Durch Charge-Control gesicherte:\n<br>&nbsp;aktuell erzeugte Energie:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\n<br>&nbsp;nächste Aktualisierung Proplanta:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\nBewölkung ab 12:00 Uhr =\n<br>&nbsp;Notstromreserve aktuell:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Bewölkung ab 15:00 Uhr ="
+                "html": "&nbsp;Prognose für Berechnung:\n<br>&nbsp;Eigenverbrauch:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Durch Charge-Control gesicherte:\n<br>&nbsp;aktuell erzeugte Energie:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Durchschnittsverbrauch Abend:\n<br>&nbsp;nächste Aktualisierung Proplanta:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\nBewölkung ab 12:00 Uhr:\n<br>&nbsp;Notstromreserve aktuell:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Bewölkung ab 15:00 Uhr:"
             },
             "style": {
                 "left": "388px",
-                "top": "553px",
+                "top": "578px",
                 "z-index": "10",
                 "color": "#ffffff",
                 "width": "709px",
@@ -785,7 +785,7 @@
             },
             "style": {
                 "left": "388px",
-                "top": "141px",
+                "top": "151px",
                 "width": "130px",
                 "height": "60px",
                 "z-index": "7",
@@ -894,7 +894,7 @@
             },
             "style": {
                 "left": "533px",
-                "top": "141px",
+                "top": "151px",
                 "width": "130px",
                 "height": "60px",
                 "z-index": "7",
@@ -1003,7 +1003,7 @@
             },
             "style": {
                 "left": "679px",
-                "top": "141px",
+                "top": "151px",
                 "width": "130px",
                 "height": "60px",
                 "z-index": "7",
@@ -1112,7 +1112,7 @@
             },
             "style": {
                 "left": "824px",
-                "top": "141px",
+                "top": "151px",
                 "width": "130px",
                 "height": "60px",
                 "z-index": "7",
@@ -1221,7 +1221,7 @@
             },
             "style": {
                 "left": "969px",
-                "top": "141px",
+                "top": "151px",
                 "width": "130px",
                 "height": "60px",
                 "z-index": "7",
@@ -1439,7 +1439,7 @@
             },
             "style": {
                 "left": "9px",
-                "top": "216px",
+                "top": "226px",
                 "width": "240px",
                 "height": "452px",
                 "z-index": "30"
@@ -1508,7 +1508,7 @@
             },
             "style": {
                 "left": "642px",
-                "top": "632px",
+                "top": "657px",
                 "width": "90px",
                 "height": "18px",
                 "z-index": "20",
@@ -1582,7 +1582,7 @@
             },
             "style": {
                 "left": "9px",
-                "top": "101px",
+                "top": "95px",
                 "z-index": "20",
                 "background-color": "#c9c9c9",
                 "color": "#007d94",
@@ -1659,7 +1659,7 @@
             },
             "style": {
                 "left": "392px",
-                "top": "101px",
+                "top": "95px",
                 "z-index": "20",
                 "background-color": "#c9c9c9",
                 "color": "#007d94",
@@ -1736,7 +1736,7 @@
             },
             "style": {
                 "left": "775px",
-                "top": "101px",
+                "top": "95px",
                 "z-index": "20",
                 "background-color": "#c9c9c9",
                 "color": "#007d94",
@@ -1833,10 +1833,10 @@
                 "lockIconColor": "{mode:vis-materialdesign.0.colors.darkTheme;light:vis-materialdesign.0.colors.light.switch.lock_icon;dark:vis-materialdesign.0.colors.dark.switch.lock_icon; mode === \"true\" ? dark : light}"
             },
             "style": {
-                "left": "12px",
-                "top": "142px",
+                "left": "4px",
+                "top": "132px",
                 "z-index": "20",
-                "width": "226px",
+                "width": "259px",
                 "height": "25px",
                 "font-size": "18px"
             },
@@ -2064,7 +2064,7 @@
             },
             "style": {
                 "left": "643px",
-                "top": "656px",
+                "top": "681px",
                 "z-index": "30",
                 "color": "#ffffff",
                 "width": "90px",
@@ -2199,7 +2199,7 @@
             },
             "style": {
                 "left": "258px",
-                "top": "219px",
+                "top": "229px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -2330,7 +2330,7 @@
             },
             "style": {
                 "left": "257px",
-                "top": "260px",
+                "top": "270px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -2461,7 +2461,7 @@
             },
             "style": {
                 "left": "257px",
-                "top": "301px",
+                "top": "311px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -2592,7 +2592,7 @@
             },
             "style": {
                 "left": "257px",
-                "top": "342px",
+                "top": "352px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -2723,7 +2723,7 @@
             },
             "style": {
                 "left": "257px",
-                "top": "383px",
+                "top": "393px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -2854,7 +2854,7 @@
             },
             "style": {
                 "left": "257px",
-                "top": "423px",
+                "top": "434px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -2985,7 +2985,7 @@
             },
             "style": {
                 "left": "257px",
-                "top": "464px",
+                "top": "475px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -3116,7 +3116,7 @@
             },
             "style": {
                 "left": "257px",
-                "top": "505px",
+                "top": "516px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -3247,7 +3247,7 @@
             },
             "style": {
                 "left": "257px",
-                "top": "546px",
+                "top": "561px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -3378,7 +3378,7 @@
             },
             "style": {
                 "left": "257px",
-                "top": "587px",
+                "top": "602px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -3509,7 +3509,7 @@
             },
             "style": {
                 "left": "257px",
-                "top": "628px",
+                "top": "643px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -3640,7 +3640,7 @@
             },
             "style": {
                 "left": "400px",
-                "top": "504px",
+                "top": "515px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -3771,7 +3771,7 @@
             },
             "style": {
                 "left": "400px",
-                "top": "463px",
+                "top": "474px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -3902,7 +3902,7 @@
             },
             "style": {
                 "left": "400px",
-                "top": "422px",
+                "top": "433px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -4033,7 +4033,7 @@
             },
             "style": {
                 "left": "400px",
-                "top": "381px",
+                "top": "392px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -4164,7 +4164,7 @@
             },
             "style": {
                 "left": "400px",
-                "top": "341px",
+                "top": "352px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -4295,7 +4295,7 @@
             },
             "style": {
                 "left": "400px",
-                "top": "300px",
+                "top": "311px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -4426,7 +4426,7 @@
             },
             "style": {
                 "left": "400px",
-                "top": "259px",
+                "top": "270px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -4557,7 +4557,7 @@
             },
             "style": {
                 "left": "400px",
-                "top": "219px",
+                "top": "229px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -4688,7 +4688,7 @@
             },
             "style": {
                 "left": "545px",
-                "top": "504px",
+                "top": "515px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -4818,8 +4818,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "545px",
-                "top": "463px",
+                "left": "544px",
+                "top": "474px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -4949,8 +4949,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "545px",
-                "top": "422px",
+                "left": "544px",
+                "top": "433px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -5080,8 +5080,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "545px",
-                "top": "381px",
+                "left": "544px",
+                "top": "392px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -5211,8 +5211,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "545px",
-                "top": "341px",
+                "left": "544px",
+                "top": "352px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -5342,8 +5342,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "545px",
-                "top": "300px",
+                "left": "544px",
+                "top": "311px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -5473,8 +5473,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "545px",
-                "top": "259px",
+                "left": "544px",
+                "top": "270px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -5604,8 +5604,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "545px",
-                "top": "219px",
+                "left": "544px",
+                "top": "229px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -5736,7 +5736,7 @@
             },
             "style": {
                 "left": "690px",
-                "top": "504px",
+                "top": "515px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -5866,8 +5866,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "690px",
-                "top": "463px",
+                "left": "689px",
+                "top": "474px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -5997,8 +5997,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "690px",
-                "top": "422px",
+                "left": "689px",
+                "top": "433px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -6128,8 +6128,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "690px",
-                "top": "381px",
+                "left": "689px",
+                "top": "392px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -6259,8 +6259,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "690px",
-                "top": "341px",
+                "left": "689px",
+                "top": "352px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -6390,8 +6390,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "690px",
-                "top": "300px",
+                "left": "689px",
+                "top": "311px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -6521,8 +6521,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "690px",
-                "top": "259px",
+                "left": "689px",
+                "top": "270px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -6652,8 +6652,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "690px",
-                "top": "219px",
+                "left": "689px",
+                "top": "229px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -6784,7 +6784,7 @@
             },
             "style": {
                 "left": "836px",
-                "top": "504px",
+                "top": "515px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -6914,8 +6914,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "836px",
-                "top": "463px",
+                "left": "835px",
+                "top": "474px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -7045,8 +7045,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "836px",
-                "top": "422px",
+                "left": "835px",
+                "top": "433px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -7176,8 +7176,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "836px",
-                "top": "381px",
+                "left": "835px",
+                "top": "392px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -7307,8 +7307,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "836px",
-                "top": "341px",
+                "left": "835px",
+                "top": "352px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -7438,8 +7438,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "836px",
-                "top": "300px",
+                "left": "835px",
+                "top": "311px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -7569,8 +7569,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "836px",
-                "top": "259px",
+                "left": "835px",
+                "top": "270px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -7700,8 +7700,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "836px",
-                "top": "219px",
+                "left": "835px",
+                "top": "229px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -7832,7 +7832,7 @@
             },
             "style": {
                 "left": "981px",
-                "top": "504px",
+                "top": "515px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -7962,8 +7962,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "981px",
-                "top": "463px",
+                "left": "980px",
+                "top": "474px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -8093,8 +8093,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "981px",
-                "top": "422px",
+                "left": "980px",
+                "top": "433px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -8224,8 +8224,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "981px",
-                "top": "381px",
+                "left": "980px",
+                "top": "392px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -8355,8 +8355,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "981px",
-                "top": "341px",
+                "left": "980px",
+                "top": "352px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -8486,8 +8486,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "981px",
-                "top": "300px",
+                "left": "980px",
+                "top": "311px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -8617,8 +8617,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "981px",
-                "top": "259px",
+                "left": "980px",
+                "top": "270px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -8748,8 +8748,8 @@
                 "clearIconSize": ""
             },
             "style": {
-                "left": "981px",
-                "top": "219px",
+                "left": "980px",
+                "top": "229px",
                 "z-index": "21",
                 "width": "115px",
                 "height": "35px"
@@ -8822,7 +8822,7 @@
             },
             "style": {
                 "left": "392px",
-                "top": "214px",
+                "top": "224px",
                 "width": "130px",
                 "height": "334px",
                 "z-index": "3",
@@ -8898,7 +8898,7 @@
             },
             "style": {
                 "left": "537px",
-                "top": "214px",
+                "top": "224px",
                 "width": "130px",
                 "height": "334px",
                 "z-index": "3",
@@ -8974,7 +8974,7 @@
             },
             "style": {
                 "left": "683px",
-                "top": "214px",
+                "top": "224px",
                 "width": "130px",
                 "height": "334px",
                 "z-index": "3",
@@ -9050,7 +9050,7 @@
             },
             "style": {
                 "left": "828px",
-                "top": "214px",
+                "top": "224px",
                 "width": "130px",
                 "height": "334px",
                 "z-index": "3",
@@ -9126,7 +9126,7 @@
             },
             "style": {
                 "left": "973px",
-                "top": "214px",
+                "top": "224px",
                 "width": "130px",
                 "height": "334px",
                 "z-index": "3",
@@ -9202,9 +9202,9 @@
             },
             "style": {
                 "left": "251px",
-                "top": "214px",
-                "width": "129px",
-                "height": "331px",
+                "top": "224px",
+                "width": "130px",
+                "height": "334px",
                 "z-index": "3",
                 "opacity": "0.75",
                 "background-color": "#00ff00",
@@ -9274,7 +9274,7 @@
             },
             "style": {
                 "left": "252px",
-                "top": "146px",
+                "top": "156px",
                 "z-index": "10",
                 "color": "#ffffff",
                 "width": "123px",
@@ -9353,8 +9353,8 @@
                 "digits": "0"
             },
             "style": {
-                "left": "999px",
-                "top": "632px",
+                "left": "998px",
+                "top": "657px",
                 "z-index": "30",
                 "color": "#ffffff",
                 "width": "98px",
@@ -9429,8 +9429,8 @@
                 "digits": "0"
             },
             "style": {
-                "left": "999px",
-                "top": "656px",
+                "left": "998px",
+                "top": "681px",
                 "z-index": "30",
                 "color": "#ffffff",
                 "width": "98px",
@@ -9658,8 +9658,8 @@
                 "html_prepend": ""
             },
             "style": {
-                "left": "999px",
-                "top": "584px",
+                "left": "998px",
+                "top": "609px",
                 "z-index": "30",
                 "color": "#ffffff",
                 "width": "98px",
@@ -9735,7 +9735,7 @@
             },
             "style": {
                 "left": "642px",
-                "top": "585px",
+                "top": "610px",
                 "z-index": "30",
                 "color": "#ffffff",
                 "width": "90px",
@@ -9745,6 +9745,176 @@
                 "text-shadow": "rgba(0, 0, 0, 0.9) 3px 3px 4px"
             },
             "widgetSet": "basic"
+        },
+        "e00088": {
+            "tpl": "tplValueFloat",
+            "data": {
+                "oid": "0_userdata.0.Charge_Control.Allgemein.EigenverbrauchDurchschnitt_kWh",
+                "g_fixed": false,
+                "g_visibility": false,
+                "g_css_font_text": true,
+                "g_css_background": false,
+                "g_css_shadow_padding": false,
+                "g_css_border": false,
+                "g_gestures": false,
+                "g_signals": false,
+                "g_last_change": false,
+                "visibility-cond": "==",
+                "visibility-val": 1,
+                "visibility-groups-action": "hide",
+                "is_comma": true,
+                "factor": "1",
+                "signals-cond-0": "==",
+                "signals-val-0": true,
+                "signals-icon-0": "/vis/signals/lowbattery.png",
+                "signals-icon-size-0": 0,
+                "signals-blink-0": false,
+                "signals-horz-0": 0,
+                "signals-vert-0": 0,
+                "signals-hide-edit-0": false,
+                "signals-cond-1": "==",
+                "signals-val-1": true,
+                "signals-icon-1": "/vis/signals/lowbattery.png",
+                "signals-icon-size-1": 0,
+                "signals-blink-1": false,
+                "signals-horz-1": 0,
+                "signals-vert-1": 0,
+                "signals-hide-edit-1": false,
+                "signals-cond-2": "==",
+                "signals-val-2": true,
+                "signals-icon-2": "/vis/signals/lowbattery.png",
+                "signals-icon-size-2": 0,
+                "signals-blink-2": false,
+                "signals-horz-2": 0,
+                "signals-vert-2": 0,
+                "signals-hide-edit-2": false,
+                "lc-type": "last-change",
+                "lc-is-interval": true,
+                "lc-is-moment": false,
+                "lc-format": "",
+                "lc-position-vert": "top",
+                "lc-position-horz": "left",
+                "lc-offset-vert": 0,
+                "lc-offset-horz": 0,
+                "lc-font-size": "12px",
+                "lc-font-family": "",
+                "lc-font-style": "",
+                "lc-bkg-color": "",
+                "lc-color": "",
+                "lc-border-width": "0",
+                "lc-border-style": "",
+                "lc-border-color": "",
+                "lc-border-radius": 10,
+                "lc-zindex": 0,
+                "html_append_plural": " kWh",
+                "digits": "2",
+                "html_append_singular": " kWh",
+                "html_prepend": ""
+            },
+            "style": {
+                "left": "998px",
+                "top": "633px",
+                "z-index": "30",
+                "color": "#ffffff",
+                "width": "98px",
+                "height": "18px",
+                "text-align": "center",
+                "font-weight": "bold",
+                "text-shadow": "rgba(0, 0, 0, 0.9) 3px 3px 4px"
+            },
+            "widgetSet": "basic"
+        },
+        "e00089": {
+            "tpl": "tplVis-materialdesign-Switch",
+            "data": {
+                "oid": "0_userdata.0.Charge_Control.Allgemein.Automatik_Regelung",
+                "g_fixed": false,
+                "g_visibility": false,
+                "g_css_font_text": true,
+                "g_css_background": false,
+                "g_css_shadow_padding": false,
+                "g_css_border": false,
+                "g_gestures": false,
+                "g_signals": false,
+                "g_last_change": false,
+                "visibility-cond": "==",
+                "visibility-val": 1,
+                "visibility-groups-action": "hide",
+                "toggleType": "boolean",
+                "stateIfNotTrueValue": "off",
+                "vibrateOnMobilDevices": "52",
+                "labelPosition": "left",
+                "labelClickActive": true,
+                "autoLockAfter": "10",
+                "lockIconTop": "5",
+                "lockIconLeft": "5",
+                "lockFilterGrayscale": "30",
+                "signals-cond-0": "==",
+                "signals-val-0": true,
+                "signals-icon-0": "/vis/signals/lowbattery.png",
+                "signals-icon-size-0": 0,
+                "signals-blink-0": false,
+                "signals-horz-0": 0,
+                "signals-vert-0": 0,
+                "signals-hide-edit-0": false,
+                "signals-cond-1": "==",
+                "signals-val-1": true,
+                "signals-icon-1": "/vis/signals/lowbattery.png",
+                "signals-icon-size-1": 0,
+                "signals-blink-1": false,
+                "signals-horz-1": 0,
+                "signals-vert-1": 0,
+                "signals-hide-edit-1": false,
+                "signals-cond-2": "==",
+                "signals-val-2": true,
+                "signals-icon-2": "/vis/signals/lowbattery.png",
+                "signals-icon-size-2": 0,
+                "signals-blink-2": false,
+                "signals-horz-2": 0,
+                "signals-vert-2": 0,
+                "signals-hide-edit-2": false,
+                "lc-type": "last-change",
+                "lc-is-interval": true,
+                "lc-is-moment": false,
+                "lc-format": "",
+                "lc-position-vert": "top",
+                "lc-position-horz": "right",
+                "lc-offset-vert": 0,
+                "lc-offset-horz": 0,
+                "lc-font-size": "12px",
+                "lc-font-family": "",
+                "lc-font-style": "",
+                "lc-bkg-color": "",
+                "lc-color": "",
+                "lc-border-width": "0",
+                "lc-border-style": "",
+                "lc-border-color": "",
+                "lc-border-radius": 10,
+                "lc-zindex": 0,
+                "valueOff": "false",
+                "valueOn": "true",
+                "labelFalse": "Automatik Laderegelung",
+                "colorSwitchThumb": "#fa0000",
+                "colorSwitchTrue": "#51fb18",
+                "colorSwitchTrack": "#fa0000",
+                "labelTrue": "Automatik Laderegelung",
+                "labelColorFalse": "#ff2929",
+                "labelColorTrue": "#5aed31",
+                "colorSwitchHover": "",
+                "valueFontFamily": "{vis-materialdesign.0.fonts.switch.value}",
+                "valueFontSize": "-1",
+                "colorSwitchHoverTrue": "{mode:vis-materialdesign.0.colors.darkTheme;light:vis-materialdesign.0.colors.light.switch.on_hover;dark:vis-materialdesign.0.colors.dark.switch.on_hover; mode === \"true\" ? dark : light}",
+                "lockIconColor": "{mode:vis-materialdesign.0.colors.darkTheme;light:vis-materialdesign.0.colors.light.switch.lock_icon;dark:vis-materialdesign.0.colors.dark.switch.lock_icon; mode === \"true\" ? dark : light}"
+            },
+            "style": {
+                "left": "4px",
+                "top": "190px",
+                "z-index": "20",
+                "width": "259px",
+                "height": "25px",
+                "font-size": "18px"
+            },
+            "widgetSet": "materialdesign"
         }
     },
     "name": "28_E3DC_Charge_Control",
