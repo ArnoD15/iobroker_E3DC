@@ -77,7 +77,7 @@ verbunden sein.
 <ul>
 <h3>Version: 1.1.6</h3>
 <li>Bei der Abfragezeit der Daten von Solcast, werden die Minuten zufällig berechnet. Solcast Daten werden jetzt zwischen 4:01 Uhr und 4:59 Uhr abgerufen</li>
-<li>Fehler in funktion CheckPrognose() behoben. Die Variable Notstrom_SOC_Proz wurde hier auf Einstelwert zurückgesetzt </li>
+<li>Fehler in Funktion CheckPrognose() behoben. Die Variable Notstrom_SOC_Proz wurde hier auf Einstellwert zurückgesetzt </li>
 
 <h3>Version: 1.1.5</h3>
 <li>Entladen wird bei erreichen der Notstromreserve gestoppt und erst bei +1% Batterie SOC über Notstromreserve SOC wieder freigeben</li>
