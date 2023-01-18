@@ -17,7 +17,7 @@ let PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUNGE
 //******************************************************************************************************
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.1.5 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.1.6 ====- ${Logparser2}`);
 //********************************************* Modul Modbus *******************************************
 const sID_Batterie_SOC =`${instanzModbus}.holdingRegisters.40083_Batterie_SOC`;                         // Pfad Modul ModBus aktueller Batterie_SOC'
 const sID_PvLeistung_E3DC_W =`${instanzModbus}.holdingRegisters.40068_PV_Leistung`;                     // Pfad Modul ModBus aktuelle PV_Leistung'
@@ -299,8 +299,8 @@ async function CheckState()
         SolcastAPI_key = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastAPI_key`)).val
         if(SolcastAPI_key == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastAPI_key enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
         
-        // Daten von Solcast immer um 04:00 Uhr abholen wenn const Solcast = true
-        schedule('{"time":{"exactTime":true,"start":"04:00"},"period":{"days":1}}', function() {
+        // Daten von Solcast immer zwischen 04:01 und 04:59 Uhr abholen wenn const Solcast = true
+        schedule(`${Math.floor(Math.random() * (59 - 1 + 1)) + 1} 4 * * *`, function() {
             SheduleSolcast(SolcastDachflaechen);
         });
     
@@ -383,7 +383,7 @@ async function Ladesteuerung()
             await setStateAsync(sID_Max_Discharge_Power_W, 0)
             await setStateAsync(sID_Max_Charge_Power_W, 0)
             // Notstrom SOC um 1% erhöhen, da die Batterieladung nach ausschalten wieder ansteigen kann.
-            Notstrom_SOC_Proz = (await getStateAsync(sID_Notstrom_akt)).val +1
+            Notstrom_SOC_Proz = (await getStateAsync(sID_Notstrom_akt)).val +2
             log(`${Logparser1} -==== Notstrom Reserve erreicht, Laden/Entladen der Batterie ist ausgeschaltet ====- ${Logparser2}`,'warn')
             if (DebugAusgabe){log(`Ladesteuerung: NotstromVerwenden= ${NotstromVerwenden} Batterie_SOC_Proz= ${Batterie_SOC_Proz} Notstrom_SOC_Proz= ${Notstrom_SOC_Proz} PV_Leistung_E3DC_W= ${PV_Leistung_E3DC_W} Notstrom_SOC_erreicht = ${Notstrom_SOC_erreicht} bM_Notstrom = ${bM_Notstrom}`,'warn')}
         }
@@ -400,7 +400,7 @@ async function Ladesteuerung()
     }else{
         // Endladen ausschalten
         // Notstrom SOC um 1% erhöhen, um ein ständiges aus und einschalten zu vermeiden.
-        Notstrom_SOC_Proz = (await getStateAsync(sID_Notstrom_akt)).val +1
+        Notstrom_SOC_Proz = (await getStateAsync(sID_Notstrom_akt)).val +2
         if (DebugAusgabe && !Notstrom_SOC_erreicht){log(`Ladesteuerung: Notstrom_SOC_erreicht= true NotstromVerwenden= ${NotstromVerwenden} Batterie_SOC_Proz= ${Batterie_SOC_Proz} Notstrom_SOC_Proz= ${Notstrom_SOC_Proz} `,'warn')}
         Notstrom_SOC_erreicht = true;
     }                                                                                        
@@ -1511,7 +1511,6 @@ async function MEZ_Regelzeiten(){
 
 // Prüfen ob Notstrom verwendet werden kann bei hoher PV Prognose für den nächsten Tag
 function CheckPrognose(){
-    Notstrom_SOC_Proz = getState(sID_Notstrom_akt).val
     //if (DebugAusgabe){log(`CheckPrognose: Batterie SOC = ${Batterie_SOC_Proz} Notstrom_SOC_Proz= ${Notstrom_SOC_Proz}`)}
     if (Batterie_SOC_Proz <= Notstrom_SOC_Proz){
         let heute = new Date
