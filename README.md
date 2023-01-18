@@ -75,12 +75,15 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.1.6</h3>
+<li>Bei der Abfragezeit der Daten von Solcast, werden die Minuten zufällig berechnet. Solcast Daten werden jetzt zwischen 4:01 Uhr und 4:59 Uhr abgerufen</li>
+<li>Fehler in funktion CheckPrognose() behoben. Die Variable Notstrom_SOC_Proz wurde hier auf Einstelwert zurückgesetzt </li>
+
 <h3>Version: 1.1.5</h3>
 <li>Entladen wird bei erreichen der Notstromreserve gestoppt und erst bei +1% Batterie SOC über Notstromreserve SOC wieder freigeben</li>
 <li>Neue Objekt ID 0_userdata.0.Charge_Control.Allgemein.Automatik_Regelung um die Regelung vom Script in VIS ausschalten zu können. Achtung ! Es wird dann auch keine Notstromreserve mehr 
 berücksichtigt und man muss diese wenn gewünscht wieder direkt beim E3DC einstellen.  </li>
 <li>Fehler behoben das die untere Ladeschwelle nicht mehr berücksichtigt wurde</li>
-
 
 <h3>Version: 1.1.4</h3>
 <li>Fehler behoben, dass mit Start PV-Leistung die Batterie entladen wurde, ohne dass die Notstromreserve freigegeben war.</li>
