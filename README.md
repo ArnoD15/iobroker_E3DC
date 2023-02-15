@@ -75,6 +75,9 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.1.7</h3>
+<li>Fehler in behoben, dass auf Unload SoC entladen wurde, obwohl noch keine PV-Leistung vorhanden war.</li>
+
 <h3>Version: 1.1.6</h3>
 <li>Bei der Abfragezeit der Daten von Solcast, werden die Minuten zufällig berechnet. Solcast Daten werden jetzt zwischen 4:01 Uhr und 4:59 Uhr abgerufen</li>
 <li>Fehler in Funktion CheckPrognose() behoben. Die Variable Notstrom_SOC_Proz wurde hier auf Einstellwert zurückgesetzt </li>
