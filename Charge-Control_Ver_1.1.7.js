@@ -17,7 +17,7 @@ let PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUNGE
 //******************************************************************************************************
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.1.6 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.1.7 ====- ${Logparser2}`);
 //********************************************* Modul Modbus *******************************************
 const sID_Batterie_SOC =`${instanzModbus}.holdingRegisters.40083_Batterie_SOC`;                         // Pfad Modul ModBus aktueller Batterie_SOC'
 const sID_PvLeistung_E3DC_W =`${instanzModbus}.holdingRegisters.40068_PV_Leistung`;                     // Pfad Modul ModBus aktuelle PV_Leistung'
@@ -425,8 +425,8 @@ async function Ladesteuerung()
                     // Ist Unload < Ladeschwelle wird bis Ladeschwelle geladen und Unload ignoriert
                     if(Ladeschwelle_Proz <= Unload_Proz){
                         let Unload_SOC_Proz = 100
-                        // Ist der Batterie SoC > Unload wird entladen
-                        if ((Batterie_SOC_Proz - Unload_Proz) > 0){
+                        // Ist der Batterie SoC > Unload und PV Leistung vorhanden wird entladen
+                        if ((Batterie_SOC_Proz - Unload_Proz) > 0 && PV_Leistung_Summe_W > 0){
                             if ((Batterie_SOC_Proz - Unload_Proz) < 1){
                                 Unload_SOC_Proz = Batterie_SOC_Proz
                             }else{
@@ -1927,3 +1927,5 @@ onStop(function () {
     clearSchedule(Timer3);
     clearSchedule(TimerProplanta);
 }, 100);
+
+
