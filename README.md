@@ -22,7 +22,7 @@ Script zum Steuern der Wallbox easy connect mit Mode 3-Ladekabel (3-phasig) fest
 verbunden sein.
 
 <h3>Modbus</h3>
-<p>Script - Sammlung Modbus Adapter für E3DC.</p>
+<p>Script Sammlung Modbus Adapter für E3DC.</p>
 <ul>
 <li>Modbus Register 40082 Aufteilung "Autarkie und Eigenverbrauch in Prozent<br>Autor: Andre Germann</li><br>
 <li>Modbus Register 40002 Aufteilung "Modbus Firmware Version"<br>Autor: Andre Germann</li><br>
