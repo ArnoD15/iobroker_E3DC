@@ -75,6 +75,9 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.2.1</h3>
+<li>Wechselrichterverluste beim Notstrom SOC werden jetzt aus dem Netz geladen, um den Notstrom SOC stabil zu halten</li>
+
 <h3>Version: 1.2.0</h3>
 <li>Bei dieser Version habe ich die Einstellung der Regelzeiten umgestellt auf die Astrofunktion von JS.<br>
     Es sind auch Änderungen in der View erforderlich und einige Parameter werden nicht mehr benötigt.
