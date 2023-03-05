@@ -75,6 +75,20 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.2.0</h3>
+<li>Bei dieser Version habe ich die Einstellung der Regelzeiten umgestellt auf die Astrofunktion von JS.
+    Es sind auch Änderungen in der View erforderlich und einige Parameter werden nicht mehr benötigt.
+    Folgende Objekt ID's können gelöscht werden:
+    0_userdata.0.Charge_Control.Allgemein.Winterminimum_MEZ
+    0_userdata.0.Charge_Control.Allgemein.Sommermaximum_MEZ
+    0_userdata.0.Charge_Control.Allgemein.Sommerladeende_MEZ
+    0_userdata.0.Charge_Control.Allgemein.Anwahl_MEZ_MESZ
+    0_userdata.0.Charge_Control.Parameter.Winterminimum_0 bis 5
+    0_userdata.0.Charge_Control.Parameter.Sommermaximum_0 bis 5
+    0_userdata.0.Charge_Control.Parameter.Sommerladeende_0 bis 5
+Die View für die neue Version 1.2.0 findet ihr auf Github und die Anleitung Charge-Control wurde auch angepasst dort sind die neuen Einstellungen beschrieben.
+Die Regelzeiten werden jetzt über drei Offset Werte eingestellt.</li>
+
 <h3>Version: 1.1.7</h3>
 <li>Fehler in behoben, dass auf Unload SoC entladen wurde, obwohl noch keine PV-Leistung vorhanden war.</li>
 
