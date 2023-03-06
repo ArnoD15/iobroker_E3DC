@@ -17,7 +17,7 @@ let PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUNGE
 //******************************************************************************************************
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.2.1 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.2.2 ====- ${Logparser2}`);
 //********************************************* Modul Modbus *******************************************
 const sID_Batterie_SOC =`${instanzModbus}.holdingRegisters.40083_Batterie_SOC`;                         // Pfad Modul ModBus aktueller Batterie_SOC'
 const sID_PvLeistung_E3DC_W =`${instanzModbus}.holdingRegisters.40068_PV_Leistung`;                     // Pfad Modul ModBus aktuelle PV_Leistung'
@@ -59,8 +59,9 @@ let bStart = true,bM_Notstrom = false;
 
 const sID_Saved_Power_W =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Saved_Power_W`;             // Leistung die mit Charge-Control gerettet wurde
 const sID_PVErtragLM2 =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Saved_PowerLM2_kWh`;          // Leistungszähler für PV Leistung die mit Charge-Control gerettet wurde
-const sID_Automatik_Prognose =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Automatik`;   // true = automatik false = manuell
+const sID_Automatik_Prognose =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Automatik`;            // true = automatik false = manuell
 const sID_Automatik_Regelung =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Automatik_Regelung`;   // true = automatik false = manuell
+const sID_NotstromAusNetz =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.NotstromAusNetz`;         // true = Notstrom aus Netz nachladen 
 const sID_EinstellungAnwahl =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.EinstellungAnwahl`;     // Einstellung 1-5
 const sID_PVErtragLM0 =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.IstPvErtragLM0_kWh`;          // Leistungszähler PV-Leistung
 const sID_PVErtragLM1 =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.IstPvErtragLM1_kWh`;          // Leistungszähler zusätzlicher WR (extern)
@@ -104,7 +105,7 @@ let Batterie_SOC_Proz = getState(sID_Batterie_SOC).val;
 let Speichergroesse_kWh                                                                 // Installierte Batterie Speicher Kapazität wird in Funktion Speichergroesse() berechnet
 
 
-let AutomatikAnwahl,AutomatikRegelung,EinstellungAnwahl,PrognoseAnwahl,count0 = 0, count1 = 0, count2 = 0, count3 = 0, Summe0 = 0, Summe1 = 0, Summe2 = 0, Summe3 = 0;
+let AutomatikAnwahl,AutomatikRegelung,NotstromAusNetz,EinstellungAnwahl,PrognoseAnwahl,count0 = 0, count1 = 0, count2 = 0, count3 = 0, Summe0 = 0, Summe1 = 0, Summe2 = 0, Summe3 = 0;
 let RE_AstroSolarNoon,LE_AstroSunset,RB_AstroSolarNoon,RE_AstroSolarNoon_alt_milisek,RB_AstroSolarNoon_alt_milisek,Zeit_alt_milisek=0,ZeitE3DC_SetPowerAlt_ms=0;
 let M_Power=0,M_Power_alt=0,Notstrom_SOC_erreicht=true,Set_Power_Value_W=0,Batterie_SOC_alt_Proz=0;
 let Notstrom_SOC_Proz = 0, M_Abriegelung=false,LadenAufNotstromSOC=false,HeuteNotstromVerwenden=true;
@@ -130,10 +131,11 @@ async function ScriptStart()
     log(`${Logparser1} -==== alle Objekt ID\'s angelegt ====- ${Logparser2}`);
     await CheckState();
     log(`${Logparser1} -==== alle Objekte ID\'s überprüft ====- ${Logparser2}`);
-    AutomatikAnwahl = getState(sID_Automatik_Prognose).val;
-    AutomatikRegelung = getState(sID_Automatik_Regelung).val;
-    PrognoseAnwahl = getState(sID_PrognoseAnwahl).val;
-    EinstellungAnwahl = getState(sID_EinstellungAnwahl).val
+    AutomatikAnwahl = (await getStateAsync(sID_Automatik_Prognose)).val;
+    AutomatikRegelung = (await getStateAsync(sID_Automatik_Regelung)).val;
+    NotstromAusNetz = (await getStateAsync(sID_NotstromAusNetz)).val;
+    PrognoseAnwahl = (await getStateAsync(sID_PrognoseAnwahl)).val;
+    EinstellungAnwahl = (await getStateAsync(sID_EinstellungAnwahl)).val
     // Wetterdaten beim Programmstart aktualisieren und Timer starten.
     await Speichergroesse()                                             // aktuell verfügbare Batterie Speichergröße berechnen
     if (Solcast) {await SheduleSolcast(SolcastDachflaechen);}           // Wetterdaten Solcast abrufen
@@ -154,6 +156,7 @@ async function CreateState(){
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.EigenverbrauchTag`, {'def':0, 'name':'min. Eigenverbrauch von 6:00 Uhr bis 19:00 Uhr in kWh', 'type':'number', 'role':'value'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Automatik`, {'def':false, 'name':'Bei true werden die Parameter automatisch nach Wetterprognose angepast' , 'type':'boolean', 'role':'State', 'desc':'Automatik Charge-Control ein/aus'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Automatik_Regelung`, {'def':false, 'name':'Bei true ist die Lade Regelung eingeschaltet' , 'type':'boolean', 'role':'State', 'desc':'Automatik Charge-Control ein/aus'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.NotstromAusNetz`, {'def':false, 'name':'Bei true wird aus dem Netz bis Notstrom SOC nachgeladen' , 'type':'boolean', 'role':'State', 'desc':'Notstrom aus Netz nachladen'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.IstSummePvLeistung_kWh`, {'def':0, 'name':'Summe kWh Leistungsmesser 0 und Leistungsmesser 1 ' , 'type':'number', 'role':'value', 'unit':'kWh'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.PrognoseBerechnung_kWh_heute`, {'def':0, 'name':'Prognose für Berechnung' , 'type':'number', 'role':'value', 'unit':'kWh'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Regelbeginn_MEZ`, {'def':'00.00', 'name':'Regelbeginn MEZ', 'type':'string', 'role':'string', 'desc':'Regelbeginn MEZ Zeit', 'unit':'Uhr'});
@@ -1657,6 +1660,16 @@ on(sID_Power_Home_W, function(obj) {
     }
 });
 
+// Wird aufgerufen wenn State NotstromAusNetz in VIS geändert wird
+on({id: sID_NotstromAusNetz, change: "ne"}, async function (obj){
+	NotstromAusNetz = (await getStateAsync(obj.id)).val;
+    if(NotstromAusNetz) {
+        if (LogAusgabe){log(`${Logparser1} -==== Notstrom SOC aus Netz nachladen eingeschaltet ====- ${Logparser2}`);}
+    }else{
+        if (LogAusgabe){log(`${Logparser1} -==== Notstrom SOC aus Netz nachladen ausgeschaltet ====- ${Logparser2}`);}
+    }
+});  
+
 // Wird aufgerufen wenn State Automatik Prognose in VIS geändert wird
 on({id: sID_Automatik_Prognose, change: "ne"}, async function (obj){
 	 AutomatikAnwahl = getState(obj.id).val;
@@ -1869,13 +1882,15 @@ schedule({hour: 0, minute: 1}, function () {
 
 // jeden Tag um 02:00 prüfen ob Notstrom SOC mit Batterie SOC übereinstimmt.
 schedule({hour: 2, minute: 0}, async function () { 
-    let nbr_Notstrom_SOC_Proz = (await getStateAsync(sID_Notstrom_akt)).val                             // Berechneter Notstrom SOC
-    Batterie_SOC_Proz = (await getStateAsync(sID_Batterie_SOC)).val;                                    // Aktueller Batterie SOC E3DC 
-    let Notstrom_Status = (await getStateAsync(sID_Notrom_Status)).val;                                 // aktueller Notstrom Status E3DC 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
-    if (Batterie_SOC_Proz < nbr_Notstrom_SOC_Proz && !HeuteNotstromVerwenden && Notstrom_Status != 4){
-        LadenAufNotstromSOC=true
-        log(`${Logparser1} -==== Batterie wird bis NotstromSOC aus dem Netz geladen ====- ${Logparser2}`,'warn')
-        LadeNotstromSOC();
+    if (NotstromAusNetz){
+        let nbr_Notstrom_SOC_Proz = (await getStateAsync(sID_Notstrom_akt)).val                             // Berechneter Notstrom SOC
+        Batterie_SOC_Proz = (await getStateAsync(sID_Batterie_SOC)).val;                                    // Aktueller Batterie SOC E3DC 
+        let Notstrom_Status = (await getStateAsync(sID_Notrom_Status)).val;                                 // aktueller Notstrom Status E3DC 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
+        if (Batterie_SOC_Proz < nbr_Notstrom_SOC_Proz && !HeuteNotstromVerwenden && Notstrom_Status != 4){
+            LadenAufNotstromSOC=true
+            log(`${Logparser1} -==== Batterie wird bis NotstromSOC aus dem Netz geladen ====- ${Logparser2}`,'warn')
+            LadeNotstromSOC();
+        }
     }
 });
 
@@ -1887,3 +1902,4 @@ onStop(function () {
     clearSchedule(Timer3);
     clearSchedule(TimerProplanta);
 }, 100);
+
