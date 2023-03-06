@@ -75,6 +75,9 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.2.2</h3>
+<li>Neue Objekt ID NotstromAusNetz, um die Funktion Notstrom SOC aus dem Netz nachladen in VIS ein und ausschalten zu können</li>
+
 <h3>Version: 1.2.1</h3>
 <li>Wechselrichterverluste beim Notstrom SOC werden jetzt aus dem Netz geladen, um den Notstrom SOC stabil zu halten</li>
 
