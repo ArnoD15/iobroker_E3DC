@@ -75,6 +75,9 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.2.3</h3>
+<li>Fehler behoben, dass die Batterie auch nach Erreichen vom soll SOC weiter aufgeladen wurde. </li>
+
 <h3>Version: 1.2.2</h3>
 <li>Neue Objekt ID NotstromAusNetz, um die Funktion Notstrom SOC aus dem Netz nachladen in VIS ein und ausschalten zu können</li>
 
