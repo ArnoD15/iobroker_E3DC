@@ -75,6 +75,10 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.2.4</h3>
+<li>Fehler behoben, dass die Batterie nicht mehr entladen wurde, wenn PV-Leistung zu gering war, um Hausverbrauch abzudecken.  </li>
+<li>Für Bewoelkungsgrad_12 und Bewoelkungsgrad_15 wird "NaN" eingetragen, wenn keine Werte abgerufen werden können. </li>
+
 <h3>Version: 1.2.3</h3>
 <li>Fehler behoben, dass die Batterie auch nach Erreichen vom soll SOC weiter aufgeladen wurde. </li>
 
