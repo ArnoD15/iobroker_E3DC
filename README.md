@@ -75,6 +75,11 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.2.6</h3>
+<li>Fehler behoben, dass die Batterie nicht mehr entladen wurde bei Umschaltung vor Regelbeginn 0:01 Uhr.  </li>
+<li>Ladeleistung Wallbox wird beim Eigenverbrauch mit berücksichtig, wenn diese über Modbus direkt mit dem Hauskraftwerk verbunden ist.  </li>
+<li>Fehler behoben, dass bei manueller Anwahl der Einstellungen 1-5 die Regelzeiten nicht aktualisiert wurden   </li>
+
 <h3>Version: 1.2.5</h3>
 <li>Für die Berechnung der Batteriekapazität werden die Objekt ID "e3dc-rscp.0.BAT.BAT_0.SPECIFIED_CAPACITY" und "e3dc-rscp.0.BAT.BAT_1.SPECIFIED_CAPACITY" verwendet.
 E3DC zeigt bei neueren Hauskraftwerken über die RSCP Schnittstelle falsche Werte bei der Objekt ID "e3dc-rscp.0.EMS.SYS_SPECS.installedBatteryCapacity" an.</li>
