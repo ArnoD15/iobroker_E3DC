@@ -17,7 +17,7 @@ let PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUNGE
 //******************************************************************************************************
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.2.5 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.2.6 ====- ${Logparser2}`);
 //********************************************* Modul Modbus *******************************************
 const sID_Batterie_SOC =`${instanzModbus}.holdingRegisters.40083_Batterie_SOC`;                         // Pfad Modul ModBus aktueller Batterie_SOC'
 const sID_PvLeistung_E3DC_W =`${instanzModbus}.holdingRegisters.40068_PV_Leistung`;                     // Pfad Modul ModBus aktuelle PV_Leistung'
@@ -25,6 +25,8 @@ const sID_PvLeistung_ADD_W =`${instanzModbus}.holdingRegisters.40076_Zusaetzlich
 const sID_BatterieLeistung_W =`${instanzModbus}.holdingRegisters.40070_Batterie_Leistung`;              // Pfad Modul ModBus aktuelle Batterie Leistung
 const sID_Power_Grid_W =`${instanzModbus}.holdingRegisters.40074_Netz_Leistung`;                        // Pfad Modul ModBus aktuelle Netz Leistung
 const sID_Power_Home_W =`${instanzModbus}.holdingRegisters.40072_Hausverbrauch_Leistung`;               // Pfad Modul ModBus aktueller Hausverbrauch
+const sID_Power_Wallbox_W =`${instanzModbus}.holdingRegisters.40078_Wallbox_Leistung`;                  // Pfad Modul ModBus aktuelle Wallbox Leistung
+
 //******************************************* Modul e3dc.rscp ******************************************
 const sID_Installed_Peak_Power =`${instanzE3DC_RSCP}.EMS.INSTALLED_PEAK_POWER`;                         // Wp der installierten PV Module
 const sID_Bat_Discharge_Limit =`${instanzE3DC_RSCP}.EMS.SYS_SPECS.maxBatDischargPower`;                 // Batterie Entladelimit
@@ -320,7 +322,7 @@ async function CheckState()
     
     // Pfadangaben zu den Modulen Modbus und e3dc-rscp überprüfen
     const PruefeID = [sID_Batterie_SOC,sID_PvLeistung_E3DC_W,sID_PvLeistung_ADD_W,sID_BatterieLeistung_W,sID_Power_Grid_W,
-    sID_Power_Home_W,sID_Bat_Discharge_Limit,sID_Bat_Charge_Limit,sID_Notrom_Status,sID_SPECIFIED_Battery_Capacity_0,sID_SET_POWER_MODE,
+    sID_Power_Home_W,sID_Power_Wallbox_W,sID_Bat_Discharge_Limit,sID_Bat_Charge_Limit,sID_Notrom_Status,sID_SPECIFIED_Battery_Capacity_0,sID_SET_POWER_MODE,
     sID_SET_POWER_VALUE_W,sID_Max_Discharge_Power_W,sID_Max_Charge_Power_W,sID_startDischargeDefault,sID_Max_wrleistung_W,
     sID_Einspeiselimit_W,sID_BAT0_Alterungszustand,sID_DISCHARGE_START_POWER,sID_PARAM_EP_RESERVE_W];
     for (let i = 0; i < PruefeID.length; i++) {
@@ -343,15 +345,15 @@ async function main()
 async function Ladesteuerung()
 {
     let dAkt = new Date();
-    let Notstrom_Status = (await getStateAsync(sID_Notrom_Status)).val;                                 // aktueller Notstrom Status E3DC 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
-    Batterie_SOC_Proz = (await getStateAsync(sID_Batterie_SOC)).val;                                    // Aktueller Batterie SOC E3DC
-    let PV_Leistung_ADD_W = (await getStateAsync(sID_PvLeistung_ADD_W)).val;                            // Aktuelle zusätzliche PV Leistung externer WR         
-    let PV_Leistung_E3DC_W = (await getStateAsync(sID_PvLeistung_E3DC_W)).val;                          // Aktuelle PV Leistung E3DC
-    let PV_Leistung_Summe_W = PV_Leistung_E3DC_W + Math.abs(PV_Leistung_ADD_W);                         // Summe PV Leistung, PV_Leistung_ADD_W (negativer Wert)
-    let Akk_max_Discharge_Power_W = (await getStateAsync(sID_Max_Discharge_Power_W)).val;               // Aktuell eingestellte Entladeleistung   
-    let Akk_max_Charge_Power_W = (await getStateAsync(sID_Max_Charge_Power_W)).val;                     // Aktuell eingestellte Ladeleistung   
-    let Power_Home_W = (await getStateAsync(sID_Power_Home_W)).val;                                     // Aktueller Hausverbrauch E3DC   
-    let UntererLadekorridor_W = (await getStateAsync(sID_UntererLadekorridor_W[EinstellungAnwahl])).val // Parameter UntererLadekorridor
+    let Notstrom_Status = (await getStateAsync(sID_Notrom_Status)).val;                                             // aktueller Notstrom Status E3DC 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
+    Batterie_SOC_Proz = (await getStateAsync(sID_Batterie_SOC)).val;                                                // Aktueller Batterie SOC E3DC
+    let PV_Leistung_ADD_W = (await getStateAsync(sID_PvLeistung_ADD_W)).val;                                        // Aktuelle zusätzliche PV Leistung externer WR         
+    let PV_Leistung_E3DC_W = (await getStateAsync(sID_PvLeistung_E3DC_W)).val;                                      // Aktuelle PV Leistung E3DC
+    let PV_Leistung_Summe_W = PV_Leistung_E3DC_W + Math.abs(PV_Leistung_ADD_W);                                     // Summe PV Leistung, PV_Leistung_ADD_W (negativer Wert)
+    let Akk_max_Discharge_Power_W = (await getStateAsync(sID_Max_Discharge_Power_W)).val;                           // Aktuell eingestellte Entladeleistung   
+    let Akk_max_Charge_Power_W = (await getStateAsync(sID_Max_Charge_Power_W)).val;                                 // Aktuell eingestellte Ladeleistung   
+    let Power_Home_W = (await getStateAsync(sID_Power_Home_W)).val+(await getStateAsync(sID_Power_Wallbox_W)).val;  // Aktueller Hausverbrauch + Ladeleistung Wallbox E3DC   
+    let UntererLadekorridor_W = (await getStateAsync(sID_UntererLadekorridor_W[EinstellungAnwahl])).val             // Parameter UntererLadekorridor
     let NotstromVerwenden = await CheckPrognose();
     
     // Das Entladen aus dem Speicher wird freigegeben wenn
@@ -420,6 +422,7 @@ async function Ladesteuerung()
                         let Unload_SOC_Proz = 100
                         // Ist der Batterie SoC > Unload und PV Leistung vorhanden wird entladen
                         if ((Batterie_SOC_Proz - Unload_Proz) > 0 && PV_Leistung_Summe_W > 0){
+                            // Batterie SoC > Unload und PV Leistung vorhanden
                             if ((Batterie_SOC_Proz - Unload_Proz) < 1){
                                 Unload_SOC_Proz = Batterie_SOC_Proz
                             }else{
@@ -440,9 +443,13 @@ async function Ladesteuerung()
                             }
                             // Laden der Batterie erst nach Regelbeginn zulassen
                             if(M_Power > 0){M_Power = 0;LadenStoppen = 1}
-                        }else{
+                        }else if((PV_Leistung_Summe_W - Power_Home_W) > UntererLadekorridor_W ){
+                            // Unload SOC erreicht und PV-Leistung höher als Eigenverbrauch.Laden der Batterie erst nach Regelbeginn zulassen
                             M_Power = 0;
                             LadenStoppen = 1
+                        }else{
+                            // Unload SOC erreicht und PV-Leistung niedriger als Eigenverbrauch.Regelung E3DC überlassen
+                            M_Power = 0;
                         }
                     }
            
@@ -1793,6 +1800,7 @@ on({id: sID_EinstellungAnwahl, change: "ne",valGt: 0}, async function (obj){
         await setStateAsync(sID_Unload_Proz[0],getState(sID_Unload_Proz[obj.state.val]).val)
         EinstellungAnwahl = 0
         await setStateAsync(sID_EinstellungAnwahl,0);
+        await MEZ_Regelzeiten();
     }
 });
 
@@ -1801,7 +1809,6 @@ on({id: sID_EinstellungAnwahl, change: "ne",valGt: 0}, async function (obj){
 on({id: arrayID_Notstrom, change: "ne"}, async function (obj) {
     await Notstromreserve(); 
 });
-
 
 // Triggern wenn sich an Einstellung 1 was ändert
 on({id: arrayID_Parameter1, change: "ne"}, async function (obj) {
