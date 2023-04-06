@@ -75,6 +75,9 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.2.7</h3>
+<li>Fehler behoben, dass die Batterie nicht mehr entladen wurde nach Regelende vor Ladeende.  </li>
+
 <h3>Version: 1.2.6</h3>
 <li>Fehler behoben, dass die Batterie nicht mehr entladen wurde bei Umschaltung vor Regelbeginn 0:01 Uhr.  </li>
 <li>Ladeleistung Wallbox wird beim Eigenverbrauch mit berücksichtig, wenn diese über Modbus direkt mit dem Hauskraftwerk verbunden ist.  </li>
