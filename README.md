@@ -40,10 +40,6 @@ verbunden sein.
 <p>View Import Datei für iobroker VIS</p>
 <p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/E3DC_Uebersicht.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/E3DC_Uebersicht.png" alt="VIS View E3DC Uebersicht" style="max-width:100%;"></a></p>
 
-<h3>iobroker_VIS_View_E3DC_Modbus.js</h3>
-<p>View Import Datei für iobroker VIS</p>
-<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/E3DC_Modbus.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/E3DC_Modbus.png" alt="VIS View E3DC Modbus" style="max-width:100%;"></a></p>
-
 <h3>iobroker_VIS_View_Diagramm_Prognosen.js</h3>
 <p>View Import Datei für iobroker VIS</p>
 <p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/Diagramm_Prognosen2.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/Diagramm_Prognosen2.png" alt="VIS View Diagramm_Prognosen" style="max-width:100%;"></a></p>
