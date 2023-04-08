@@ -2,7 +2,6 @@
 //------------------------------------------------------------------------------------------------------
 //++++++++++++++++++++++++++++++++++++++++++  USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++++
 const LogparserSyntax = true                                                                            // Wenn true wird die LOG Ausgabe an Adapter Logparser angepasst
-const instanzModbus = 'modbus.0'                                                                       	// Instanz Modbus Adater
 const instanzE3DC_RSCP = 'e3dc-rscp.0'                                                                 	// Instanz e3dc-rscp Adapter
 
 const instanz = '0_userdata.0';                                                                        	// Instanz Script Charge-Control
@@ -17,17 +16,14 @@ let PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUNGE
 //******************************************************************************************************
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.2.7 ====- ${Logparser2}`);
-//********************************************* Modul Modbus *******************************************
-const sID_Batterie_SOC =`${instanzModbus}.holdingRegisters.40083_Batterie_SOC`;                         // Pfad Modul ModBus aktueller Batterie_SOC'
-const sID_PvLeistung_E3DC_W =`${instanzModbus}.holdingRegisters.40068_PV_Leistung`;                     // Pfad Modul ModBus aktuelle PV_Leistung'
-const sID_PvLeistung_ADD_W =`${instanzModbus}.holdingRegisters.40076_Zusaetzliche_Einspeiser_Leistung`; // Pfad Modul ModBus Zusätzliche Einspeiser Leistung
-const sID_BatterieLeistung_W =`${instanzModbus}.holdingRegisters.40070_Batterie_Leistung`;              // Pfad Modul ModBus aktuelle Batterie Leistung
-const sID_Power_Grid_W =`${instanzModbus}.holdingRegisters.40074_Netz_Leistung`;                        // Pfad Modul ModBus aktuelle Netz Leistung
-const sID_Power_Home_W =`${instanzModbus}.holdingRegisters.40072_Hausverbrauch_Leistung`;               // Pfad Modul ModBus aktueller Hausverbrauch
-const sID_Power_Wallbox_W =`${instanzModbus}.holdingRegisters.40078_Wallbox_Leistung`;                  // Pfad Modul ModBus aktuelle Wallbox Leistung
-
+log(`${Logparser1} -==== Charge-Control Version 1.2.8 ====- ${Logparser2}`);
 //******************************************* Modul e3dc.rscp ******************************************
+const sID_Batterie_SOC =`${instanzE3DC_RSCP}.EMS.BAT_SOC`;                                                  // Pfad Modul ModBus aktueller Batterie_SOC'
+const sID_PvLeistung_E3DC_W =`${instanzE3DC_RSCP}.EMS.POWER_PV`;                                            // Pfad Modul ModBus aktuelle PV_Leistung'
+const sID_PvLeistung_ADD_W =`${instanzE3DC_RSCP}.EMS.POWER_ADD`;                                            // Pfad Modul ModBus Zusätzliche Einspeiser Leistung
+const sID_Power_Home_W =`${instanzE3DC_RSCP}.EMS.POWER_HOME`;                                               // Pfad Modul ModBus aktueller Hausverbrauch
+const sID_Power_Wallbox_W =`${instanzE3DC_RSCP}.EMS.POWER_WB_ALL`;                                          // Pfad Modul ModBus aktuelle Wallbox Leistung
+
 const sID_Installed_Peak_Power =`${instanzE3DC_RSCP}.EMS.INSTALLED_PEAK_POWER`;                         // Wp der installierten PV Module
 const sID_Bat_Discharge_Limit =`${instanzE3DC_RSCP}.EMS.SYS_SPECS.maxBatDischargPower`;                 // Batterie Entladelimit
 const sID_Bat_Charge_Limit =`${instanzE3DC_RSCP}.EMS.SYS_SPECS.maxBatChargePower`;                      // Batterie Ladelimit
@@ -40,7 +36,6 @@ const sID_SPECIFIED_Battery_Capacity_1 =`${instanzE3DC_RSCP}.BAT.BAT_1.SPECIFIED
 const sID_SET_POWER_MODE =`${instanzE3DC_RSCP}.EMS.SET_POWER_MODE`;                                     // Lademodus
 const sID_SET_POWER_VALUE_W =`${instanzE3DC_RSCP}.EMS.SET_POWER_VALUE`;                                 // Eingestellte Ladeleistung
 const sID_Max_wrleistung_W =`${instanzE3DC_RSCP}.EMS.SYS_SPECS.maxAcPower`;                             // Maximale Wechselrichter Leistung
-const sID_Einspeiselimit_W =`${instanzE3DC_RSCP}.EMS.DERATE_AT_POWER_VALUE`;                            // Eingestellte Einspeisegrenze E3DC in W
 const sID_Einspeiselimit_Pro =`${instanzE3DC_RSCP}.EMS.DERATE_AT_PERCENT_VALUE`;                        // Eingestellte Einspeisegrenze E3DC in Prozent
 const sID_BAT0_Alterungszustand =`${instanzE3DC_RSCP}.BAT.BAT_0.ASOC`;                                  // Batterie ASOC e3dc-rscp
 const sID_Max_Discharge_Power_W =`${instanzE3DC_RSCP}.EMS.MAX_DISCHARGE_POWER`;                         // Eingestellte maximale Batterie-Entladeleistung. (Variable Einstellung E3DC)
@@ -113,7 +108,7 @@ let Speichergroesse_kWh                                                         
 let AutomatikAnwahl,AutomatikRegelung,NotstromAusNetz,EinstellungAnwahl,PrognoseAnwahl,count0 = 0, count1 = 0, count2 = 0, count3 = 0, Summe0 = 0, Summe1 = 0, Summe2 = 0, Summe3 = 0;
 let RE_AstroSolarNoon,LE_AstroSunset,RB_AstroSolarNoon,RE_AstroSolarNoon_alt_milisek,RB_AstroSolarNoon_alt_milisek,Zeit_alt_milisek=0,ZeitE3DC_SetPowerAlt_ms=0;
 let M_Power=0,M_Power_alt=0,Notstrom_SOC_erreicht=true,Set_Power_Value_W=0,Batterie_SOC_alt_Proz=0,bLadenEntladenStoppen= false,bLadenEntladenStoppen_alt=false;
-let Notstrom_SOC_Proz = 0, M_Abriegelung=false,LadenAufNotstromSOC=false,HeuteNotstromVerwenden=true;
+let Notstrom_SOC_Proz = 0, M_Abriegelung=false,LadenAufNotstromSOC=false,HeuteNotstromVerbraucht=true;
 let Timer0 = null, Timer1 = null,Timer2 = null,Timer3 = null, TimerProplanta= null;
 let CheckConfig = true, Schritt = 0;
 let SummePV_Leistung_Tag_kW =[{0:'',1:'',2:'',3:'',4:'',5:'',6:'',7:''},{0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0},{0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0},{0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0}];
@@ -321,10 +316,10 @@ async function CheckState()
     if(nMaxPvLeistungTag_kWh == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_maxPvLeistungTag_kWh enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
     
     // Pfadangaben zu den Modulen Modbus und e3dc-rscp überprüfen
-    const PruefeID = [sID_Batterie_SOC,sID_PvLeistung_E3DC_W,sID_PvLeistung_ADD_W,sID_BatterieLeistung_W,sID_Power_Grid_W,
+    const PruefeID = [sID_Batterie_SOC,sID_PvLeistung_E3DC_W,sID_PvLeistung_ADD_W,
     sID_Power_Home_W,sID_Power_Wallbox_W,sID_Bat_Discharge_Limit,sID_Bat_Charge_Limit,sID_Notrom_Status,sID_SPECIFIED_Battery_Capacity_0,sID_SET_POWER_MODE,
     sID_SET_POWER_VALUE_W,sID_Max_Discharge_Power_W,sID_Max_Charge_Power_W,sID_startDischargeDefault,sID_Max_wrleistung_W,
-    sID_Einspeiselimit_W,sID_BAT0_Alterungszustand,sID_DISCHARGE_START_POWER,sID_PARAM_EP_RESERVE_W];
+    sID_BAT0_Alterungszustand,sID_DISCHARGE_START_POWER,sID_PARAM_EP_RESERVE_W];
     for (let i = 0; i < PruefeID.length; i++) {
         if (!existsObject(PruefeID[i])){log(`${Logparser1} Pfad = ${PruefeID[i]} existiert nicht, bitte prüfen ${Logparser2}`,'error');}
     }
@@ -346,7 +341,6 @@ async function Ladesteuerung()
 {
     let dAkt = new Date();
     let Notstrom_Status = (await getStateAsync(sID_Notrom_Status)).val;                                             // aktueller Notstrom Status E3DC 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
-    Batterie_SOC_Proz = (await getStateAsync(sID_Batterie_SOC)).val;                                                // Aktueller Batterie SOC E3DC
     let PV_Leistung_ADD_W = (await getStateAsync(sID_PvLeistung_ADD_W)).val;                                        // Aktuelle zusätzliche PV Leistung externer WR         
     let PV_Leistung_E3DC_W = (await getStateAsync(sID_PvLeistung_E3DC_W)).val;                                      // Aktuelle PV Leistung E3DC
     let PV_Leistung_Summe_W = PV_Leistung_E3DC_W + Math.abs(PV_Leistung_ADD_W);                                     // Summe PV Leistung, PV_Leistung_ADD_W (negativer Wert)
@@ -355,6 +349,7 @@ async function Ladesteuerung()
     let Power_Home_W = (await getStateAsync(sID_Power_Home_W)).val+(await getStateAsync(sID_Power_Wallbox_W)).val;  // Aktueller Hausverbrauch + Ladeleistung Wallbox E3DC   
     let UntererLadekorridor_W = (await getStateAsync(sID_UntererLadekorridor_W[EinstellungAnwahl])).val             // Parameter UntererLadekorridor
     let NotstromVerwenden = await CheckPrognose();
+    Batterie_SOC_Proz = (await getStateAsync(sID_Batterie_SOC)).val;                                                // Aktueller Batterie SOC E3DC
     
     // Das Entladen aus dem Speicher wird freigegeben wenn
     // Notstrom oder Inselbetrieb aktiv ist oder NotstromVerwenden = true oder LadenAufNotstrom = true oder der Batterie SOC > der berechneten Reserve liegt oder PV-Leistung > 100W ist und vor Sonnenuntergang
@@ -558,12 +553,11 @@ async function Ladesteuerung()
         }
    
     
-        // Leerlauf beibehalten bis sich der Wert M_Power ändert
-        if(M_Power_alt != maximumLadeleistung_W || M_Power != maximumLadeleistung_W ){
+        // Leerlauf beibehalten bis sich der Wert M_Power ändert oder LadenEntladenStoppen true ist
+        if(M_Power_alt != maximumLadeleistung_W || M_Power != maximumLadeleistung_W || bLadenEntladenStoppen ){
             
             // Alle 6 sek. muss mindestens ein Steuerbefehl an e3dc.rscp Adapter gesendet werden sonst übernimmt E3DC die Steuerung
             if((bLadenEntladenStoppen != bLadenEntladenStoppen_alt || M_Power != M_Power_alt || (dAkt.getTime()- ZeitE3DC_SetPowerAlt_ms)> 5000) && !LadenAufNotstromSOC){
-            
                 ZeitE3DC_SetPowerAlt_ms = dAkt.getTime();
                 M_Power_alt = M_Power;
                 bLadenEntladenStoppen_alt = bLadenEntladenStoppen
@@ -1253,7 +1247,7 @@ async function SheduleProplanta() {
             let ArrayBereinig = await HTML_CleanUp(result4)    
             
             for (let i=0; i < ArrayBereinig.length; i++) {
-                //if (DebugAusgabe){log(`i =${i} Wert ab Tag 4=${ArrayBereinig[i]}`);}
+                //log(`i =${i} Wert ab Tag 4=${ArrayBereinig[i]}`);
                 if (ArrayBereinig[i] == 'Globalstrahlung'){
                     if (isNaN(parseFloat(ArrayBereinig[i+1]))){GlobalstrahlungTag4 = 0;}else{GlobalstrahlungTag4 = parseFloat(ArrayBereinig[i+1]);}      
                     if (isNaN(parseFloat(ArrayBereinig[i+2]))){GlobalstrahlungTag5 = 0;}else{GlobalstrahlungTag5 = parseFloat(ArrayBereinig[i+2]);}      
@@ -1296,6 +1290,7 @@ async function SheduleProplanta() {
         })
     }
 }
+
 
 // Proplanta HTML Tags löschen und Daten bereinigen
 function HTML_CleanUp(data) {
@@ -1495,7 +1490,7 @@ function CheckPrognose(){
             if(ReichweiteTime_ms > sunriseEndTimeMorgen_ms && PrognoseMorgen_kWh > minWertPrognose_kWh && minWertPrognose_kWh > 0){
                 // Batterie reicht bis zum Sonnenaufgang, es kann entladen werden
                 if (LogAusgabe && Notstrom_SOC_erreicht){log(`${Logparser1}-==== Freigabe Notstrom nach Sonnenaufgang. ====-${Logparser2}`)}
-                HeuteNotstromVerwenden = true;
+                HeuteNotstromVerbraucht = true;
                 return true
             }
         }else{
@@ -1508,7 +1503,7 @@ function CheckPrognose(){
             if(ReichweiteTime_ms > sunriseEndTimeHeute_ms && PrognoseMorgen_kWh > minWertPrognose_kWh && minWertPrognose_kWh > 0){
                 // Batterie reicht bis zum Sonnenaufgang, es kann entladen werden
                 if (LogAusgabe && Notstrom_SOC_erreicht){log(`${Logparser1}-==== Freigabe Notstrom vor Sonnenaufgang. ====-${Logparser2}`)}
-                HeuteNotstromVerwenden = true;
+                HeuteNotstromVerbraucht = true;
                 return true
             }
     
@@ -1517,104 +1512,62 @@ function CheckPrognose(){
     return false
 }
 
-
 // Leistungsmesser0 jede minute in W/h umrechen W = P*t
-// Autor:smartboart (ioBroker)
-function Wh_Leistungsmesser0(){
-	//if(DebugAusgabe)log(`${Logparser1} Funktion Schedulestart aktiv ${Logparser2}`); 
-	let AufDieMinute =  '* * * * *';
-	Timer0 = schedule(AufDieMinute, function(){   
-		//if(DebugAusgabe)log(`${Logparser1} minütlicher Schedule aktiv ${Logparser2}`);       
-		let PVErtrag = getState (sID_PVErtragLM0).val;  
-		let Pmin = Summe0/count0;
-		if(count0>0 && Summe0 >0){
-			setState(sID_PVErtragLM0, PVErtrag + Pmin/60/1000,true);//kWh
-			//if(DebugAusgabe)log(['Schedule Umrechnen W = P*t.  Minutenwert Leistung: '+ Pmin, ' Minutenwert Arbeit: ' + (Pmin/60/1000), ' Tageswert Ertrag: ' +PVErtrag ].join(''));
-			setTimeout(function(){
-				count0=0;
-				Summe0=0;
-				//if(DebugAusgabe)log(['Reset: Count =  '+ count0, ' Summe = ' + Summe0 ].join(''));
-			},100);
-		}else{
-			if(count0===0 && Summe0 ===0){
-				clearSchedule(Timer0);
-				Timer0 = null;
-                //if(DebugAusgabe)log(`${Logparser1} minütlicher Schedule gestoppt ${Logparser2}`);
-            }
-        }  
-    });
+function Wh_Leistungsmesser0() {
+  let AufDieMinute = '* * * * *';
+  Timer0 = schedule(AufDieMinute, () => {
+    let Pmin = Summe0 / count0 || 0;
+    if (count0 > 0 && Summe0 > 0) {
+      setState(sID_PVErtragLM0, getState(sID_PVErtragLM0).val + Pmin / 60 / 1000, true); 
+      setTimeout(() => { count0 = Summe0 = 0; }, 100);
+    } else if (count0 === 0 && Summe0 === 0) {
+      clearSchedule(Timer0);
+      Timer0 = null;
+    }
+  });
 }
 
 // Leistungsmesser1 jede minute in W/h umrechen W = P*t
-// Autor:smartboart (ioBroker)
 function Wh_Leistungsmesser1(){
-	//if(DebugAusgabe)log(`${Logparser1} Funktion Schedulestart aktiv ${Logparser2}`); 
 	let AufDieMinute =  '* * * * *';
-	Timer1 = schedule(AufDieMinute, function(){   
-		//if(DebugAusgabe)log(`${Logparser1} minütlicher Schedule aktiv ${Logparser2}`);       
-		let PVErtrag = getState (sID_PVErtragLM1).val;  
+	Timer1 = schedule(AufDieMinute, () => {   
 		let Pmin = Summe1/count1;
 		if(count1>0 && Summe1 >0){
-			setState(sID_PVErtragLM1, PVErtrag + Pmin/60/1000,true);//kWh
-			setTimeout(function(){
-				count1=0;
-				Summe1=0;
-				
-			},100);
-		}else{
-			if(count1===0 && Summe1 ===0){
-				clearSchedule(Timer1);
-				Timer1=null;
-                //if(DebugAusgabe)log(`${Logparser1} minütlicher Schedule gestoppt ${Logparser2}`);
-            }
+			setState(sID_PVErtragLM1, getState (sID_PVErtragLM1).val + Pmin/60/1000,true);//kWh
+			setTimeout(() => { count1 = Summe1 = 0;},100);
+		}else if (count1===0 && Summe1 ===0) {
+			clearSchedule(Timer1);
+			Timer1=null;
         }  
     });
 } 
 
-
 // Leistungsmesser2 jede minute in W/h umrechen W = P*t
-// Autor:smartboart (ioBroker)
 function Wh_Leistungsmesser2(){
-	//if(DebugAusgabe)log(`${Logparser1} Funktion Schedulestart LM2 aktiv ${Logparser2}`); 
 	let AufDieMinute =  '* * * * *';
-	Timer2 = schedule(AufDieMinute, function(){   
-		//if(DebugAusgabe)log(`${Logparser1} minütlicher Schedule Timer2 aktiv ${Logparser2}`);       
-		let PVErtrag = getState (sID_PVErtragLM2).val;  
+	Timer2 = schedule(AufDieMinute, () => {   
 		let Pmin = Summe2/count2;
 		if(count2>0 && Summe2 >0){
-			setState(sID_PVErtragLM2, round(PVErtrag + Pmin/60/1000,0),true);//kWh
-			setTimeout(function(){
-				count2=0;
-				Summe2=0;
-			},100);
-		}else{
-			if(count2===0 && Summe2 ===0){
+			setState(sID_PVErtragLM2, getState (sID_PVErtragLM2).val + Pmin/60/1000,true);//kWh
+			setTimeout(() => {count2= Summe2 = 0;},100);
+		}else if(count2===0 && Summe2 ===0){
 				clearSchedule(Timer2);
 				Timer2=null;
-                //if(DebugAusgabe)log(`${Logparser1} minütlicher Schedule Timer2 gestoppt ${Logparser2}`);
-            }
         }  
     });
 } 
 
 // Leistungsmesser3 jede minute in W/h umrechen W = P*t
-// Autor:smartboart (ioBroker)
 function Wh_Leistungsmesser3(){
 	let AufDieMinute =  '* * * * *';
-	Timer3 = schedule(AufDieMinute, function(){   
-		let PVErtrag = getState (sID_PVErtragLM3).val;  
+	Timer3 = schedule(AufDieMinute, () => {   
 		let Pmin = Summe3/count3;
 		if(count3>0 && Summe3 >0){
-			setState(sID_PVErtragLM3, PVErtrag + Pmin/60/1000,true);//kWh
-			setTimeout(function(){
-				count3=0;
-				Summe3=0;
-			},100);
-		}else{
-			if(count3===0 && Summe3 ===0){
+			setState(sID_PVErtragLM3, getState (sID_PVErtragLM3).val + Pmin/60/1000,true);//kWh
+			setTimeout(() => {count3= Summe3 = 0;},100);
+		}else if(count3===0 && Summe3 ===0){
 				clearSchedule(Timer3);
 				Timer3 = null;
-            }
         }  
     });
 }
@@ -1898,7 +1851,7 @@ schedule("0 0 1 * *", async function() {
 
 // jeden Tag um 12:00 aktualisieren.
 schedule({hour: 12, minute: 0}, function () { 
-	HeuteNotstromVerwenden = false
+	HeuteNotstromVerbraucht = false
 });
 
 // jeden Tag um 00:01 Tageswert nullen und Regelzeiten aktualisieren.
@@ -1916,7 +1869,7 @@ schedule({hour: 2, minute: 0}, async function () {
         let nbr_Notstrom_SOC_Proz = (await getStateAsync(sID_Notstrom_akt)).val                             // Berechneter Notstrom SOC
         Batterie_SOC_Proz = (await getStateAsync(sID_Batterie_SOC)).val;                                    // Aktueller Batterie SOC E3DC 
         let Notstrom_Status = (await getStateAsync(sID_Notrom_Status)).val;                                 // aktueller Notstrom Status E3DC 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
-        if (Batterie_SOC_Proz < nbr_Notstrom_SOC_Proz && !HeuteNotstromVerwenden && Notstrom_Status != 4){
+        if (Batterie_SOC_Proz < nbr_Notstrom_SOC_Proz && !HeuteNotstromVerbraucht && Notstrom_Status != 4){
             LadenAufNotstromSOC=true
             log(`${Logparser1} -==== Batterie wird bis NotstromSOC aus dem Netz geladen ====- ${Logparser2}`,'warn')
             LadeNotstromSOC();
