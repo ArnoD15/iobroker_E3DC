@@ -71,8 +71,8 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "buttontext": "Batterie",
-                "nav_view": "28_E3DC_RSCP_Batterie",
+                "buttontext": "Batterie Status",
+                "nav_view": "01_Batterie",
                 "labelWidth": "0",
                 "textFontFamily": "#mdwTheme:vis-materialdesign.0.fonts.button.default.text",
                 "textFontSize": "#mdwTheme:vis-materialdesign.0.fontSizes.button.default.text",
@@ -157,8 +157,8 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "buttontext": "WR Temperatur",
-                "nav_view": "28_E3DC_WR_Diagramm",
+                "buttontext": "PV-Prognose",
+                "nav_view": "28_E3DC_PV_Prognose",
                 "labelWidth": "0",
                 "textFontFamily": "#mdwTheme:vis-materialdesign.0.fonts.button.default.text",
                 "textFontSize": "#mdwTheme:vis-materialdesign.0.fontSizes.button.default.text",
@@ -167,8 +167,8 @@
                 "image": ""
             },
             "style": {
-                "left": "286px",
-                "top": "26px",
+                "left": "704px",
+                "top": "27px",
                 "width": "130px",
                 "height": "50px",
                 "color": "#ffffff",
@@ -243,15 +243,14 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "buttontext": "Wechselrichter",
-                "nav_view": "28_E3DC_RSCP_Wechselrichter",
+                "buttontext": "E3DC EMS",
+                "nav_view": "28_E3DC_RSCP_EMS",
                 "labelWidth": "0",
                 "textFontFamily": "#mdwTheme:vis-materialdesign.0.fonts.button.default.text",
-                "textFontSize": "",
+                "textFontSize": "#mdwTheme:vis-materialdesign.0.fontSizes.button.default.text",
                 "mdwButtonPrimaryColor": "#2e2e2e",
                 "mdwButtonSecondaryColor": "#ffffff",
-                "image": "",
-                "debug": false
+                "image": ""
             },
             "style": {
                 "left": "147px",
@@ -330,8 +329,8 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "buttontext": "",
-                "nav_view": "",
+                "buttontext": "PV-Diagramm",
+                "nav_view": "28_E3DC_PV_Diagramm",
                 "labelWidth": "0",
                 "textFontFamily": "#mdwTheme:vis-materialdesign.0.fonts.button.default.text",
                 "textFontSize": "#mdwTheme:vis-materialdesign.0.fontSizes.button.default.text",
@@ -416,8 +415,8 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "buttontext": "EMS",
-                "nav_view": "28_E3DC_RSCP_EMS",
+                "buttontext": "Zählerstände Tag",
+                "nav_view": "17_Stromzähler_Tag",
                 "labelWidth": "0",
                 "textFontFamily": "#mdwTheme:vis-materialdesign.0.fonts.button.default.text",
                 "textFontSize": "#mdwTheme:vis-materialdesign.0.fontSizes.button.default.text",
@@ -426,7 +425,7 @@
                 "image": ""
             },
             "style": {
-                "left": "425px",
+                "left": "286px",
                 "top": "27px",
                 "width": "130px",
                 "height": "50px",
@@ -502,8 +501,8 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "buttontext": "SOH Batterie",
-                "nav_view": "28_E3DC_SOH_Diagramm",
+                "buttontext": "Energieverb. aktuell",
+                "nav_view": "21_Energieverbrauch",
                 "labelWidth": "0",
                 "textFontFamily": "#mdwTheme:vis-materialdesign.0.fonts.button.default.text",
                 "textFontSize": "#mdwTheme:vis-materialdesign.0.fontSizes.button.default.text",
@@ -512,7 +511,7 @@
                 "image": ""
             },
             "style": {
-                "left": "704px",
+                "left": "565px",
                 "top": "27px",
                 "width": "130px",
                 "height": "50px",
@@ -588,8 +587,8 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "buttontext": "Sperrzeiten",
-                "nav_view": "28_E3DC_RSCP_Sperrzeiten",
+                "buttontext": "Zählerstände Monat",
+                "nav_view": "17_Stromzähler_Monat",
                 "labelWidth": "0",
                 "textFontFamily": "#mdwTheme:vis-materialdesign.0.fonts.button.default.text",
                 "textFontSize": "#mdwTheme:vis-materialdesign.0.fontSizes.button.default.text",
@@ -598,7 +597,7 @@
                 "image": ""
             },
             "style": {
-                "left": "565px",
+                "left": "425px",
                 "top": "27px",
                 "width": "130px",
                 "height": "50px",
@@ -674,8 +673,8 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "buttontext": "",
-                "nav_view": "",
+                "buttontext": "Charge Control",
+                "nav_view": "28_E3DC_Charge_Control",
                 "labelWidth": "0",
                 "textFontFamily": "#mdwTheme:vis-materialdesign.0.fonts.button.default.text",
                 "textFontSize": "#mdwTheme:vis-materialdesign.0.fontSizes.button.default.text",
@@ -701,6 +700,6 @@
             "widgetSet": "materialdesign"
         }
     },
-    "name": "900_Menueleiste_unten_E3DC",
+    "name": "900_Menueleiste_unten_Energie",
     "filterList": []
 }

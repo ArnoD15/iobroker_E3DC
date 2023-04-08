@@ -153,10 +153,10 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "visibility-oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status"
+                "visibility-oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS"
             },
             "style": {
-                "left": "779px",
+                "left": "751px",
                 "top": "608px",
                 "z-index": "5",
                 "width": "60px",
@@ -223,11 +223,11 @@
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
                 "html": "Bei Ausfall:\nNetzanschluss getrennt",
-                "visibility-oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status"
+                "visibility-oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS"
             },
             "style": {
-                "left": "795px",
-                "top": "550px",
+                "left": "791px",
+                "top": "549px",
                 "width": "106px",
                 "height": "58px",
                 "color": "#ffffff",
@@ -239,7 +239,7 @@
         "e00004": {
             "tpl": "tplValueFloat",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40068_PV_Leistung",
+                "oid": "e3dc-rscp.0.EMS.POWER_PV",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -315,7 +315,7 @@
         "e00005": {
             "tpl": "tplValueFloatBar",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40083_Batterie_SOC",
+                "oid": "e3dc-rscp.0.EMS.BAT_SOC",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -391,7 +391,7 @@
         "e00006": {
             "tpl": "tplValueFloat",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40083_Batterie_SOC",
+                "oid": "e3dc-rscp.0.EMS.BAT_SOC",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -528,8 +528,8 @@
                 "html_append_plural": " W"
             },
             "style": {
-                "left": "780px",
-                "top": "151px",
+                "left": "779px",
+                "top": "174px",
                 "width": "120px",
                 "height": "30px",
                 "background-color": "#ffffff",
@@ -543,7 +543,7 @@
         "e00008": {
             "tpl": "tplValueFloat",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40070_Batterie_Leistung",
+                "oid": "e3dc-rscp.0.EMS.POWER_BAT",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -604,7 +604,7 @@
                 "signals-hide-edit-2": false
             },
             "style": {
-                "left": "780px",
+                "left": "779px",
                 "top": "511px",
                 "width": "120px",
                 "height": "30px",
@@ -619,7 +619,7 @@
         "e00009": {
             "tpl": "tplValueFloat",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40074_Netz_Leistung",
+                "oid": "e3dc-rscp.0.EMS.POWER_GRID",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -921,7 +921,7 @@
         "e00013": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.info.connection",
+                "oid": "e3dc-rscp.0.info.connection",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -992,7 +992,7 @@
                 "style5": ""
             },
             "style": {
-                "left": "521px",
+                "left": "524px",
                 "top": "99px",
                 "z-index": "30",
                 "background-color": "",
@@ -1169,7 +1169,7 @@
         "e00016": {
             "tpl": "tplValueFloat",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40103_DC_String_2_Power",
+                "oid": "e3dc-rscp.0.PVI.PVI_0.String_1.DC_POWER",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -1245,7 +1245,7 @@
         "e00017": {
             "tpl": "tplValueFloat",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40100_DC_String_2_Current",
+                "oid": "e3dc-rscp.0.PVI.PVI_0.String_1.DC_CURRENT",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -1321,7 +1321,7 @@
         "e00018": {
             "tpl": "tplValueFloat",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40097_DC_String_2_Voltage",
+                "oid": "e3dc-rscp.0.PVI.PVI_0.String_1.DC_VOLTAGE",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -1397,7 +1397,7 @@
         "e00019": {
             "tpl": "tplValueFloat",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40102_DC_String_1_Power",
+                "oid": "e3dc-rscp.0.PVI.PVI_0.String_0.DC_POWER",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -1473,7 +1473,7 @@
         "e00020": {
             "tpl": "tplValueFloat",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40099_DC_String_1_Current",
+                "oid": "e3dc-rscp.0.PVI.PVI_0.String_0.DC_CURRENT",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -1549,7 +1549,7 @@
         "e00021": {
             "tpl": "tplValueFloat",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40096_DC_String_1_Voltage",
+                "oid": "e3dc-rscp.0.PVI.PVI_0.String_0.DC_VOLTAGE",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -1625,7 +1625,7 @@
         "e00022": {
             "tpl": "tplValueFloatBar",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40083_Batterie_SOC",
+                "oid": "e3dc-rscp.0.EMS.BAT_SOC",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -1689,8 +1689,8 @@
                 "border": "black 1px solid"
             },
             "style": {
-                "left": "580px",
-                "top": "132px",
+                "left": "586px",
+                "top": "131px",
                 "color": "#000000",
                 "z-index": "11",
                 "width": "30px",
@@ -1757,8 +1757,8 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "signals-oid-0": "modbus.0.holdingRegisters.40070_Batterie_Leistung",
-                "signals-oid-1": "modbus.0.holdingRegisters.40070_Batterie_Leistung"
+                "signals-oid-0": "e3dc-rscp.0.EMS.POWER_BAT",
+                "signals-oid-1": "e3dc-rscp.0.EMS.POWER_BAT"
             },
             "style": {
                 "left": "861px",
@@ -1828,8 +1828,8 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "signals-oid-0": "modbus.0.holdingRegisters.40074_Netz_Leistung",
-                "signals-oid-1": "modbus.0.holdingRegisters.40074_Netz_Leistung"
+                "signals-oid-0": "e3dc-rscp.0.EMS.POWER_GRID",
+                "signals-oid-1": "e3dc-rscp.0.EMS.POWER_GRID"
             },
             "style": {
                 "left": "861px",
@@ -1899,8 +1899,8 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "signals-oid-0": "modbus.0.holdingRegisters.40072_Hausverbrauch_Leistung",
-                "signals-oid-1": "modbus.0.holdingRegisters.40072_Hausverbrauch_Leistung"
+                "signals-oid-0": "0_userdata.0.E3DC_Wallbox.Allgemein.Hausverbrauch",
+                "signals-oid-1": "0_userdata.0.E3DC_Wallbox.Allgemein.Hausverbrauch"
             },
             "style": {
                 "left": "861px",
@@ -1914,7 +1914,7 @@
         "e00026": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status",
+                "oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -1978,11 +1978,11 @@
                 "style3": "background:#e31616"
             },
             "style": {
-                "left": "844px",
+                "left": "824px",
                 "top": "659px",
                 "z-index": "8",
                 "background-color": "",
-                "width": "75px",
+                "width": "95px",
                 "height": "3px"
             },
             "widgetSet": "basic"
@@ -1990,9 +1990,9 @@
         "e00027": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status",
+                "oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS",
                 "g_fixed": false,
-                "g_visibility": false,
+                "g_visibility": true,
                 "g_css_font_text": false,
                 "g_css_background": true,
                 "g_css_shadow_padding": false,
@@ -2001,7 +2001,7 @@
                 "g_signals": false,
                 "g_last_change": false,
                 "visibility-cond": "==",
-                "visibility-val": 1,
+                "visibility-val": "2",
                 "visibility-groups-action": "hide",
                 "count": "4",
                 "signals-cond-0": "==",
@@ -2051,14 +2051,15 @@
                 "style2": "background:#4ee316",
                 "style1": "",
                 "style4": "",
-                "style3": "background:#e31616"
+                "style3": "background:#e31616",
+                "visibility-oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS"
             },
             "style": {
-                "left": "789px",
+                "left": "765px",
                 "top": "659px",
                 "z-index": "8",
                 "background-color": "",
-                "width": "55px",
+                "width": "60px",
                 "height": "3px"
             },
             "widgetSet": "basic"
@@ -2127,10 +2128,10 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "visibility-oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status"
+                "visibility-oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS"
             },
             "style": {
-                "left": "779px",
+                "left": "751px",
                 "top": "608px",
                 "z-index": "5",
                 "width": "60px",
@@ -2141,7 +2142,7 @@
         "e00029": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status",
+                "oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -2209,7 +2210,7 @@
                 "top": "659px",
                 "z-index": "8",
                 "background-color": "",
-                "width": "140px",
+                "width": "117px",
                 "height": "3px"
             },
             "widgetSet": "basic"
@@ -2217,7 +2218,7 @@
         "e00030": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status",
+                "oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -2349,8 +2350,8 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "signals-oid-0": "modbus.0.holdingRegisters.40072_Hausverbrauch_Leistung",
-                "signals-oid-1": "modbus.0.holdingRegisters.40072_Hausverbrauch_Leistung"
+                "signals-oid-0": "0_userdata.0.E3DC_Wallbox.Allgemein.Hausverbrauch",
+                "signals-oid-1": "0_userdata.0.E3DC_Wallbox.Allgemein.Hausverbrauch"
             },
             "style": {
                 "left": "829px",
@@ -2420,8 +2421,8 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "signals-oid-0": "modbus.0.holdingRegisters.40070_Batterie_Leistung",
-                "signals-oid-1": "modbus.0.holdingRegisters.40070_Batterie_Leistung"
+                "signals-oid-0": "e3dc-rscp.0.EMS.POWER_BAT",
+                "signals-oid-1": "e3dc-rscp.0.EMS.POWER_BAT"
             },
             "style": {
                 "left": "829px",
@@ -2491,8 +2492,8 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "signals-oid-0": "modbus.0.holdingRegisters.40074_Netz_Leistung",
-                "signals-oid-1": "modbus.0.holdingRegisters.40074_Netz_Leistung"
+                "signals-oid-0": "e3dc-rscp.0.EMS.POWER_GRID",
+                "signals-oid-1": "e3dc-rscp.0.EMS.POWER_GRID"
             },
             "style": {
                 "left": "829px",
@@ -2565,8 +2566,8 @@
                 "style0": "",
                 "test_list": "",
                 "style1": "",
-                "signals-oid-0": "modbus.0.holdingRegisters.40074_Netz_Leistung",
-                "signals-oid-1": "modbus.0.holdingRegisters.40074_Netz_Leistung"
+                "signals-oid-0": "e3dc-rscp.0.EMS.POWER_GRID",
+                "signals-oid-1": "e3dc-rscp.0.EMS.POWER_GRID"
             },
             "style": {
                 "left": "976px",
@@ -2636,7 +2637,7 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "signals-oid-0": "modbus.0.holdingRegisters.40103_DC_String_2_Power",
+                "signals-oid-0": "e3dc-rscp.0.PVI.PVI_0.String_0.DC_POWER",
                 "signals-oid-1": ""
             },
             "style": {
@@ -2725,11 +2726,11 @@
                 "icon_class": ""
             },
             "style": {
-                "left": "914px",
+                "left": "913px",
                 "top": "408px",
                 "z-index": "30",
-                "width": "202px",
-                "height": "322px"
+                "width": "195px",
+                "height": "314px"
             },
             "widgetSet": "metro"
         },
@@ -2863,7 +2864,7 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "nav_view": "28_E3DC_Modbus",
+                "nav_view": "28_E3DC_String_Diagramm",
                 "select_current": false,
                 "g_effects": false,
                 "g_icon": true,
@@ -2880,7 +2881,7 @@
                 "badge_height": "0"
             },
             "style": {
-                "left": "516px",
+                "left": "522px",
                 "top": "123px",
                 "z-index": "20",
                 "width": "183px",
@@ -3272,7 +3273,7 @@
         "e00044": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status",
+                "oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -3348,7 +3349,7 @@
         "e00045": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status",
+                "oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -3424,7 +3425,7 @@
         "e00046": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status",
+                "oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -3642,7 +3643,7 @@
         "e00049": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status",
+                "oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -3779,7 +3780,7 @@
                 "signals-hide-edit-2": false
             },
             "style": {
-                "left": "780px",
+                "left": "779px",
                 "top": "358px",
                 "width": "120px",
                 "height": "30px",
@@ -3855,7 +3856,7 @@
                 "signals-hide-edit-2": false
             },
             "style": {
-                "left": "780px",
+                "left": "779px",
                 "top": "269px",
                 "width": "120px",
                 "height": "30px",
@@ -3928,7 +3929,7 @@
                 "visibility-groups-action": "hide"
             },
             "style": {
-                "left": "780px",
+                "left": "779px",
                 "top": "242px",
                 "width": "120px",
                 "height": "21px",
@@ -3998,7 +3999,7 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "src": "/vis.0/Icon/Wallbox.png",
+                "src": "/vis.0/Icon/Wallboc.png",
                 "stretch": false
             },
             "style": {
@@ -4090,8 +4091,8 @@
                 "left": "917px",
                 "top": "244px",
                 "z-index": "30",
-                "width": "199px",
-                "height": "158px"
+                "width": "194px",
+                "height": "156px"
             },
             "widgetSet": "metro"
         },
@@ -4157,7 +4158,7 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "nav_view": "26_E3DC_Diag_Leistung",
+                "nav_view": "21_Energieverbrauch",
                 "select_current": false,
                 "g_effects": false,
                 "g_icon": true,
@@ -4175,8 +4176,8 @@
                 "left": "919px",
                 "top": "71px",
                 "z-index": "30",
-                "width": "199px",
-                "height": "160px"
+                "width": "194px",
+                "height": "158px"
             },
             "widgetSet": "metro"
         },
@@ -4899,7 +4900,7 @@
                 "visibility-groups-action": "hide"
             },
             "style": {
-                "left": "780px",
+                "left": "779px",
                 "top": "331px",
                 "width": "120px",
                 "height": "21px",
@@ -6910,7 +6911,7 @@
         "e00090": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status",
+                "oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -6986,7 +6987,7 @@
         "e00091": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status",
+                "oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -7120,7 +7121,7 @@
                 "src": "/vis.0/Icon/E3DC_pro.png"
             },
             "style": {
-                "left": "513px",
+                "left": "520px",
                 "top": "123px",
                 "z-index": "10",
                 "width": "196px",
@@ -7131,7 +7132,7 @@
         "e00093": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status",
+                "oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -7207,7 +7208,7 @@
         "e00094": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status",
+                "oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -7283,7 +7284,7 @@
         "e00095": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status",
+                "oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -7359,7 +7360,7 @@
         "e00096": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status",
+                "oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -7435,7 +7436,7 @@
         "e00097": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status",
+                "oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -7511,7 +7512,7 @@
         "e00098": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status",
+                "oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -7643,7 +7644,7 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "signals-oid-0": "modbus.0.holdingRegisters.40103_DC_String_2_Power",
+                "signals-oid-0": "e3dc-rscp.0.PVI.PVI_0.String_1.DC_POWER",
                 "signals-oid-1": ""
             },
             "style": {
@@ -7658,7 +7659,7 @@
         "e00100": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status",
+                "oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -7734,7 +7735,7 @@
         "e00101": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status",
+                "oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -7810,7 +7811,7 @@
         "e00102": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status",
+                "oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -7886,7 +7887,7 @@
         "e00103": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status",
+                "oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -7962,7 +7963,7 @@
         "e00104": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status",
+                "oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -8038,7 +8039,7 @@
         "e00105": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40084_Emergency_Power_Status",
+                "oid": "e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -8408,10 +8409,10 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "html": "{l1:modbus.0.holdingRegisters.41007_WR0_Wirkleistung_L1;l2:modbus.0.holdingRegisters.41009_WR0_Wirkleistung_L2;l3:modbus.0.holdingRegisters.41011_WR0_Wirkleistung_L3;(l1*1+l2*1+l3*1)} W AC"
+                "html": "{l1:e3dc-rscp.0.PVI.PVI_0.Phase_0.AC_POWER;l2:e3dc-rscp.0.PVI.PVI_0.Phase_1.AC_POWER;l3:e3dc-rscp.0.PVI.PVI_0.Phase_2.AC_POWER;(l1*1+l2*1+l3*1)} W AC"
             },
             "style": {
-                "left": "522px",
+                "left": "524px",
                 "top": "74px",
                 "z-index": "10",
                 "color": "#000000",
@@ -8419,6 +8420,320 @@
                 "height": "20px",
                 "background-color": "#ffffff",
                 "font-size": "large",
+                "text-align": "center"
+            },
+            "widgetSet": "basic"
+        },
+        "e00110": {
+            "tpl": "tplValueListHtml8",
+            "data": {
+                "oid": "modbus.0.holdingRegisters.40087_EMS_CTRL",
+                "g_fixed": false,
+                "g_visibility": false,
+                "g_css_font_text": true,
+                "g_css_background": true,
+                "g_css_shadow_padding": false,
+                "g_css_border": true,
+                "g_gestures": false,
+                "g_signals": false,
+                "g_last_change": false,
+                "visibility-cond": "==",
+                "visibility-val": 1,
+                "visibility-groups-action": "hide",
+                "count": "1",
+                "signals-cond-0": "==",
+                "signals-val-0": true,
+                "signals-icon-0": "/vis/signals/lowbattery.png",
+                "signals-icon-size-0": 0,
+                "signals-blink-0": false,
+                "signals-horz-0": 0,
+                "signals-vert-0": 0,
+                "signals-hide-edit-0": false,
+                "signals-cond-1": "==",
+                "signals-val-1": true,
+                "signals-icon-1": "/vis/signals/lowbattery.png",
+                "signals-icon-size-1": 0,
+                "signals-blink-1": false,
+                "signals-horz-1": 0,
+                "signals-vert-1": 0,
+                "signals-hide-edit-1": false,
+                "signals-cond-2": "==",
+                "signals-val-2": true,
+                "signals-icon-2": "/vis/signals/lowbattery.png",
+                "signals-icon-size-2": 0,
+                "signals-blink-2": false,
+                "signals-horz-2": 0,
+                "signals-vert-2": 0,
+                "signals-hide-edit-2": false,
+                "lc-type": "last-change",
+                "lc-is-interval": true,
+                "lc-is-moment": false,
+                "lc-format": "",
+                "lc-position-vert": "top",
+                "lc-position-horz": "right",
+                "lc-offset-vert": 0,
+                "lc-offset-horz": 0,
+                "lc-font-size": "12px",
+                "lc-font-family": "",
+                "lc-font-style": "",
+                "lc-bkg-color": "",
+                "lc-color": "",
+                "lc-border-width": "0",
+                "lc-border-style": "",
+                "lc-border-color": "",
+                "lc-border-radius": 10,
+                "lc-zindex": 0,
+                "value0": "",
+                "value1": "EMS CTRL",
+                "style1": "background:#ffff33",
+                "style0": "",
+                "style2": "",
+                "value2": "",
+                "test_list": "",
+                "value3": "",
+                "value4": "",
+                "value5": "",
+                "style3": "",
+                "style4": "",
+                "style5": ""
+            },
+            "style": {
+                "left": "617px",
+                "top": "264px",
+                "z-index": "30",
+                "width": "78px",
+                "height": "34px",
+                "border-width": "1px",
+                "border-style": "double",
+                "border-color": "#000000",
+                "border-radius": "2px",
+                "color": "#ff0000",
+                "text-align": "center",
+                "font-weight": "bold",
+                "font-size": "11pt",
+                "line-height": "25pt",
+                "text-shadow": ""
+            },
+            "widgetSet": "basic"
+        },
+        "e00111": {
+            "tpl": "tplValueFloat",
+            "data": {
+                "oid": "modbus.2.holdingRegisters.41013_WP_Aufnahmeleistung",
+                "g_fixed": false,
+                "g_visibility": false,
+                "g_css_font_text": false,
+                "g_css_background": true,
+                "g_css_shadow_padding": false,
+                "g_css_border": false,
+                "g_gestures": false,
+                "g_signals": false,
+                "g_last_change": false,
+                "visibility-cond": "==",
+                "visibility-val": 1,
+                "visibility-groups-action": "hide",
+                "is_comma": "true",
+                "factor": "1",
+                "signals-cond-0": "==",
+                "signals-val-0": true,
+                "signals-icon-0": "/vis/signals/lowbattery.png",
+                "signals-icon-size-0": 0,
+                "signals-blink-0": false,
+                "signals-horz-0": 0,
+                "signals-vert-0": 0,
+                "signals-hide-edit-0": false,
+                "signals-cond-1": "==",
+                "signals-val-1": true,
+                "signals-icon-1": "/vis/signals/lowbattery.png",
+                "signals-icon-size-1": 0,
+                "signals-blink-1": false,
+                "signals-horz-1": 0,
+                "signals-vert-1": 0,
+                "signals-hide-edit-1": false,
+                "signals-cond-2": "==",
+                "signals-val-2": true,
+                "signals-icon-2": "/vis/signals/lowbattery.png",
+                "signals-icon-size-2": 0,
+                "signals-blink-2": false,
+                "signals-horz-2": 0,
+                "signals-vert-2": 0,
+                "signals-hide-edit-2": false,
+                "lc-type": "last-change",
+                "lc-is-interval": true,
+                "lc-is-moment": false,
+                "lc-format": "",
+                "lc-position-vert": "top",
+                "lc-position-horz": "right",
+                "lc-offset-vert": 0,
+                "lc-offset-horz": 0,
+                "lc-font-size": "12px",
+                "lc-font-family": "",
+                "lc-font-style": "",
+                "lc-bkg-color": "",
+                "lc-color": "",
+                "lc-border-width": "0",
+                "lc-border-style": "",
+                "lc-border-color": "",
+                "lc-border-radius": 10,
+                "lc-zindex": 0,
+                "html_append_singular": " W",
+                "html_append_plural": " W"
+            },
+            "style": {
+                "left": "779px",
+                "top": "88px",
+                "width": "120px",
+                "height": "30px",
+                "background-color": "#ffffff",
+                "z-index": "10",
+                "color": "#000000",
+                "text-align": "center",
+                "font-size": "x-large"
+            },
+            "widgetSet": "basic"
+        },
+        "e00112": {
+            "tpl": "tplHtml",
+            "data": {
+                "g_fixed": false,
+                "g_visibility": false,
+                "g_css_font_text": true,
+                "g_css_background": false,
+                "g_css_shadow_padding": false,
+                "g_css_border": false,
+                "g_gestures": false,
+                "g_signals": false,
+                "g_last_change": false,
+                "refreshInterval": "0",
+                "signals-cond-0": "==",
+                "signals-val-0": true,
+                "signals-icon-0": "/vis/signals/lowbattery.png",
+                "signals-icon-size-0": 0,
+                "signals-blink-0": false,
+                "signals-horz-0": 0,
+                "signals-vert-0": 0,
+                "signals-hide-edit-0": false,
+                "signals-cond-1": "==",
+                "signals-val-1": true,
+                "signals-icon-1": "/vis/signals/lowbattery.png",
+                "signals-icon-size-1": 0,
+                "signals-blink-1": false,
+                "signals-horz-1": 0,
+                "signals-vert-1": 0,
+                "signals-hide-edit-1": false,
+                "signals-cond-2": "==",
+                "signals-val-2": true,
+                "signals-icon-2": "/vis/signals/lowbattery.png",
+                "signals-icon-size-2": 0,
+                "signals-blink-2": false,
+                "signals-horz-2": 0,
+                "signals-vert-2": 0,
+                "signals-hide-edit-2": false,
+                "lc-type": "last-change",
+                "lc-is-interval": true,
+                "lc-is-moment": false,
+                "lc-format": "",
+                "lc-position-vert": "top",
+                "lc-position-horz": "right",
+                "lc-offset-vert": 0,
+                "lc-offset-horz": 0,
+                "lc-font-size": "12px",
+                "lc-font-family": "",
+                "lc-font-style": "",
+                "lc-bkg-color": "",
+                "lc-color": "",
+                "lc-border-width": "0",
+                "lc-border-style": "",
+                "lc-border-color": "",
+                "lc-border-radius": 10,
+                "lc-zindex": 0,
+                "html": "LW-Pumpe",
+                "visibility-cond": "==",
+                "visibility-val": 1,
+                "visibility-groups-action": "hide"
+            },
+            "style": {
+                "left": "779px",
+                "top": "62px",
+                "width": "120px",
+                "height": "21px",
+                "color": "#ffffff",
+                "z-index": "2",
+                "text-shadow": "rgba(0, 0, 0, 0.9) 3px 3px 4px",
+                "font-size": "larger",
+                "text-align": "center"
+            },
+            "widgetSet": "basic"
+        },
+        "e00113": {
+            "tpl": "tplHtml",
+            "data": {
+                "g_fixed": false,
+                "g_visibility": false,
+                "g_css_font_text": true,
+                "g_css_background": false,
+                "g_css_shadow_padding": false,
+                "g_css_border": false,
+                "g_gestures": false,
+                "g_signals": false,
+                "g_last_change": false,
+                "refreshInterval": "0",
+                "signals-cond-0": "==",
+                "signals-val-0": true,
+                "signals-icon-0": "/vis/signals/lowbattery.png",
+                "signals-icon-size-0": 0,
+                "signals-blink-0": false,
+                "signals-horz-0": 0,
+                "signals-vert-0": 0,
+                "signals-hide-edit-0": false,
+                "signals-cond-1": "==",
+                "signals-val-1": true,
+                "signals-icon-1": "/vis/signals/lowbattery.png",
+                "signals-icon-size-1": 0,
+                "signals-blink-1": false,
+                "signals-horz-1": 0,
+                "signals-vert-1": 0,
+                "signals-hide-edit-1": false,
+                "signals-cond-2": "==",
+                "signals-val-2": true,
+                "signals-icon-2": "/vis/signals/lowbattery.png",
+                "signals-icon-size-2": 0,
+                "signals-blink-2": false,
+                "signals-horz-2": 0,
+                "signals-vert-2": 0,
+                "signals-hide-edit-2": false,
+                "lc-type": "last-change",
+                "lc-is-interval": true,
+                "lc-is-moment": false,
+                "lc-format": "",
+                "lc-position-vert": "top",
+                "lc-position-horz": "right",
+                "lc-offset-vert": 0,
+                "lc-offset-horz": 0,
+                "lc-font-size": "12px",
+                "lc-font-family": "",
+                "lc-font-style": "",
+                "lc-bkg-color": "",
+                "lc-color": "",
+                "lc-border-width": "0",
+                "lc-border-style": "",
+                "lc-border-color": "",
+                "lc-border-radius": 10,
+                "lc-zindex": 0,
+                "html": "Haus",
+                "visibility-cond": "==",
+                "visibility-val": 1,
+                "visibility-groups-action": "hide"
+            },
+            "style": {
+                "left": "779px",
+                "top": "149px",
+                "width": "120px",
+                "height": "21px",
+                "color": "#ffffff",
+                "z-index": "2",
+                "text-shadow": "rgba(0, 0, 0, 0.9) 3px 3px 4px",
+                "font-size": "larger",
                 "text-align": "center"
             },
             "widgetSet": "basic"
