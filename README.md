@@ -76,7 +76,7 @@ verbunden sein.
 
 <ul>
 <h3>Version: 1.2.8</h3>
-<li>Fehler behoben, dass die Batterie entladen, auch wenn Notstromreserve erreicht wurde.  </li>
+<li>Fehler behoben, dass die Batterie entladen wurde, auch wenn Notstromreserve erreicht wurde.  </li>
 <li>Ab dieser Version wird nur noch der e3dc-rscp Adapter benötigt, eine Anbindung über Modbus ist nicht mehr erforderlich.
 Bitte prüfen, ob beim e3dc-rscp Adapter das Abfrageintervall für kurz[s] auf 2 steht und die folgenden Tag auf S eingestellt sind:
 TAG_EMS_REQ_POWER_PV,TAG_EMS_REQ_POWER_BAT,TAG_EMS_REQ_POWER_HOME,TAG_EMS_REQ_POWER_GRID,TAG_EMS_REQ_POWER_ADD,TAG_EMS_REQ_BAT_SOC,TAG_WB_REQ_ENERGY_ALL </li>
