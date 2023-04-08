@@ -34,7 +34,7 @@ verbunden sein.
 
 <h3>iobroker_VIS_View_E3DC_Charge_Control.js</h3>
 <p>View Import Datei für iobroker VIS</p>
-<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/E3DC_Control.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/E3DC_Control2.png" alt="VIS View E3DC-Control" style="max-width:100%;"></a></p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/E3DC_Control.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/E3DC_Control.png" alt="VIS View E3DC-Control" style="max-width:100%;"></a></p>
 
 <h3>iobroker_VIS_View_E3DC_Uebersicht.js</h3>
 <p>View Import Datei für iobroker VIS</p>
