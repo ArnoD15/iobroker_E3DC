@@ -140,13 +140,13 @@
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
                 "src": "",
-                "signals-oid-0": "modbus.0.holdingRegisters.40087_EMS_CTRL",
-                "signals-oid-1": "modbus.0.holdingRegisters.40087_EMS_CTRL",
+                "signals-oid-0": "e3dc-rscp.0.EMS.STATUS_7",
+                "signals-oid-1": "e3dc-rscp.0.EMS.STATUS_7",
                 "signals-text-1": "EMS Control",
                 "signals-text-2": "EMS Control"
             },
             "style": {
-                "left": "739px",
+                "left": "737px",
                 "top": "9px",
                 "width": "46px",
                 "height": "46px",

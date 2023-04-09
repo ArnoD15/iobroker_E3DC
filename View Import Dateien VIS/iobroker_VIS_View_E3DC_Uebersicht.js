@@ -8427,7 +8427,7 @@
         "e00110": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "modbus.0.holdingRegisters.40087_EMS_CTRL",
+                "oid": "e3dc-rscp.0.EMS.STATUS_7",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
