@@ -4915,7 +4915,7 @@
         "e00064": {
             "tpl": "tplValueFloat",
             "data": {
-                "oid": "javascript.0.e3dc.modbus.Batteriekapazitaet",
+                "oid": "0_userdata.0.Charge_Control.Allgemein.Batteriekapazität_kWh",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -4992,7 +4992,7 @@
         "e00065": {
             "tpl": "tplValueString",
             "data": {
-                "oid": "javascript.0.e3dc.modbus.Autonomiezeit",
+                "oid": "0_userdata.0.Charge_Control.Allgemein.Autonomiezeit",
                 "g_fixed": false,
                 "g_visibility": true,
                 "g_css_font_text": true,
@@ -5002,7 +5002,7 @@
                 "g_gestures": false,
                 "g_signals": false,
                 "g_last_change": false,
-                "visibility-cond": ">",
+                "visibility-cond": "<",
                 "visibility-val": "0",
                 "visibility-groups-action": "hide",
                 "signals-cond-0": "==",
@@ -5048,14 +5048,14 @@
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
                 "html_prepend": "Autonomiezeit<br>",
-                "visibility-oid": "javascript.0.e3dc.modbus.Autonomiezeit"
+                "visibility-oid": "e3dc-rscp.0.EMS.POWER_BAT"
             },
             "style": {
-                "left": "779px",
+                "left": "767px",
                 "top": "430px",
                 "z-index": "30",
                 "height": "49px",
-                "width": "120px",
+                "width": "142px",
                 "color": "#ffffff",
                 "text-align": "center",
                 "font-size": "larger",
