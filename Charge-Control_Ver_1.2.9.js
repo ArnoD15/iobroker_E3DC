@@ -16,7 +16,7 @@ let PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUNGE
 //******************************************************************************************************
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.2.8 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.2.9 ====- ${Logparser2}`);
 //******************************************* Modul e3dc.rscp ******************************************
 const sID_Batterie_SOC =`${instanzE3DC_RSCP}.EMS.BAT_SOC`;                                                  // Pfad Modul ModBus aktueller Batterie_SOC'
 const sID_PvLeistung_E3DC_W =`${instanzE3DC_RSCP}.EMS.POWER_PV`;                                            // Pfad Modul ModBus aktuelle PV_Leistung'
@@ -76,6 +76,8 @@ const sID_Ladeende_MEZ =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Ladeende_MEZ`
 const sID_Notstrom_min_Proz =`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Notstrom_min`;
 const sID_Notstrom_sockel_Proz =`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Notstrom_sockel`;
 const sID_Notstrom_akt =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Notstrom_akt`;
+const sID_Autonomiezeit =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Autonomiezeit`;
+const sID_BatSoc_kWh =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Batteriekapazität_kWh`;
 for (let i = 0; i <= 5; i++) {
     sID_UntererLadekorridor_W[i] =`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.UntererLadekorridor_${i}`;
     sID_Ladeschwelle_Proz[i] =`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Ladeschwelle_${i}`;
@@ -150,6 +152,8 @@ async function ScriptStart()
 async function CreateState(){
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Notstrom_min`, {'def':30, 'name':'Speicherreserve in % bei Wintersonnenwende 21.12', 'type':'number', 'role':'value', 'desc':'Speicherreserve in % bei winterminimum', 'unit':'%'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Notstrom_sockel`, {'def':20, 'name':'min. SOC Wert bei Tag-/Nachtgleiche 21.3./21.9.', 'type':'number', 'role':'value', 'desc':'min. SOC Wert bei Tag-/Nachtgleiche 21.3./21.9.', 'unit':'%'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Autonomiezeit`, {'def':0, 'name':'verbleibende Reichweite der Batterie in h', 'type':'number', 'role':'value', 'desc':'verbleibende Reichweite der Batterie in h', 'unit':'h'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Batteriekapazität_kWh`, {'def':0, 'name':'verbleibende Reichweite der Batterie in kWh', 'type':'number', 'role':'value', 'desc':'verbleibende Reichweite der Batterie in kWh', 'unit':'kWh'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Notstrom_akt`, {'def':0, 'name':'aktuell berechnete Notstromreserve', 'type':'number', 'role':'value', 'desc':'aktuell berechnete Notstromreserve', 'unit':'%'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Listenelement_Nr`, {'def':0, 'name':'Aktive Anwahl Listenelement in VIS' , 'type':'number', 'role':'value'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.EinstellungAnwahl`, {'def':0, 'name':'Aktuell manuell angewählte Einstellung', 'type':'number', 'role':'State'});
@@ -439,10 +443,11 @@ async function Ladesteuerung()
                                 }
                             }
                             // Laden der Batterie erst nach Regelbeginn zulassen
-                            if(M_Power > 0){bLadenEntladenStoppen = true}
+                            if(M_Power > 0){bLadenEntladenStoppen = true;M_Power = 0;}
                         }else if((PV_Leistung_Summe_W - Power_Home_W) > UntererLadekorridor_W ){
                             // Unload SOC erreicht und PV-Leistung höher als Eigenverbrauch.Laden der Batterie erst nach Regelbeginn zulassen
                             bLadenEntladenStoppen = true
+                            M_Power = 0;
                         }else{
                             // Unload SOC erreicht und PV-Leistung niedriger als Eigenverbrauch.Regelung E3DC überlassen
                             M_Power = 0;
@@ -460,6 +465,7 @@ async function Ladesteuerung()
                         if(LogAusgabeRegelung){log(`${Logparser1} -==== 2 M_Power:${M_Power} = Math.round(((Ladeende_Proz:${Ladeende_Proz} - Batterie_SOC_Proz:${Batterie_SOC_Proz})*Speichergroesse_kWh:${Speichergroesse_kWh}*10*3600) / (tRegelende_milisek:${RE_AstroSolarNoon.getTime()} - Zeit_aktuell_milisek:${dAkt.getTime()})) ====- ${Logparser2}`)}
                         if (M_Power < UntererLadekorridor_W || M_Power < 0){
                             bLadenEntladenStoppen = true
+                            M_Power = 0;
                         }
                     }
                 // Prüfen ob nach Regelende vor Ladeende
@@ -480,6 +486,7 @@ async function Ladesteuerung()
                     }else if(PV_Leistung_Summe_W -Power_Home_W > 0){
                         // PV-Leistung höher als Eigenverbrauch und SOC Ladeende2 erreicht.Laden stoppen
                         bLadenEntladenStoppen = true
+                        M_Power = 0;
                     }else{
                         // Ladeende2 erreicht und PV-Leistung niedriger als Eigenverbrauch.Regelung E3DC überlassen
                         M_Power = 0;
@@ -495,6 +502,7 @@ async function Ladesteuerung()
                     }else if(PV_Leistung_Summe_W -Power_Home_W > 0){
                         // PV-Leistung höher als Eigenverbrauch und SOC Ladeende2 erreicht.Laden stoppen
                         bLadenEntladenStoppen = true
+                        M_Power = 0;
                     }else if(PV_Leistung_Summe_W > 0 ){
                         // PV-Leistung vorhanden aber reicht nicht um Eigenverbrauch abzudecken. Regelung E3DC überlassen.
                         M_Power = maximumLadeleistung_W;
@@ -1885,5 +1893,4 @@ onStop(function () {
     clearSchedule(Timer3);
     clearSchedule(TimerProplanta);
 }, 100);
-
 
