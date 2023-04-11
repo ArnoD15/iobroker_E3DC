@@ -73,8 +73,8 @@ verbunden sein.
 <ul>
 <h3>Version: 1.2.9</h3>
 <li>Neuer User Parameter 10_Systemwirkungsgrad.<br> Max. Systemwirkungsgrad inkl. Batterie in % aus den technischen Daten E3DC (beim S10E 88%).<br> Wird für die 
-Berechnung der Batteriekapazität in kWh zur Anzeige in VIS verwendet.  </li>
-<li>Berechnung Autonomiezeit für Anzeige in VIS integriert.</li>
+Berechnung der Batteriekapazität in kWh zur Anzeige in VIS verwendet.<br>Neue Objekt ID: 0_userdata.0.Charge_Control.Allgemein.Batteriekapazität_kWh  </li>
+<li>Berechnung Autonomiezeit für Anzeige in VIS integriert.<br>Neue Objekt ID: 0_userdata.0.Charge_Control.Allgemein.Autonomiezeit</li>
 <li>Fehler behoben, dass der unterer Ladekorridor ignoriert wurde.</li>
 
 <h3>Version: 1.2.8</h3>
