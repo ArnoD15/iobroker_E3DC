@@ -71,6 +71,12 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.2.9</h3>
+<li>Neuer User Parameter 10_Systemwirkungsgrad.<br> Max. Systemwirkungsgrad inkl. Batterie in % aus den technischen Daten E3DC (beim S10E 88%).<br> Wird für die 
+Berechnung der Batteriekapazität in kWh zur Anzeige in VIS verwendet.  </li>
+<li>Berechnung Autonomiezeit für Anzeige in VIS integriert.</li>
+<li>Fehler behoben, dass der unterer Ladekorridor ignoriert wurde.</li>
+
 <h3>Version: 1.2.8</h3>
 <li>Fehler behoben, dass die Batterie entladen wurde, auch wenn Notstromreserve erreicht wurde.  </li>
 <li>Ab dieser Version wird nur noch der e3dc-rscp Adapter benötigt, eine Anbindung über Modbus ist nicht mehr erforderlich.
