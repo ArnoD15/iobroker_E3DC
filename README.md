@@ -71,6 +71,15 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.2.10</h3>
+<li>E3DC-RSCP Adapater kann ab Version 1.2.0 die Info Tags anzeigen und somit auch die Firmware Version.
+<br> Das wurde im Script integriert und zwei neue Objekte angelegt:
+<br>"0_userdata.0.Charge_Control.Allgemein.FirmwareDate" und
+<br>"0_userdata.0.Charge_Control.Allgemein.LastFirmwareVersion"
+<br>um in VIS das Datum und die Uhrzeit der Firmware Installation anzeigen zu können und sich die alte Version zu merken und auch diese anzeigen zu können</li>
+<li>Fehler behoben, dass e3dc-rscp.0.EMS.POWER_LIMITS_USED nicht automatisch aktiviert wurde.</li>
+<li>Fehler behoben, dass beim Erreichen von Ladeschwelle, Ladeende und Ladeende2 es zum "Pulsen" der Ladeleistung führen kann.</li>
+
 <h3>Version: 1.2.9</h3>
 <li>Neuer User Parameter 10_Systemwirkungsgrad.<br> Max. Systemwirkungsgrad inkl. Batterie in % aus den technischen Daten E3DC (beim S10E 88%).<br> Wird für die 
 Berechnung der Batteriekapazität in kWh zur Anzeige in VIS verwendet.<br>Neue Objekt ID: 0_userdata.0.Charge_Control.Allgemein.Batteriekapazität_kWh  </li>
