@@ -71,6 +71,9 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.2.11</h3>
+<li>Fehler behoben, dass nicht mehr auf entladen umgeschaltet wurde, nachdem das Laden der Batterie gesperrt war.</li>
+
 <h3>Version: 1.2.10</h3>
 <li>E3DC-RSCP Adapater kann ab Version 1.2.0 die Info Tags anzeigen und somit auch die Firmware Version.
 <br> Das wurde im Script integriert und zwei neue Objekte angelegt:
