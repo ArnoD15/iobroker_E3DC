@@ -486,8 +486,6 @@ async function Ladesteuerung()
                         if ((M_Power < UntererLadekorridor_W || M_Power < 0) && PV_Leistung_Summe_W -Power_Home_W > 0){
                             bLadenEntladenStoppen = true
                             M_Power = 0;
-                        }else{
-                            M_Power = 0;
                         }
                     }
                 // Prüfen ob nach Regelende vor Ladeende
@@ -509,8 +507,6 @@ async function Ladesteuerung()
                             if (M_Power < UntererLadekorridor_W && PV_Leistung_Summe_W -Power_Home_W > 0){
                                 M_Power = 0;
                                 bLadenEntladenStoppen = true
-                            }else{
-                                M_Power = 0;
                             }
                         }   
                     }else if(PV_Leistung_Summe_W -Power_Home_W > 0){
