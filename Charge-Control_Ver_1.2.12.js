@@ -16,7 +16,7 @@ let PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUNGE
 //******************************************************************************************************
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.2.11 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.2.12 ====- ${Logparser2}`);
 //******************************************* Modul e3dc.rscp ******************************************
 const sID_Batterie_SOC =`${instanzE3DC_RSCP}.EMS.BAT_SOC`;                                              // aktueller Batterie_SOC
 const sID_PvLeistung_E3DC_W =`${instanzE3DC_RSCP}.EMS.POWER_PV`;                                        // aktuelle PV_Leistung
@@ -433,7 +433,7 @@ async function Ladesteuerung()
                 if (dAkt.getTime() < RB_AstroSolarNoon.getTime()) { 
                      // Vor Regelbeginn.
                     if(LogAusgabeRegelung && Schritt != 1){log(`${Logparser1} -==== Vor Regelbeginn ====- ${Logparser2}`);Schritt = 1;}
-                    // Ist Unload < Ladeschwelle wird bis Ladeschwelle geladen und Unload ignoriert
+                    // Ist Ladeschwelle > Unload wird bis Ladeschwelle geladen und Unload ignoriert
                     if(Ladeschwelle_Proz <= Unload_Proz){
                         let Unload_SOC_Proz = 100
                         // Ist der Batterie SoC > Unload und PV Leistung vorhanden wird entladen
@@ -459,20 +459,23 @@ async function Ladesteuerung()
                             }
                             // Prüfen ob entladen werden muss sonst Laden der Batterie erst nach Regelbeginn zulassen
                             if(M_Power > 0 && PV_Leistung_Summe_W - Power_Home_W > 0){
+                                // Batterie muss nicht auf Unload SOC entladen werden und PV-Leistung > Eigenverbrauch (0 W) 
                                 bLadenEntladenStoppen = true;
                                 M_Power = 0;
-                            }else{
-                                M_Power = 0;
+                            }else if(M_Power > 0 && PV_Leistung_Summe_W - Power_Home_W > 0){
+                                // Batterie muss nicht muss nicht auf Unload SOC entladen werden und PV-Leistung < Eigenverbrauch (idle) 
+                                M_Power = maximumLadeleistung_W;
                             }
                         }else if((PV_Leistung_Summe_W - Power_Home_W) > UntererLadekorridor_W ){
-                            // Unload SOC erreicht und PV-Leistung höher als Eigenverbrauch.Laden der Batterie erst nach Regelbeginn zulassen
+                            // Unload SOC erreicht und PV-Leistung höher als Eigenverbrauch.Laden der Batterie erst nach Regelbeginn zulassen (0 W)
                             bLadenEntladenStoppen = true
                             M_Power = 0;
                         }else{
-                            // Unload SOC erreicht und PV-Leistung niedriger als Eigenverbrauch.Regelung E3DC überlassen
-                            M_Power = 0;
+                            // Unload SOC erreicht und PV-Leistung niedriger als Eigenverbrauch.(idle)
+                            M_Power = maximumLadeleistung_W;
                         }
-                    }
+                    } // Keine Regelung erforderlich, da laden mit max. PV-Überschuss Standard E3DC ist.(idle)
+                
                 // Prüfen ob nach Regelbeginn vor Regelende
                 }else if(dAkt.getTime() < RE_AstroSolarNoon.getTime()){ 
                     // Nach Regelbeginn vor Regelende
@@ -483,11 +486,13 @@ async function Ladesteuerung()
                         // Berechnen der Ladeleistung bis zum Ladeende SOC in W/sek.
                         M_Power = Math.round(((Ladeende_Proz - Batterie_SOC_Proz)*Speichergroesse_kWh*10*3600) / (Math.trunc((RE_AstroSolarNoon.getTime()-dAkt.getTime())/1000)));
                         if(LogAusgabeRegelung){log(`${Logparser1} -==== 2 M_Power:${M_Power} = Math.round(((Ladeende_Proz:${Ladeende_Proz} - Batterie_SOC_Proz:${Batterie_SOC_Proz})*Speichergroesse_kWh:${Speichergroesse_kWh}*10*3600) / (tRegelende_milisek:${RE_AstroSolarNoon.getTime()} - Zeit_aktuell_milisek:${dAkt.getTime()})) ====- ${Logparser2}`)}
-                        if ((M_Power < UntererLadekorridor_W || M_Power < 0) && PV_Leistung_Summe_W -Power_Home_W > 0){
+                        if (M_Power < UntererLadekorridor_W && PV_Leistung_Summe_W -Power_Home_W > 0){
+                            // Ausreichend PV-Leistung aber Batterie muss nicht geladen werden (0 W)
                             bLadenEntladenStoppen = true
                             M_Power = 0;
-                        }else{
-                            M_Power = 0;
+                        }else if (M_Power < UntererLadekorridor_W && PV_Leistung_Summe_W -Power_Home_W <= 0){
+                            // Batterie muss nicht geladen werden und PV-Leistung zu gering (idle)
+                            M_Power = maximumLadeleistung_W;
                         }
                     }
                 // Prüfen ob nach Regelende vor Ladeende
@@ -507,19 +512,21 @@ async function Ladesteuerung()
                             M_Power = Math.round(((Ladeende2_Proz - Batterie_SOC_Proz)*Speichergroesse_kWh*10*3600) / (Math.trunc((LE_AstroSunset.getTime()-dAkt.getTime())/1000)));
                             if(LogAusgabeRegelung){log(`${Logparser1} -==== 3 M_Power:${M_Power} = Math.round(((Ladeende2_Proz:${Ladeende2_Proz} - Batterie_SOC_Proz:${Batterie_SOC_Proz})* Speichergroesse_kWh:${Speichergroesse_kWh} * 10 * 3600)/(tSommerladeende_milisek:${LE_AstroSunset.getTime()} - Zeit_aktuell_milisek:${dAkt.getTime()})) ====- ${Logparser2}`)}
                             if (M_Power < UntererLadekorridor_W && PV_Leistung_Summe_W -Power_Home_W > 0){
+                                // Ausreichend PV-Leistung aber Batterie muss nicht geladen werden (0 W)
                                 M_Power = 0;
                                 bLadenEntladenStoppen = true
-                            }else{
-                                M_Power = 0;
+                            }else if (M_Power < UntererLadekorridor_W && PV_Leistung_Summe_W -Power_Home_W <= 0){
+                                // Batterie muss nicht geladen werden und PV-Leistung zu gering (idle)
+                                M_Power = maximumLadeleistung_W;
                             }
                         }   
                     }else if(PV_Leistung_Summe_W -Power_Home_W > 0){
-                        // PV-Leistung höher als Eigenverbrauch und SOC Ladeende2 erreicht.Laden stoppen
+                        // Ladeende2 erreicht und PV-Leistung höher als Eigenverbrauch (0 W))
                         bLadenEntladenStoppen = true
                         M_Power = 0;
                     }else{
-                        // Ladeende2 erreicht und PV-Leistung niedriger als Eigenverbrauch.Regelung E3DC überlassen
-                        M_Power = 0;
+                        // Ladeende2 erreicht und PV-Leistung niedriger als Eigenverbrauch. (idle)
+                        M_Power = maximumLadeleistung_W;
                     }
                 // Prüfen ob nach Sommerladeende
                 }else if(dAkt.getTime() > LE_AstroSunset.getTime()){
@@ -528,14 +535,14 @@ async function Ladesteuerung()
                     if(LogAusgabeRegelung && Schritt != 4){log(`${Logparser1} -==== Sommerladeende überschritten ====- ${Logparser2}`);Schritt=4;}
                     if(Batterie_SOC_Proz > Ladeende2_Proz){Ladeende2_Proz_erreicht = true}else if(Batterie_SOC_Proz < Ladeende2_Proz-1){Ladeende2_Proz_erreicht = false}
                     if (!Ladeende2_Proz_erreicht && PV_Leistung_Summe_W > UntererLadekorridor_W){
-                        // SOC Ladeende2 nicht erreicht und ausreichend PV-Leistung vorhanden. Regelung E3DC überlassen
+                        // SOC Ladeende2 nicht erreicht und ausreichend PV-Leistung vorhanden. (idle)
                         M_Power = maximumLadeleistung_W;
-                    }else if(PV_Leistung_Summe_W -Power_Home_W > 0){
-                        // PV-Leistung höher als Eigenverbrauch und SOC Ladeende2 erreicht.Laden stoppen
+                    }else if(Ladeende2_Proz_erreicht && PV_Leistung_Summe_W -Power_Home_W > 0){
+                        // SOC Ladeende2 erreicht und PV-Leistung höher als Eigenverbrauch. (0 W)
                         bLadenEntladenStoppen = true
                         M_Power = 0;
-                    }else if(PV_Leistung_Summe_W > 0 ){
-                        // PV-Leistung vorhanden aber reicht nicht um Eigenverbrauch abzudecken. Regelung E3DC überlassen.
+                    }else if(Ladeende2_Proz_erreicht && PV_Leistung_Summe_W-Power_Home_W <= 0 ){
+                        // SOC Ladeende2 erreicht und PV-Leistung < Eigenverbrauch. (idle)
                         M_Power = maximumLadeleistung_W;
                     }
                 }
@@ -606,13 +613,13 @@ async function Ladesteuerung()
                     Set_Power_Value_W = 0;
                     await setStateAsync(sID_SET_POWER_MODE,1); // Idle
                     await setStateAsync(sID_SET_POWER_VALUE_W,0)
-                    if (LogAusgabeRegelung){log(`${Logparser1}-==== Batterie entladen stoppen 0W. Schritt = ${Schritt} LadenStoppen = ${bLadenEntladenStoppen} SET_POWER_MODE = 1 idle ====-${Logparser2}`,'warn');}
+                    if (LogAusgabeRegelung){log(`${Logparser1}-==== Batterie entladen stoppen (0 W). Schritt = ${Schritt} LadenStoppen = ${bLadenEntladenStoppen} SET_POWER_MODE = 1 idle ====-${Logparser2}`,'warn');}
                     bLadenEntladenStoppen = false
                 }else if(M_Power == maximumLadeleistung_W ){
                 // E3DC die Steuerung überlassen, dann wird mit der maximal möglichen Ladeleistung geladen oder entladen
                     Set_Power_Value_W = 0
                     await setStateAsync(sID_SET_POWER_MODE,0); // Normal
-                    if(LogAusgabeRegelung){log(`${Logparser1} -==== Regelung E3DC überlassen. Schritt = ${Schritt} SET_POWER_MODE = 0 normal ====- ${Logparser2}`)}
+                    if(LogAusgabeRegelung){log(`${Logparser1} -==== Regelung E3DC überlassen (idle). Schritt = ${Schritt} SET_POWER_MODE = 0 normal ====- ${Logparser2}`)}
                 
                 }else if(M_Power > 0){
                     // Beim ersten aufruf Wert M_Power übernehmen oder wenn Einspeisegrenze erreicht wurde und erst dann langsam erhöhen oder senken
@@ -1964,4 +1971,5 @@ onStop(function () {
     clearSchedule(Timer3);
     clearSchedule(TimerProplanta);
 }, 100);
+
 
