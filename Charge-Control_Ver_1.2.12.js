@@ -462,15 +462,15 @@ async function Ladesteuerung()
                                 // Batterie muss nicht auf Unload SOC entladen werden und PV-Leistung > Eigenverbrauch (0 W) 
                                 bLadenEntladenStoppen = true;
                                 M_Power = 0;
-                            }else if(M_Power > 0 && PV_Leistung_Summe_W - Power_Home_W > 0){
-                                // Batterie muss nicht muss nicht auf Unload SOC entladen werden und PV-Leistung < Eigenverbrauch (idle) 
+                            }else if(M_Power > 0 && PV_Leistung_Summe_W - Power_Home_W <= 0){
+                                // Batterie muss nicht auf Unload SOC entladen werden und PV-Leistung < Eigenverbrauch (idle) 
                                 M_Power = maximumLadeleistung_W;
                             }
-                        }else if((PV_Leistung_Summe_W - Power_Home_W) > UntererLadekorridor_W ){
+                        }else if((PV_Leistung_Summe_W - Power_Home_W) > UntererLadekorridor_W || (PV_Leistung_Summe_W - Power_Home_W) > 0 ){
                             // Unload SOC erreicht und PV-Leistung höher als Eigenverbrauch.Laden der Batterie erst nach Regelbeginn zulassen (0 W)
                             bLadenEntladenStoppen = true
                             M_Power = 0;
-                        }else{
+                        }else if((PV_Leistung_Summe_W - Power_Home_W) <= 0 ){
                             // Unload SOC erreicht und PV-Leistung niedriger als Eigenverbrauch.(idle)
                             M_Power = maximumLadeleistung_W;
                         }
