@@ -71,6 +71,12 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.2.13</h3>
+<li>Neue Objekt-ID "0_userdata.0.Charge_Control.Allgemein.Akt_Berechnete_Ladeleistung_W" erstellt, um die berechnete Ladeleistung bis Regelende bzw. Ladeende in VIS anzuzeigen.</li>
+
+<h3>Version: 1.2.12</h3>
+<li>kleinere Fehler behoben und Script aufgeräumt.</li>
+
 <h3>Version: 1.2.11</h3>
 <li>Fehler behoben, dass nicht mehr auf entladen umgeschaltet wurde, nachdem das Laden der Batterie gesperrt war.</li>
 
