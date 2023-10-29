@@ -16,7 +16,7 @@ let PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUNGE
 //******************************************************************************************************
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.2.13 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.2.14 ====- ${Logparser2}`);
 //******************************************* Modul e3dc.rscp ******************************************
 const sID_Batterie_SOC =`${instanzE3DC_RSCP}.EMS.BAT_SOC`;                                              // aktueller Batterie_SOC
 const sID_PvLeistung_E3DC_W =`${instanzE3DC_RSCP}.EMS.POWER_PV`;                                        // aktuelle PV_Leistung
@@ -514,6 +514,7 @@ async function Ladesteuerung()
                             Batterie_SOC_alt_Proz = Batterie_SOC_Proz; CheckConfig = false; RE_AstroSolarNoon_alt_milisek = RE_AstroSolarNoon.getTime(); Zeit_alt_milisek = dAkt.getTime();
                             M_Power = Math.round(((Ladeende2_Proz - Batterie_SOC_Proz)*Speichergroesse_kWh*10*3600) / (Math.trunc((LE_AstroSunset.getTime()-dAkt.getTime())/1000)));
                             await setStateAsync(sID_out_Akt_Ladeleistung_W,M_Power);
+                            log(`wurde gesetzt`)
                             if(LogAusgabeRegelung){log(`${Logparser1} -==== 3 M_Power:${M_Power} = Math.round(((Ladeende2_Proz:${Ladeende2_Proz} - Batterie_SOC_Proz:${Batterie_SOC_Proz})* Speichergroesse_kWh:${Speichergroesse_kWh} * 10 * 3600)/(tSommerladeende_milisek:${LE_AstroSunset.getTime()} - Zeit_aktuell_milisek:${dAkt.getTime()})) ====- ${Logparser2}`)}
                             if (M_Power < UntererLadekorridor_W && PV_Leistung_Summe_W -Power_Home_W > 0){
                                 // Ausreichend PV-Leistung aber Batterie muss nicht geladen werden (0 W)
@@ -535,6 +536,7 @@ async function Ladesteuerung()
                 // Prüfen ob nach Sommerladeende
                 }else if(dAkt.getTime() > LE_AstroSunset.getTime()){
                     // Nach Sommerladeende
+                    await setStateAsync(sID_out_Akt_Ladeleistung_W,0);
                     // Wurde Batterie SOC Ladeende2 erreicht, dann Ladung beenden ansonsten mit maximal möglicher Ladeleistung Laden.
                     if(LogAusgabeRegelung && Schritt != 4){log(`${Logparser1} -==== Sommerladeende überschritten ====- ${Logparser2}`);Schritt=4;}
                     if(Batterie_SOC_Proz > Ladeende2_Proz){Ladeende2_Proz_erreicht = true}else if(Batterie_SOC_Proz < Ladeende2_Proz-1){Ladeende2_Proz_erreicht = false}
@@ -1643,6 +1645,31 @@ async function LadeNotstromSOC(){
     LadenAufNotstromSOC=false
 }
 
+async function LadeleistungSoll()
+{
+    let dAkt = new Date();
+    let Ladeende_Proz = (await getStateAsync(sID_Ladeende_Proz[EinstellungAnwahl])).val                             // Parameter Ladeende
+    let Ladeende2_Proz = (await getStateAsync(sID_Ladeende2_Proz[EinstellungAnwahl])).val                           // Parameter Ladeende2
+    let Ladeleistung = 0
+
+    
+    // Prüfen ob vor Regelbeginn
+    if (dAkt.getTime() < RB_AstroSolarNoon.getTime() && Ladeleistung > 0) { 
+        await setStateAsync(sID_out_Akt_Ladeleistung_W,0);
+    // Prüfen ob nach Regelbeginn vor Regelende
+    }else if(dAkt.getTime() < RE_AstroSolarNoon.getTime()){
+        // Berechnen der Ladeleistung bis zum Ladeende SOC in W/sek.
+        Ladeleistung = Math.round(((Ladeende_Proz - Batterie_SOC_Proz)*Speichergroesse_kWh*10*3600) / (Math.trunc((RE_AstroSolarNoon.getTime()-dAkt.getTime())/1000)));
+        await setStateAsync(sID_out_Akt_Ladeleistung_W,Ladeleistung);
+    // Prüfen ob nach Regelende vor Ladeende
+    }else if(dAkt.getTime() < LE_AstroSunset.getTime()){
+        // Berechnen der Ladeleistung bis zum Ladeende2 SOC in W/sek.
+        Ladeleistung = Math.round(((Ladeende2_Proz - Batterie_SOC_Proz)*Speichergroesse_kWh*10*3600) / (Math.trunc((LE_AstroSunset.getTime()-dAkt.getTime())/1000)));
+        await setStateAsync(sID_out_Akt_Ladeleistung_W,Ladeleistung);
+    }else if(Ladeleistung > 0){
+        await setStateAsync(sID_out_Akt_Ladeleistung_W,0);
+    }
+}
 
 //***************************************************************************************************
 //********************************** Schedules und Trigger Bereich **********************************
@@ -1922,7 +1949,7 @@ if (existsState(sID_PVErtragLM1)){
 schedule('*/3 * * * * *', async function() {
     // Vor Regelung Skript Startdurchlauf erst abwarten  
     if(!bStart && AutomatikRegelung){Ladesteuerung();}
-
+    else if (!bStart && !AutomatikRegelung){LadeleistungSoll()}
 });
 
 // jeden Monat am 1 History Daten Tag aktuelles Monat Löschen
