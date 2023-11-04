@@ -71,6 +71,9 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.2.15</h3>
+<li>Kleinere Optimierungen und Fehler behoben bei der Berechnung der Sollladeleistung.</li>
+
 <h3>Version: 1.2.14</h3>
 <li>Fehler behoben, das die neue Objekt-ID "0_userdata.0.Charge_Control.Allgemein.Akt_Berechnete_Ladeleistung_W" nach Ladeende nicht auf 0 gesetzt wurde. Soll Ladeleistung wird jetzt auch berechnet, wenn "Automatik Laderegelung" ausgeschaltet wird. </li>
 
