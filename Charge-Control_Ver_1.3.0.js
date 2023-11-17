@@ -16,7 +16,7 @@ let PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUNGE
 //******************************************************************************************************
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.2.15 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.3.0 ====- ${Logparser2}`);
 //******************************************* Modul e3dc.rscp ******************************************
 const sID_Batterie_SOC =`${instanzE3DC_RSCP}.EMS.BAT_SOC`;                                              // aktueller Batterie_SOC
 const sID_PvLeistung_E3DC_W =`${instanzE3DC_RSCP}.EMS.POWER_PV`;                                        // aktuelle PV_Leistung
@@ -43,7 +43,7 @@ const sID_BAT0_Alterungszustand =`${instanzE3DC_RSCP}.BAT.BAT_0.ASOC`;          
 const sID_Max_Discharge_Power_W =`${instanzE3DC_RSCP}.EMS.MAX_DISCHARGE_POWER`;                         // Eingestellte maximale Batterie-Entladeleistung. (Variable Einstellung E3DC)
 const sID_Max_Charge_Power_W =`${instanzE3DC_RSCP}.EMS.MAX_CHARGE_POWER`;                               // Eingestellte maximale Batterie-Ladeleistung. (Variable Einstellung E3DC)
 const sID_DISCHARGE_START_POWER =`${instanzE3DC_RSCP}.EMS.DISCHARGE_START_POWER`;                       // Anfängliche Batterie-Entladeleistung
-const sID_PARAM_EP_RESERVE_W =`${instanzE3DC_RSCP}.EP.PARAM_0.PARAM_EP_RESERVE_W`;                      // Eingestellte Notstrom Reserve E3DC
+const sID_PARAM_EP_RESERVE_W =`${instanzE3DC_RSCP}.EP.PARAM_0.PARAM_EP_RESERVE_ENERGY`;                 // Eingestellte Notstrom Reserve E3DC
 
 const fsw = require('fs');
 // @ts-ignore
@@ -146,7 +146,7 @@ async function ScriptStart()
     // Wetterdaten beim Programmstart aktualisieren und Timer starten.
     await Speichergroesse()                                             // aktuell verfügbare Batterie Speichergröße berechnen
     if (Solcast) {await SheduleSolcast(SolcastDachflaechen);}           // Wetterdaten Solcast abrufen
-    //await UTC_Dezimal_to_MEZ();                                       // UTC Zeiten in MEZ umrechnen
+    //await UTC_Dezimal_to_MEZ();                                         // UTC Zeiten in MEZ umrechnen
     await MEZ_Regelzeiten();                                            // RE,RB und Ladeende berechnen
     await Notstromreserve();                                            // Eingestellte Notstromreserve berechnen
     await PrognosedatenAbrufen();                                       // Wetterdaten Proplanta abrufen danach wird main() augerufen
@@ -1657,7 +1657,7 @@ async function LadeleistungSoll()
         alt_milisek = dAkt.getTime();                    
         // Prüfen ob vor Regelbeginn
         if (dAkt.getTime() < RB_AstroSolarNoon.getTime()) { 
-        
+           
         // Prüfen ob nach Regelbeginn vor Regelende
         }else if(dAkt.getTime() < RE_AstroSolarNoon.getTime()){
             // Berechnen der Ladeleistung bis zum Ladeende SOC in W/sek.
