@@ -71,6 +71,9 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.3.0</h3>
+<li>Script musste an die neue Version vom Adapter e3dc-rscp 1.2.5 angepasst werden. Bitte zuerst den Adapter e3dc-rscp 1.2.5 installieren und nur dann diese Scriptversion verwenden.</li>
+
 <h3>Version: 1.2.15</h3>
 <li>Kleinere Optimierungen und Fehler behoben bei der Berechnung der Sollladeleistung.</li>
 
