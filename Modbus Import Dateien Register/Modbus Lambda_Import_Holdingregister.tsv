@@ -1,0 +1,49 @@
+_address	name	description	unit	type	len	factor	offset	formula	role	room	poll	wp	cw	isScale
+40001	Fehler_Nummer	0=kein Fehler		int16be	1	1	0		state		true			
+40002	Betriebszustand	0=off/1=Automatik/2=Manuell/3=Error		uint16be	1	1	0		state		true			
+40003	Aktuelle_Aussentemperatur	RW / Aussentemperatur min = -50.0°C; max = 80.0°C	°C	int16be	1	0.1	0		value		true	false	false	
+40004	Durchschnittliche_Aussentemp._1h	Durchschnittstemperatur der letzten 60 Minuten	°C	int16be	1	0.1	0		value		true			
+40005	Berechnete_Aussentemp.		°C	int16be	1	0.1			value		true			
+40101	Fehler_Nr_E-Manager	0=kein Fehler		int16be	1				state		true		false	
+40102	Betriebszustand_E-Manager	0=off/1=Automatik/2=Manuell/3=Error/4=Offline		uint16be	1				state		true		false	
+40103	Aktuelle_Leistung	RW / min = 0W; max = 65535W	W	int16be	1				value		true	false	false	
+40104	Leistung_aller_WP	Tatsächlicher Stromverbrauch aller konfigurierten Wärmepumpen	W	int16be	1				value		true		false	
+40105	Leistung_Sollwert_WP	Stromverbrauchssollwert als Summe für alle Wärmepumpen	W	int16be	1				value		true		false	
+41001	WP_Fehlerkategorie	0=kein/1=Meldung/2=Warnung/3=Alarm/4=Störung		uint16be	1				state		true		false	
+41002	WP_Fehler_NR	1-99		int16be	1				state		true		false	
+41003	WP-Status	0-40		uint16be	1				state		true		false	
+41004	WP-Betriebszustand			uint16be	1				state		true		false	
+41005	WP_Vorlauftemperatur		°C	int16be	1	0.01			value		true		false	
+41006	WP_Ruecklauftemperatur		°C	int16be	1	0.01			value		true		false	
+41007	WP_Volumenstromkühlkörper		l/min	int16be	1	0.01			value		true		false	
+41008	WP_Eintrittstemperatur_Luft		°C	int16be	1	0.01			value		true		false	
+41010	WP_Volumenstrom_Vorlauf		l/min	int16be	1	0.01			value		true		false	
+41011	WP_Kompressor		%	uint16be	1	0.01			value		true		false	
+41012	WP_Abgabeleistung		kW	int16be	1	0.1			value		true		false	
+41013	WP_Aufnahmeleistung		W	int16be	1				value		true		false	
+41014	WP_COP			int16be	1	0.01			value		true		false	
+41015	WP_Passwort	RW / Passwortregister zum Freigeben von Modbus-Anforderungsregistern		uint16be	1				value		true	false	false	
+41016	WP_Anfragetyp	RW / 0 = NO REQUEST, 1 = FLOW PUMP CIRCULATION, 2 = CENTRAL HEATING, 3 = CENTRAL COOLING, 4 = DOMESTIC HOT WATER		int16be	1	0.1			value		true	false	false	
+41017	WP_Vorlauftemperatur	RW / Gewünschte Vorlauftemperatur. (min. = 0,0°C, max. = 70,0°C)	°C	int16be	1	0.1			value		true	false	false	
+41018	WP_Ruecklauftemperatur	RW / Gewünschte Rücklauftemperatur. (min. = 0,0°C, max. = 65,0°C)	°C	int16be	1	0.1			value		true	false	false	
+41019	WP_Spreizung	RW / Gewünschte Temperaturdifferenz zwischen Vorlauf und Rücklauf. (min. = 0,0 K, max. = 35,0 K)	K	int16be	1	0.1			value		true	false	false	
+41020	WP_Heizstab	1 = NO-Relais für 2. Heizstufe ist aktiviert		int16be	1				state		true	true	false	
+41051	Störung_Quittieren	RW / 1=Alle aktiven WP Störungen Quittieren		uint16be	1				state		true	true	false	
+42001	Brauchwasserspeicher_Fehler_Nr	Brauchwasserspeicher Fehler Nr. 0=kein Fehler		int16be	1				state		true		false	
+42002	Brauchwasserspeicher_Betriebszustand	Brauchwasserspeicher Betriebszustand		uint16be	1				state		true		false	
+42003	Brauchwasserspeicher_Ist_Temperatur	Brauchwasserspeicher Ist-Temperatur	°C	int16be	1	0.1			value		true		false	
+42051	Brauchwasserspeicher_Set_max_Temp	RW / Einstellung für maximale Kesseltemperatur (min = 25,0 °C; max = 65,0 °C)	°C	int16be	1	0.1			value		true	false	false	
+43001	Pufferspeicher_Fehler_Nr	Pufferspeicher Fehler Nr. 0=kein Fehler		int16be	1				state		true	false	false	
+43002	Pufferspeicher_Betriebszustand			uint16be	1				state		true	false	false	
+43003	Pufferspeicher_Ist_Temperatur		°C	int16be	1	0.1			value		true	false	false	
+43004	Pufferspeicher_Ist_Temperatur_low		°C	int16be	1	0.1			value		true	false	false	
+43051	Pufferspeicher_Set_max_Temp	RW / Einstellung für maximale Kesseltemperatur (min = 25,0 °C; max = 65,0 °C)		int16be	1	0.1			value		true	false	false	
+45001	Heizkreis_Fehler_Nr	Nr. 0=kein Fehler		int16be	1				state		true	false	false	
+45002	Heizkreis_Betriebszustand			uint16be	1				state		true	false	false	
+45003	Heizkreis_Vorlauftemperatur		°C	int16be	1	0.1			value		true	false	false	
+45004	Heizkreis_Ruecklauftemperatur		°C	int16be	1	0.1			value		true	false	false	
+45006	Heizkreis_Soll_Temperatur	RW / min = 15.0°C; max = 65.0°C	°C	int16be	1	0.1			value		true	false	false	
+45007	Heizkreis_Betriebsmodus	RW / 0-7 		int16be	1				value		true	false	false	
+45051	Set_Offset_Vorlauftemp._Sollwert	RW / min = -10.0K; max = 10.0K	°C	int16be	1	0.1			value		true	false	false	
+45052	Set_Raumheizungs_Solltemperatur	RW / min = 15.0°C; max = 40.0 °C	°C	int16be	1	0.1			value		true	false	false	
+45053	Set_Soll_Raumkühltemp	RW / min = 15.0°C; max = 40.0 °C	°C	int16be	1	0.1			value		true	false	false	
