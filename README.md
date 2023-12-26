@@ -71,6 +71,10 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.3.1</h3>
+<li>Parameter in VIS können jetzt auch einzeln unter "Einstellung Manuell" geändert werden. </li>
+<li>Regelung Charge-Control wird gestoppt wenn manuelles Laden der Batterie beim E3DC aktiviert wird</li>
+
 <h3>Version: 1.3.0</h3>
 <li>Script musste an die neue Version vom Adapter e3dc-rscp 1.2.5 angepasst werden. Bitte zuerst den Adapter e3dc-rscp 1.2.5 installieren und nur dann diese Scriptversion verwenden.</li>
 
