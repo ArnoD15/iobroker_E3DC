@@ -68,6 +68,14 @@ verbunden sein.
 <p>View Import Datei für iobroker VIS</p>
 <p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/E3DC_WR_Diagramm.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/E3DC_WR_Diagramm.png" alt="VIS View E3DC WR Diagramm" style="max-width:100%;"></a></p>
 
+<h3>iobroker_VIS_View_E3DC_Zell_Temp_Diagramm.js</h3>
+<p>View Import Datei für iobroker VIS</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/VIS_View_E3DC_Zell_Temp_Diagramm.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/VIS_View_E3DC_Zell_Temp_Diagramm.png" alt="VIS View E3DC Zell Temp Diagramm" style="max-width:100%;"></a></p>
+
+<h3>iobroker_VIS_View_E3DC_SOH_Diagramm.js</h3>
+<p>View Import Datei für iobroker VIS</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/VIS_View_E3DC_SOH_Diagramm.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/VIS_View_E3DC_SOH_Diagramm.png" alt="VIS View E3DC SOH Diagramm" style="max-width:100%;"></a></p>
+
 
 <br><br>
 <a name="log"></a>
