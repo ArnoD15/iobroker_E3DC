@@ -3,9 +3,9 @@ Script zur Erfassung und Berechnung der Zählerstände.
 ***********************************************************************************************/
 //+++++++++++++++++++++++++++++++++++++  USER ANPASSUNGEN ++++++++++++++++++++++++++++++++++++++
 
-let instanz = '0_userdata.0.';                                                                                      // Instanz Script Charge-Control
-let PfadEbene1 = 'Zaehlerstaende.';                                                                                      // Pfad innerhalb der Instanz
-let PfadEbene2 = ['Zaehlerstaende.', 'Kosten.', 'History.']                                                         // Pfad innerhalb PfadEbene1
+let instanz = '0_userdata.0';                                                                                      // Instanz Script Charge-Control
+let PfadEbene1 = 'Zaehlerstaende';                                                                                      // Pfad innerhalb der Instanz
+let PfadEbene2 = ['Zaehlerstaende', 'Kosten', 'History']                                                         // Pfad innerhalb PfadEbene1
 const LogAusgabe = false                                                                                            // Zusätzliche LOG Ausgaben 
 const DebugAusgabe = false                                                                                          // Debug Ausgabe im LOG zur Fehlersuche
 const nEinspeiseVerguetung = 0.0979                                                                                 // Einspeisevergütung pro kWh
@@ -25,35 +25,39 @@ const sID_LW_Pumpe_Verbrauch_LM0 ='0_userdata.0.Heizung.LW_Pumpe_VerbrauchLM0_kW
 // e3dc-rscp Adapter
 const sID_String0_DC_Wh = 'e3dc-rscp.0.PVI.PVI_0.String_0.DC_STRING_ENERGY_ALL';                        
 const sID_String1_DC_Wh = 'e3dc-rscp.0.PVI.PVI_0.String_1.DC_STRING_ENERGY_ALL';                        
-
+const sID_POWER_BAT_W = 'e3dc-rscp.0.EMS.POWER_BAT';
 
 //++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++
 ScriptStart();
 
-const sID_Json1 = instanz + PfadEbene1 +PfadEbene2[2]+'JsonTableMonat';
-const sID_Json2 = instanz + PfadEbene1 +PfadEbene2[2]+'JsonTableTag';
-const sID_NetzbezugAltMonat = instanz + PfadEbene1 +PfadEbene2[0]+'NetzbezugAltMonat';
-const sID_NetzeinspeisungAltMonat = instanz + PfadEbene1 +PfadEbene2[0]+'NetzeinspeisungAltMonat';
-const sID_SolarproduktionAltMonat = instanz + PfadEbene1 +PfadEbene2[0]+'SolarproduktionAltMonat';
-const sID_NetzbezugAltTag = instanz + PfadEbene1 +PfadEbene2[0]+'NetzbezugAltTag';
-const sID_PV_Zaehler_DC_kWh_AltTag = instanz + PfadEbene1 +PfadEbene2[0]+'PV_Zaehler_DC_AltTag';
-const sID_NetzeinspeisungAltTag = instanz + PfadEbene1 +PfadEbene2[0]+'NetzeinspeisungAltTag';
-const sID_PV_Zaehler_AC_kWh_AltTag = instanz + PfadEbene1 +PfadEbene2[0]+'SolarproduktionAltTag';
-const sID_Mehrwertsteuersatz = instanz + PfadEbene1 +PfadEbene2[1]+'Mehrwertsteuersatz';
-const sID_Nettostrompreis = instanz + PfadEbene1 +PfadEbene2[1]+'Nettostrompreis';
-const sID_NettoGrundpreis = instanz + PfadEbene1 +PfadEbene2[1]+'NettoGrundpreis';
-const sID_StrompreisMonat = instanz + PfadEbene1 +PfadEbene2[1]+'StrompreisMonat';
-const sID_AbleseZeitraum = instanz + PfadEbene1 +PfadEbene2[0]+'AbleseZeitraum';
-const sID_NetzbezugAktuel = instanz + PfadEbene1 +PfadEbene2[0]+'NetzbezugAktuel';
-const sID_Netzeinspeisung_proz = instanz + PfadEbene1 +PfadEbene2[0]+'Netzeinspeisung_Jahr_Prozent';
-const sID_LW_Pumpe_NetzbezugAltTag = instanz + PfadEbene1 +PfadEbene2[0]+ 'LW_Pumpe_NetzbezugAltTag';              
-const sID_LW_Pumpe_NetzbezugAltMonat = instanz + PfadEbene1 +PfadEbene2[0]+ 'LW_Pumpe_NetzbezugAltMonat'; 
+const sID_NetzbezugAltMonat = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.NetzbezugAltMonat`;
+const sID_NetzeinspeisungAltMonat = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.NetzeinspeisungAltMonat`;
+const sID_SolarproduktionAltMonat =`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.SolarproduktionAltMonat`;
+const sID_NetzbezugAltTag = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.NetzbezugAltTag`;
+const sID_PV_Zaehler_DC_kWh_AltTag = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.PV_Zaehler_DC_AltTag`;
+const sID_NetzeinspeisungAltTag = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.NetzeinspeisungAltTag`;
+const sID_PV_Zaehler_AC_kWh_AltTag = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.SolarproduktionAltTag`;
+const sID_AbleseZeitraum = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.AbleseZeitraum`;
+const sID_NetzbezugAktuel = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.NetzbezugAktuel`;
+const sID_Netzeinspeisung_proz = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Netzeinspeisung_Jahr_Prozent`;
+const sID_LW_Pumpe_NetzbezugAltTag = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.LW_Pumpe_NetzbezugAltTag`;              
+const sID_LW_Pumpe_NetzbezugAltMonat = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.LW_Pumpe_NetzbezugAltMonat`; 
+const sID_LM0_Batterie_Laden_kWh = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.LM0_Batterie_Laden_kWh`;
+const sID_LM1_Batterie_Entladen_kWh = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.LM1_Batterie_Entladen_kWh`;
+const sID_Mehrwertsteuersatz = `${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Mehrwertsteuersatz`;
+const sID_Nettostrompreis = `${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Nettostrompreis`;
+const sID_NettoGrundpreis = `${instanz}.${PfadEbene1}.${PfadEbene2[1]}.NettoGrundpreis`;
+const sID_StrompreisMonat = `${instanz}.${PfadEbene1}.${PfadEbene2[1]}.StrompreisMonat`;
+const sID_Json1 = `${instanz}.${PfadEbene1}.${PfadEbene2[2]}.JsonTableMonat`;
+const sID_Json2 = `${instanz}.${PfadEbene1}.${PfadEbene2[2]}.JsonTableTag`;
 
+let Timer0 = null, Timer1 = null,Timer2 = null,Timer3 = null
+let count0 = 0, count1 = 0, count2 = 0, count3 = 0, Summe0 = 0, Summe1 = 0, Summe2 = 0, Summe3 = 0;
 
 // Wird nur beim Start vom Script aufgerufen
 async function ScriptStart()
 {
-    log(`-==== Script Zählerstände Version 1.0.10 ====-`);
+    log(`-==== Script Zählerstände Version 1.1.1 ====-`);
     await CreateState();
     log(`-==== alle Objekt ID\'s angelegt ====- `);
 }
@@ -61,24 +65,27 @@ async function ScriptStart()
 
 // Alle nötigen Objekt ID's anlegen 
 async function CreateState(){
-    createState(instanz + PfadEbene1 +PfadEbene2[0]+'NetzbezugAltMonat',    0, {name: 'lezter Zählerstand Monatsbeginn', type: 'number', unit: 'kWh' });
-    createState(instanz + PfadEbene1 +PfadEbene2[0]+'PV_Zaehler_DC_AltTag',    0, {name: 'lezter Zählerstand DC Tagesbeginn', type: 'number', unit: 'kWh' });
-    createState(instanz + PfadEbene1 +PfadEbene2[0]+'NetzeinspeisungAltMonat',    0, {name: 'lezter Zählerstand Monatsbeginn', type: 'number', unit: 'kWh' });
-    createState(instanz + PfadEbene1 +PfadEbene2[0]+'SolarproduktionAltMonat',    0, {name: 'lezter Zählerstand Monatsbeginn', type: 'number', unit: 'kWh' });
-    createState(instanz + PfadEbene1 +PfadEbene2[0]+'NetzbezugAltTag',    0, {name: 'lezter Zählerstand Tagesbeginn', type: 'number', unit: 'kWh' });
-    createState(instanz + PfadEbene1 +PfadEbene2[0]+'LW_Pumpe_NetzbezugAltTag',    0, {name: 'lezter Zählerstand Wärmepumpe Tagesbeginn', type: 'number', unit: 'kWh' });
-    createState(instanz + PfadEbene1 +PfadEbene2[0]+'LW_Pumpe_NetzbezugAltMonat',    0, {name: 'lezter Zählerstand Wärmepumpe Monatsbeginn', type: 'number', unit: 'kWh' });
-    createState(instanz + PfadEbene1 +PfadEbene2[0]+'NetzeinspeisungAltTag',    0, {name: 'lezter Zählerstand Tagesbeginn', type: 'number', unit: 'kWh' });
-    createState(instanz + PfadEbene1 +PfadEbene2[0]+'SolarproduktionAltTag',    0, {name: 'lezter Zählerstand Tagesbeginn', type: 'number', unit: 'kWh' });
-    createState(instanz + PfadEbene1 +PfadEbene2[1]+'Mehrwertsteuersatz',    16, {name: 'aktueller Mehrwertsteuersatz', type: 'number', unit: '%' });
-    createState(instanz + PfadEbene1 +PfadEbene2[1]+'Nettostrompreis',    0.2638, {name: 'Strompreis netto pro kwh', type: 'number', unit: '€' });
-    createState(instanz + PfadEbene1 +PfadEbene2[1]+'NettoGrundpreis',    8.5, {name: 'Grundpreis netto pro Monat', type: 'number', unit: '€' });
-    createState(instanz + PfadEbene1 +PfadEbene2[1]+'StrompreisMonat',    0.2638, {name: 'Strompreis pro kwh', type: 'number', unit: '€' });
-    createState(instanz + PfadEbene1 +PfadEbene2[0]+'AbleseZeitraum',    0, {name: 'lezter abgerechneter Zählerstand ', type: 'number', unit: 'kWh' });
-    createState(instanz + PfadEbene1 +PfadEbene2[0]+'NetzbezugAktuel',    0, {name: 'Aktueller Stromverbrauch im Ablesezeitraum  ', type: 'number', unit: 'kWh' });
-    createState(instanz + PfadEbene1 +PfadEbene2[2]+'JsonTableMonat', JSON.stringify([]), {name: 'Tabelle Zaehlerstaende Monat',type: 'string'});
-    createState(instanz + PfadEbene1 +PfadEbene2[2]+'JsonTableTag', JSON.stringify([]), {name: 'Tabelle Zaehlerstaende Tag',type: 'string'});
-    createState(instanz + PfadEbene1 +PfadEbene2[0]+'Netzeinspeisung_Jahr_Prozent',    0, {name: 'Aktuelle Einspeiseleistung im Jahr in %  ', type: 'number', unit: '%' });
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.NetzbezugAltMonat`,    0, {name: 'lezter Zählerstand Monatsbeginn', type: 'number', unit: 'kWh' });
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.PV_Zaehler_DC_AltTag`,    0, {name: 'lezter Zählerstand DC Tagesbeginn', type: 'number', unit: 'kWh' });
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.NetzeinspeisungAltMonat`,    0, {name: 'lezter Zählerstand Monatsbeginn', type: 'number', unit: 'kWh' });
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.SolarproduktionAltMonat`,    0, {name: 'lezter Zählerstand Monatsbeginn', type: 'number', unit: 'kWh' });
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.NetzbezugAltTag`,    0, {name: 'lezter Zählerstand Tagesbeginn', type: 'number', unit: 'kWh' });
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.LW_Pumpe_NetzbezugAltTag`,    0, {name: 'lezter Zählerstand Wärmepumpe Tagesbeginn', type: 'number', unit: 'kWh' });
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.LW_Pumpe_NetzbezugAltMonat`,    0, {name: 'lezter Zählerstand Wärmepumpe Monatsbeginn', type: 'number', unit: 'kWh' });
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.NetzeinspeisungAltTag`,    0, {name: 'lezter Zählerstand Tagesbeginn', type: 'number', unit: 'kWh' });
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.SolarproduktionAltTag`,    0, {name: 'lezter Zählerstand Tagesbeginn', type: 'number', unit: 'kWh' });
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.AbleseZeitraum`,    0, {name: 'lezter abgerechneter Zählerstand ', type: 'number', unit: 'kWh' });
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.NetzbezugAktuel`,    0, {name: 'Aktueller Stromverbrauch im Ablesezeitraum  ', type: 'number', unit: 'kWh' });
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Netzeinspeisung_Jahr_Prozent`,{'def':0,'name':'Aktuelle Einspeiseleistung im Jahr in %  ', 'type': 'number', 'unit': '%' });
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.LM0_Batterie_Laden_kWh`, {'def':0, 'name':'kWh Leistungsmesser 0 ' , 'type':'number', 'role':'value', 'unit':'kWh'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.LM1_Batterie_Entladen_kWh`, {'def':0, 'name':'kWh Leistungsmesser 0 ' , 'type':'number', 'role':'value', 'unit':'kWh'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Mehrwertsteuersatz`,    16, {name: 'aktueller Mehrwertsteuersatz', type: 'number', unit: '%' });
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Nettostrompreis`,    0.2638, {name: 'Strompreis netto pro kwh', type: 'number', unit: '€' });
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.NettoGrundpreis`,    8.5, {name: 'Grundpreis netto pro Monat', type: 'number', unit: '€' });
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.StrompreisMonat`,    0.2638, {name: 'Strompreis pro kwh', type: 'number', unit: '€' });
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.JsonTableMonat`, JSON.stringify([]), {name: 'Tabelle Zaehlerstaende Monat',type: 'string'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.JsonTableTag`, JSON.stringify([]), {name: 'Tabelle Zaehlerstaende Tag',type: 'string'});
+    
 }
 
 
@@ -186,6 +193,11 @@ schedule("5 0 * * *", async function() {
     let nPV_Zaehler_DC_kWh_Akt = (nString0_DC_Wh_Aktuell+nString1_DC_Wh_Aktuell)/1000;
     let nPV_Leistung_DC_kWh_Tag = nPV_Zaehler_DC_kWh_Akt-nPV_Zaehler_DC_kWh_AltTag;
     
+    // Batterieladung berechnen
+    let Batterieladung = round((await getStateAsync(sID_LM0_Batterie_Laden_kWh)).val + (await getStateAsync(sID_LM1_Batterie_Entladen_kWh)).val,2);
+    let WR_Verlust_kWh = (round(nPV_Zaehler_DC_kWh_Akt,2) + Batterieladung)- round(nPV_Zaehler_AC_kWh_Akt,2)
+    let WR_Verlust_proz = round(nPV_Zaehler_AC_kWh_Akt,2)/((round(nPV_Zaehler_DC_kWh_Akt,2) + Batterieladung)/100)
+
     let EigenverbrauchNeu = nPV_Leistung_AC_kWh_Tag - nEinspeiseZaehlerNeu + nBezugZaehlerNeu;
     let AutarkieNeu = (EigenverbrauchNeu-nBezugZaehlerNeu) / (EigenverbrauchNeu/100);
     
@@ -204,8 +216,10 @@ schedule("5 0 * * *", async function() {
     obj.Datum = DatumGestern;
     obj.Einspeisung = Math.round(nEinspeiseZaehlerNeu) + ' kWh';
     obj.Netzbezug = Math.round(nBezugZaehlerNeu) + ' kWh';
-    obj.Solarproduktion_AC = round(nPV_Leistung_AC_kWh_Tag,2) + ' kWh';
     obj.Solarproduktion_DC = round(nPV_Leistung_DC_kWh_Tag,2) + ' kWh';
+    obj.Batterieladung = - Batterieladung + ' kWh';
+    obj.Solarproduktion_AC = round(nPV_Leistung_AC_kWh_Tag,2) + ' kWh';
+    obj.WR_Verlust = WR_Verlust_kWh + ' kWh '+ WR_Verlust_proz + ' %';
     obj.Eigenverbrauch = Math.round(EigenverbrauchNeu) + ' kWh';
     obj.Autarkie = Math.round(AutarkieNeu) + ' %';
     obj.LwPumpeTag = Math.round(nLW_Pumpe_kWh_Tag) + ' kWh';
@@ -220,6 +234,9 @@ schedule("5 0 * * *", async function() {
     //if(arr.length > 12) arr.shift();
     if(existsState(sID_Json2)) await setStateAsync(sID_Json2, JSON.stringify(arr), true);
     
+    // Zähler Batterieladung zurücksetzen
+    await setStateAsync(sID_LM0_Batterie_Laden_kWh,0)
+    await setStateAsync(sID_LM1_Batterie_Entladen_kWh,0)
 });
 
 
@@ -249,6 +266,49 @@ function round(wert, dez) {
     let umrechnungsfaktor = Math.pow(10,dez);
     return Math.round(wert * umrechnungsfaktor) / umrechnungsfaktor;
 } 
+
+// Leistungsmesser0 Batterie laden/entladen jede minute in W/h umrechen W = P*t
+async function Wh_Leistungsmesser0() {
+  let AufDieMinute = '* * * * *';
+  Timer0 = schedule(AufDieMinute, async () => {
+    let Pmin0 = Summe0 / count0 || 0;
+    let Pmin1 = Summe1 / count1 || 0;
+    if (count0 > 0 && Summe0 > 0 || count1 > 0 && Summe1 < 0) {
+        if(count0 > 0 && Summe0 > 0){
+            await setStateAsync(sID_LM0_Batterie_Laden_kWh, (await getStateAsync(sID_LM0_Batterie_Laden_kWh)).val + Pmin0 / 60 / 1000, true); 
+            count0 = Summe0 = 0;
+        }
+        if(count1 > 0 && Summe1 < 0){
+            await setStateAsync(sID_LM1_Batterie_Entladen_kWh, (await getStateAsync(sID_LM1_Batterie_Entladen_kWh)).val + Pmin1 / 60 / 1000, true); 
+            count1 = Summe1 = 0;
+        }
+    } else if (count0 === 0 && Summe0 === 0 && count1 === 0 && Summe1 === 0) {
+      clearSchedule(Timer0);
+      Timer0 = null;
+    }
+  });
+}
+
+
+//***************************************************************************************************
+//********************************** Schedules und Trigger Bereich **********************************
+//***************************************************************************************************
+
+// Zaehler LM0 Batterie laden/entladen
+on(sID_POWER_BAT_W, function(obj) {
+    let Leistung = getState(obj.id).val;
+    if(Leistung > 0){
+		// Laden
+        if(!Timer0)Wh_Leistungsmesser0();
+		count0 ++
+		Summe0 = Summe0 + Leistung;
+	}else if (Leistung < 0){
+        // Entladen
+        if(!Timer0)Wh_Leistungsmesser0();
+		count1 ++
+		Summe1 = Summe1 + Leistung;
+    }
+});
 
 // Bei Änderung Bezugszähler soll der Verbrauch im Ablesezeitraum aktualisiert werden.
 on({id: sID_BezugZaehlerHomematic, change: "ne"}, async function (obj){	
