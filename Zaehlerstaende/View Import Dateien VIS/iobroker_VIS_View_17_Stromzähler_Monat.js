@@ -91,7 +91,7 @@
         "e00002": {
             "tpl": "tplVis-materialdesign-Input",
             "data": {
-                "oid": "0_userdata.0.PV_Anlage.Kosten.Nettostrompreis",
+                "oid": "0_userdata.0.Zaehlerstaende.Kosten.Nettostrompreis",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -197,7 +197,7 @@
         "e00003": {
             "tpl": "tplVis-materialdesign-Select",
             "data": {
-                "oid": "0_userdata.0.PV_Anlage.Kosten.Mehrwertsteuersatz",
+                "oid": "0_userdata.0.Zaehlerstaende.Kosten.Mehrwertsteuersatz",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -363,7 +363,7 @@
         "e00004": {
             "tpl": "tplVis-materialdesign-Table",
             "data": {
-                "oid": "0_userdata.0.PV_Anlage.History.JsonTableMonat",
+                "oid": "0_userdata.0.Zaehlerstaende.History.JsonTableMonat",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -1060,7 +1060,7 @@
         "e00011": {
             "tpl": "tplVis-materialdesign-Input",
             "data": {
-                "oid": "0_userdata.0.PV_Anlage.Kosten.NettoGrundpreis",
+                "oid": "0_userdata.0.Zaehlerstaende.Kosten.NettoGrundpreis",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -1166,7 +1166,7 @@
         "e00012": {
             "tpl": "tplVis-materialdesign-Input",
             "data": {
-                "oid": "0_userdata.0.PV_Anlage.Zaehlerstaende.AbleseZeitraum",
+                "oid": "0_userdata.0.Zaehlerstaende.Zaehlerstaende.AbleseZeitraum",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -1273,7 +1273,7 @@
         "e00013": {
             "tpl": "tplHqOdometer",
             "data": {
-                "oid": "0_userdata.0.PV_Anlage.Zaehlerstaende.NetzbezugAktuel",
+                "oid": "0_userdata.0.Zaehlerstaende.Zaehlerstaende.NetzbezugAktuel",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
