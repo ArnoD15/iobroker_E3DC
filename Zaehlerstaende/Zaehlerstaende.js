@@ -3,9 +3,9 @@ Script zur Erfassung und Berechnung der Zählerstände.
 ***********************************************************************************************/
 //+++++++++++++++++++++++++++++++++++++  USER ANPASSUNGEN ++++++++++++++++++++++++++++++++++++++
 
-let instanz = '0_userdata.0';                                                                                      // Instanz Script Charge-Control
-let PfadEbene1 = 'Zaehlerstaende';                                                                                      // Pfad innerhalb der Instanz
-let PfadEbene2 = ['Zaehlerstaende', 'Kosten', 'History']                                                         // Pfad innerhalb PfadEbene1
+let instanz = '0_userdata.0';                                                                                       // Instanz Script Charge-Control
+let PfadEbene1 = 'Zaehlerstaende';                                                                                  // Pfad innerhalb der Instanz
+let PfadEbene2 = ['Zaehlerstaende', 'Kosten', 'History']                                                            // Pfad innerhalb PfadEbene1
 const LogAusgabe = false                                                                                            // Zusätzliche LOG Ausgaben 
 const DebugAusgabe = false                                                                                          // Debug Ausgabe im LOG zur Fehlersuche
 const nEinspeiseVerguetung = 0.0979                                                                                 // Einspeisevergütung pro kWh
@@ -57,7 +57,7 @@ let count0 = 0, count1 = 0, count2 = 0, count3 = 0, Summe0 = 0, Summe1 = 0, Summ
 // Wird nur beim Start vom Script aufgerufen
 async function ScriptStart()
 {
-    log(`-==== Script Zählerstände Version 1.1.1 ====-`);
+    log(`-==== Script Zählerstände Version 1.1.2 ====-`);
     await CreateState();
     log(`-==== alle Objekt ID\'s angelegt ====- `);
 }
@@ -195,8 +195,8 @@ schedule("5 0 * * *", async function() {
     
     // Batterieladung berechnen
     let Batterieladung = round((await getStateAsync(sID_LM0_Batterie_Laden_kWh)).val + (await getStateAsync(sID_LM1_Batterie_Entladen_kWh)).val,2);
-    let WR_Verlust_kWh = (round(nPV_Zaehler_DC_kWh_Akt,2) + Batterieladung)- round(nPV_Zaehler_AC_kWh_Akt,2)
-    let WR_Verlust_proz = round(nPV_Zaehler_AC_kWh_Akt,2)/((round(nPV_Zaehler_DC_kWh_Akt,2) + Batterieladung)/100)
+    let WR_Verlust_kWh = round((nPV_Leistung_DC_kWh_Tag + Batterieladung)- nPV_Leistung_AC_kWh_Tag,2);
+    let WR_Verlust_proz = round((nPV_Leistung_AC_kWh_Tag/(nPV_Leistung_DC_kWh_Tag + Batterieladung)/100),2)
 
     let EigenverbrauchNeu = nPV_Leistung_AC_kWh_Tag - nEinspeiseZaehlerNeu + nBezugZaehlerNeu;
     let AutarkieNeu = (EigenverbrauchNeu-nBezugZaehlerNeu) / (EigenverbrauchNeu/100);
@@ -229,10 +229,10 @@ schedule("5 0 * * *", async function() {
     obj.PvZaehlerDC = Math.round(nPV_Zaehler_DC_kWh_Akt) + ' kWh';
         
     let arr = [];
-    if(existsState(sID_Json2)) arr = JSON.parse((await getStateAsync(sID_Json2)).val);
+    if(existsStateAsync(sID_Json2)) arr = JSON.parse((await getStateAsync(sID_Json2)).val);
     arr.unshift(obj);
     //if(arr.length > 12) arr.shift();
-    if(existsState(sID_Json2)) await setStateAsync(sID_Json2, JSON.stringify(arr), true);
+    if(existsStateAsync(sID_Json2)) await setStateAsync(sID_Json2, JSON.stringify(arr), true);
     
     // Zähler Batterieladung zurücksetzen
     await setStateAsync(sID_LM0_Batterie_Laden_kWh,0)
@@ -295,8 +295,8 @@ async function Wh_Leistungsmesser0() {
 //***************************************************************************************************
 
 // Zaehler LM0 Batterie laden/entladen
-on(sID_POWER_BAT_W, function(obj) {
-    let Leistung = getState(obj.id).val;
+on(sID_POWER_BAT_W,async function(obj) {
+    let Leistung = (await getStateAsync(obj.id)).val;
     if(Leistung > 0){
 		// Laden
         if(!Timer0)Wh_Leistungsmesser0();
