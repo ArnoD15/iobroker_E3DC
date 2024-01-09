@@ -320,5 +320,5 @@ on({id: sID_BezugZaehlerHomematic, change: "ne"}, async function (obj){
 
 // Bei Änderung Einspeisezaehler soll die Einspeiseleistung in % aktualisiert werden.
 on({id: sID_EinspeiseZaehlerHomematic, change: "ne"}, async function (obj){	
-    await setStateAsync(sID_Netzeinspeisung_proz,AnzeigeEinspeiseleistung_Prozent());
+    await setStateAsync(sID_Netzeinspeisung_proz,await AnzeigeEinspeiseleistung_Prozent());
 });
