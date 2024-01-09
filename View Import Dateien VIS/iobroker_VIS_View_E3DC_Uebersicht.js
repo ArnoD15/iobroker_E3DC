@@ -1,3 +1,4 @@
+
 {
     "settings": {
         "style": {
@@ -2726,7 +2727,7 @@
                 "icon_class": ""
             },
             "style": {
-                "left": "913px",
+                "left": "912px",
                 "top": "408px",
                 "z-index": "30",
                 "width": "195px",
@@ -8201,7 +8202,7 @@
         "e00107": {
             "tpl": "tplValueFloatBar",
             "data": {
-                "oid": "0_userdata.0.PV_Anlage.Zaehlerstaende.Netzeinspeisung_Jahr_Prozent",
+                "oid": "0_userdata.0.Zaehlerstaende.Zaehlerstaende.Netzeinspeisung_Jahr_Prozent",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -8277,7 +8278,7 @@
         "e00108": {
             "tpl": "tplValueFloat",
             "data": {
-                "oid": "0_userdata.0.PV_Anlage.Zaehlerstaende.Netzeinspeisung_Jahr_Prozent",
+                "oid": "0_userdata.0.Zaehlerstaende.Zaehlerstaende.Netzeinspeisung_Jahr_Prozent",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
