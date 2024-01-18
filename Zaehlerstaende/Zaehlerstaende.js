@@ -57,7 +57,7 @@ let count0 = 0, count1 = 0, count2 = 0, count3 = 0, Summe0 = 0, Summe1 = 0, Summ
 // Wird nur beim Start vom Script aufgerufen
 async function ScriptStart()
 {
-    log(`-==== Script Zählerstände Version 1.1.2 ====-`);
+    log(`-==== Script Zählerstände Version 1.1.3 ====-`);
     await CreateState();
     log(`-==== alle Objekt ID\'s angelegt ====- `);
 }
@@ -194,9 +194,9 @@ schedule("5 0 * * *", async function() {
     let nPV_Leistung_DC_kWh_Tag = nPV_Zaehler_DC_kWh_Akt-nPV_Zaehler_DC_kWh_AltTag;
     
     // Batterieladung berechnen
-    let Batterieladung = round((await getStateAsync(sID_LM0_Batterie_Laden_kWh)).val + (await getStateAsync(sID_LM1_Batterie_Entladen_kWh)).val,2);
+    let Batterieladung = -round((await getStateAsync(sID_LM0_Batterie_Laden_kWh)).val + (await getStateAsync(sID_LM1_Batterie_Entladen_kWh)).val,2);
     let WR_Verlust_kWh = round((nPV_Leistung_DC_kWh_Tag + Batterieladung)- nPV_Leistung_AC_kWh_Tag,2);
-    let WR_Verlust_proz = round((nPV_Leistung_AC_kWh_Tag/(nPV_Leistung_DC_kWh_Tag + Batterieladung)/100),2)
+    let WR_Verlust_proz = round(100-((nPV_Leistung_AC_kWh_Tag/((nPV_Leistung_DC_kWh_Tag + Batterieladung)/100))),2)
 
     let EigenverbrauchNeu = nPV_Leistung_AC_kWh_Tag - nEinspeiseZaehlerNeu + nBezugZaehlerNeu;
     let AutarkieNeu = (EigenverbrauchNeu-nBezugZaehlerNeu) / (EigenverbrauchNeu/100);
@@ -217,7 +217,7 @@ schedule("5 0 * * *", async function() {
     obj.Einspeisung = Math.round(nEinspeiseZaehlerNeu) + ' kWh';
     obj.Netzbezug = Math.round(nBezugZaehlerNeu) + ' kWh';
     obj.Solarproduktion_DC = round(nPV_Leistung_DC_kWh_Tag,2) + ' kWh';
-    obj.Batterieladung = - Batterieladung + ' kWh';
+    obj.Batterieladung =  Batterieladung + ' kWh';
     obj.Solarproduktion_AC = round(nPV_Leistung_AC_kWh_Tag,2) + ' kWh';
     obj.WR_Verlust = WR_Verlust_kWh + ' kWh '+ WR_Verlust_proz + ' %';
     obj.Eigenverbrauch = Math.round(EigenverbrauchNeu) + ' kWh';
