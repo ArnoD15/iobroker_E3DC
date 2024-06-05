@@ -1,7 +1,7 @@
 'use strict';
 //------------------------------------------------------------------------------------------------------
 //++++++++++++++++++++++++++++++++++++++++++  USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++++
-const LogparserSyntax = true                                                                            // Wenn true wird die LOG Ausgabe an Adapter Logparser angepasst
+const LogparserSyntax = false                                                                            // Wenn true wird die LOG Ausgabe an Adapter Logparser angepasst
 const instanzE3DC_RSCP = 'e3dc-rscp.0'                                                                 	// Instanz e3dc-rscp Adapter
 
 const instanz = '0_userdata.0';                                                                        	// Instanz Script Charge-Control
@@ -16,12 +16,19 @@ let PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUNGE
 //******************************************************************************************************
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.3.1 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.3.2 ====- ${Logparser2}`);
+
 //******************************************* Modul e3dc.rscp ******************************************
+// bitte ändert diese Variable von userData zu Power_Home_W, wenn ihr keinen Heizstab mit Einbindung des Hausverbrauchskripts verwendet
+
+//const sID_Power_Home_W =`${instanzE3DC_RSCP}.EMS.POWER_HOME`;                                         // aktueller Hausverbrauch
+const sID_Power_Home_W =`0_userdata.0.Heizung.E3DC.Hausverbrauch_ohne_Heizstab`;                        // berechnenter Hausverbrauch aus Hausverbrauchsskript
+
+
+//*******************************************Modul e3dc.rscp static variables **************************
 const sID_Batterie_SOC =`${instanzE3DC_RSCP}.EMS.BAT_SOC`;                                              // aktueller Batterie_SOC
 const sID_PvLeistung_E3DC_W =`${instanzE3DC_RSCP}.EMS.POWER_PV`;                                        // aktuelle PV_Leistung
 const sID_PvLeistung_ADD_W =`${instanzE3DC_RSCP}.EMS.POWER_ADD`;                                        // Zusätzliche Einspeiser Leistung
-const sID_Power_Home_W =`${instanzE3DC_RSCP}.EMS.POWER_HOME`;                                           // aktueller Hausverbrauch
 const sID_Power_Wallbox_W =`${instanzE3DC_RSCP}.EMS.POWER_WB_ALL`;                                      // aktuelle Wallbox Leistung
 const sID_Power_Bat_W = `${instanzE3DC_RSCP}.EMS.POWER_BAT`;                                            // aktuelle Batterie_Leistung'
 const sID_Installed_Peak_Power =`${instanzE3DC_RSCP}.EMS.INSTALLED_PEAK_POWER`;                         // Wp der installierten PV Module
@@ -2040,5 +2047,4 @@ onStop(function () {
     clearSchedule(Timer3);
     clearSchedule(TimerProplanta);
 }, 100);
-
 
