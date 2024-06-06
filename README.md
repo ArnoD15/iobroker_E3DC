@@ -74,6 +74,17 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 <ul>
+<h3>Version: 1.4.0</h3>
+<li>Wenn die Notstromreserve bis zum Sonnenaufgang reicht, wird das Entladen der Batterie freigegeben und nicht mehr gestoppt, bis die Batterie leer ist.<br>
+Die ständige Neuberechnung des Batterie SOC führte zu ständigem Ein- und Ausschalten der Entladeleistung.</li>
+<li>Neue Objekt ID "0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_ScriptHausverbrauch". Wenn das Script "Hausverbrauch" zusammen mit dem Script "my-pv Heizstab" für den Heizstab von ORuessel verwendet wird, dann
+bitte auf true setzen.   </li>
+<li>Neue Objekt ID "0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_ScriptTibber". Vorbereitung für Tibber, aktuell noch nicht umgesetzt.</li>
+<li>Geänderte Objekt ID "0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_DebugAusgabeDetail". Die LOG-Ausgabe zur Fehlersuche wurde geändert, um mir die Hilfe aus der Ferne zu erleichtern.
+Es gibt jetzt zwei LOG-Stufen DebugAusgabe, um den Programmdurchlauf zu logen und DebugAusgabeDetail, um auch die Werte und Einstellungen im Logfile auszugeben.
+Die Objekt ID 10_LogAusgabeRegelung entfällt somit. </li>
+<li>Kleinere Fehler behoben </li>
+
 <h3>Version: 1.3.1</h3>
 <li>Parameter in VIS können jetzt auch einzeln unter "Einstellung Manuell" geändert werden. </li>
 <li>Regelung Charge-Control wird gestoppt wenn manuelles Laden der Batterie beim E3DC aktiviert wird</li>
