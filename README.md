@@ -82,8 +82,7 @@ Laderegelung Batterie Vorrang vor dem Heizstab hat:<br>
     - Ladeschwelle nicht erreicht wurde<br>
     - Notstrom aktiv ist.<br>
     - Die Wallbox geladen wird.<br></li>
-	
-<li>XMLHttpRequest ausgetauscht durch axios</li>
+
 
 <h3>Version: 1.4.0</h3>
 <li>Wenn die Notstromreserve bis zum Sonnenaufgang reicht, wird das Entladen der Batterie freigegeben und nicht mehr gestoppt, bis die Batterie leer ist.<br>
