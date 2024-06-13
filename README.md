@@ -78,11 +78,11 @@ verbunden sein.
 <li>XMLHttpRequest ausgetauscht durch axios</li>
 <li>Neue Objekt ID "e3dc-rscp.0.Charge_Control.Allgemein.FreigabeHeizstab".<br>Wenn 10_ScriptHausverbrauch = true ist wird FreigabeHeizstab immer auf false gesetzt wenn die
 Laderegelung Batterie Vorrang vor dem Heizstab hat:<br>
-    - Wenn Ladeende oder Ladeende2 nicht erreicht wurde.
-    - Ladeschwelle nicht erreicht wurde
-    - Notstrom aktiv ist.
-    - Die Wallbox geladen wird.
-</li>
+    - Wenn Ladeende oder Ladeende2 nicht erreicht wurde.<br>
+    - Ladeschwelle nicht erreicht wurde<br>
+    - Notstrom aktiv ist.<br>
+    - Die Wallbox geladen wird.<br></li>
+	
 <li>XMLHttpRequest ausgetauscht durch axios</li>
 
 <h3>Version: 1.4.0</h3>
