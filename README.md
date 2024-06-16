@@ -76,13 +76,13 @@ verbunden sein.
 <ul>
 <h3>Version: 1.4.1</h3>
 <li>XMLHttpRequest ausgetauscht durch axios</li>
-<li>Neue Objekt ID "e3dc-rscp.0.Charge_Control.Allgemein.FreigabeHeizstab".<br>Wenn 10_ScriptHausverbrauch = true ist wird FreigabeHeizstab immer auf false gesetzt wenn die
-Laderegelung Batterie Vorrang vor dem Heizstab hat:<br>
-    - Wenn Ladeende oder Ladeende2 nicht erreicht wurde.<br>
-    - Ladeschwelle nicht erreicht wurde<br>
-    - Notstrom aktiv ist.<br>
-    - Die Wallbox geladen wird.<br></li>
-
+<li>Neue Konstante im Script im Bereich USER ANPASSUNGEN um die Leistung Hausverbrauch zu berechnen ohne LW-Pumpe,Heizstab oder Wallbox<br>
+- **sID_LeistungHeizstab_W** hier kann der Pfad zu den Leistungswerte Heizstab eingetragen werden, ansonsten leer lassen<br>
+- **sID_WallboxLadeLeistung_1_W**  hier kann der Pfad zu den Leistungswerte der Wallbox eingetragen werden, ansonsten leer lassen<br>
+- **sID_LeistungLW_Pumpe_W**  hier kann der Pfad zu den Leistungswerte der LW-Pumpe eingetragen werden, ansonsten leer lassen<br>
+das Ergebniss wird unter der neuen Objekt ID 0_userdata.0.Charge_Control.Allgemein.Hausverbrauch eingetragen.</li>
+<li>Die Objekt **ID 0_userdata.0.Charge_Control.Allgemein.Akt_Berechnete_Ladeleistung_W** enthält nun den vom Script ChargeControl eingestellte Ladeleistung und nicht mehr 
+die Berechnete Ladeleistung um die Batterie auf 100% zu laden</li>
 
 <h3>Version: 1.4.0</h3>
 <li>Wenn die Notstromreserve bis zum Sonnenaufgang reicht, wird das Entladen der Batterie freigegeben und nicht mehr gestoppt, bis die Batterie leer ist.<br>
