@@ -5,8 +5,13 @@ const LogparserSyntax = true                                                    
 const instanzE3DC_RSCP = 'e3dc-rscp.0'                                                                 	// Instanz e3dc-rscp Adapter
 
 const instanz = '0_userdata.0';                                                                        	// Instanz Script Charge-Control
-let PfadEbene1 = 'Charge_Control';                                                                     	// Pfad innerhalb der Instanz
-let PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUNGEN']                		// Pfad innerhalb PfadEbene1
+const PfadEbene1 = 'Charge_Control';                                                                    // Pfad innerhalb der Instanz
+const PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUNGEN']                	// Pfad innerhalb PfadEbene1
+
+const sID_LeistungHeizstab_W = ``;                                                                      // Pfad zu den Leistungswerte Heizstab eintragen ansonsten leer lassen
+const sID_WallboxLadeLeistung_1_W = 'modbus.1.inputRegisters.120_Leistung_aktuell';                     // Pfad zu den Leistungswerte Wallbox1 eintragen ansonsten leer lassen
+const sID_WallboxLadeLeistung_2_W = '';                                                                 // Pfad zu den Leistungswerte Wallbox2 eintragen ansonsten leer lassen
+const sID_LeistungLW_Pumpe_W = 'modbus.2.holdingRegisters.41013_WP_Aufnahmeleistung';                   // Pfad zu den Leistungswerte Wärmepumpe eintragen ansonsten leer lassen
 
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
 //------------------------------------------------------------------------------------------------------
@@ -18,7 +23,7 @@ let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
 log(`${Logparser1} -==== Charge-Control Version 1.4.1 ====- ${Logparser2}`);
 //****************************************** Adapter e3dc.rscp *****************************************
-let sID_Power_Home_W                                                                                    // Pfad ist abhängig von Variable ScriptHausverbrauch siehe function CheckState()
+const sID_Power_Home_W =`${instanzE3DC_RSCP}.EMS.POWER_HOME`;                                           // aktueller Hausverbrauch E3DC                                         // Pfad ist abhängig von Variable ScriptHausverbrauch siehe function CheckState()
 const sID_Batterie_SOC =`${instanzE3DC_RSCP}.EMS.BAT_SOC`;                                              // aktueller Batterie_SOC
 const sID_PvLeistung_E3DC_W =`${instanzE3DC_RSCP}.EMS.POWER_PV`;                                        // aktuelle PV_Leistung
 const sID_PvLeistung_ADD_W =`${instanzE3DC_RSCP}.EMS.POWER_ADD`;                                        // Zusätzliche Einspeiser Leistung
@@ -54,7 +59,7 @@ const axios = require('axios');
 let Resource_Id_Dach=[];
 let sID_UntererLadekorridor_W =[],sID_Ladeschwelle_Proz =[],sID_Ladeende_Proz=[],sID_Ladeende2_Proz=[],sID_RegelbeginnOffset=[],sID_RegelendeOffset=[],sID_LadeendeOffset=[],sID_Unload_Proz=[];
 let logflag,sLogPath,LogAusgabe,DebugAusgabe,DebugAusgabeDetail,Offset_sunriseEnd_min,minWertPrognose_kWh,lastDebugLogTime = 0;
-let country,ProplantaOrt,ProplantaPlz,BewoelkungsgradGrenzwert,ScriptHausverbrauch,ScriptTibber;
+let country,ProplantaOrt,ProplantaPlz,BewoelkungsgradGrenzwert,ScriptTibber;
 let Solcast,SolcastDachflaechen,SolcastAPI_key,Entladetiefe_Pro,Systemwirkungsgrad_Pro;
 let nModulFlaeche,nWirkungsgradModule,nKorrFaktor,nMinPvLeistungTag_kWh,nMaxPvLeistungTag_kWh;     
 let bStart = true,bM_Notstrom = false,StoppTriggerParameter = false,StoppTriggerEinstellungAnwahl =false,LogProgrammablauf = "",Notstrom_Status,NotstromVerwenden,Status_Notstrom_SOC=false;
@@ -62,7 +67,6 @@ let bStart = true,bM_Notstrom = false,StoppTriggerParameter = false,StoppTrigger
 const sID_Saved_Power_W =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Saved_Power_W`;             // Leistung die mit Charge-Control gerettet wurde
 const sID_PVErtragLM2 =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Saved_PowerLM2_kWh`;          // Leistungszähler für PV Leistung die mit Charge-Control gerettet wurde
 const sID_Automatik_Prognose =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Automatik`;            // true = automatik false = manuell
-const sID_FreigabeHeizstab =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.FreigabeHeizstab`;       // true = Regelung Heizstab über my-pv Heizstab Script
 const sID_Automatik_Regelung =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Automatik_Regelung`;   // true = automatik false = manuell
 const sID_NotstromAusNetz =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.NotstromAusNetz`;         // true = Notstrom aus Netz nachladen 
 const sID_EinstellungAnwahl =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.EinstellungAnwahl`;     // Einstellung 1-5
@@ -72,6 +76,7 @@ const sID_PVErtragLM3 =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Eigenverbrauch
 const sID_PrognoseAnwahl =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.PrognoseAnwahl`;           // Aktuelle Einstellung welche Prognose für Berechnung verwendet wird
 const sID_EigenverbrauchDurchschnitt_kWh =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.EigenverbrauchDurchschnitt_kWh`; // Durchschnittlicher Eigenverbrauch von 0:00 Uhr bis 8:00 Uhr
 const sID_EigenverbrauchTag =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.EigenverbrauchTag`;     // Einstellung täglicher Eigenverbrauch in VIS oder über anderes Script
+const sID_HausverbrauchBereinigt = `${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Hausverbrauch`;   // Reiner Hausverbrauch ohne WB, LW-Pumpe oder Heizstab
 const sID_AnzeigeHistoryMonat =`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.HistorySelect`;       // Umschaltung der Monate im View Prognose in VIS 
 const sID_Regelbeginn_MEZ =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Regelbeginn_MEZ`;         // Berechneter Regelbeginn in MEZ Zeit
 const sID_Regelende_MEZ =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Regelende_MEZ`;
@@ -122,7 +127,7 @@ let Speichergroesse_kWh                                                         
 let AutomatikAnwahl,AutomatikRegelung,ManuelleLadungBatt,NotstromAusNetz,EinstellungAnwahl,PrognoseAnwahl,count0 = 0, count1 = 0, count2 = 0, count3 = 0, Summe0 = 0, Summe1 = 0, Summe2 = 0, Summe3 = 0;
 let RE_AstroSolarNoon,LE_AstroSunset,RB_AstroSolarNoon,RE_AstroSolarNoon_alt_milisek,RB_AstroSolarNoon_alt_milisek,alt_milisek=0,Zeit_alt_milisek=0,ZeitE3DC_SetPowerAlt_ms=0,ReichweiteAktVerbrauchAlt=0;
 let M_Power=0,M_Power_alt=0,Set_Power_Value_W=0,Batterie_SOC_alt_Proz=0,bLadenEntladenStoppen= false,bLadenEntladenStoppen_alt=false;
-let Notstrom_SOC_Proz = 0, M_Abriegelung=false,LadenAufNotstromSOC=false,HeuteNotstromVerbraucht=false,setFreigabeHeizstabStatus=false;
+let Notstrom_SOC_Proz = 0, M_Abriegelung=false,LadenAufNotstromSOC=false,HeuteNotstromVerbraucht=false;
 let Timer0 = null, Timer1 = null,Timer2 = null,Timer3 = null,TimerProplanta= null;
 let CheckConfig = true,CheckConfig2 = true, Ladeschwelle_Proz_erreicht=false,Ladeende_Proz_erreicht=false,Ladeende2_Proz_erreicht = false,Ladeende2_Proz_erreicht2 = false;
 let SummePV_Leistung_Tag_kW =[{0:'',1:'',2:'',3:'',4:'',5:'',6:'',7:''},{0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0},{0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0},{0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0}];
@@ -145,6 +150,8 @@ async function ScriptStart()
     log(`${Logparser1} -==== alle Objekt ID\'s angelegt ====- ${Logparser2}`);
     await CheckState();
     log(`${Logparser1} -==== alle Objekte ID\'s überprüft ====- ${Logparser2}`);
+    // Proplanta Länderauswahl zuordnen
+    baseurl = await baseUrls[country];
     AutomatikAnwahl = (await getStateAsync(sID_Automatik_Prognose)).val;
     AutomatikRegelung = (await getStateAsync(sID_Automatik_Regelung)).val;
     if ((await getStateAsync(sID_Manual_Charge_Energy)).val > 0){ManuelleLadungBatt = true}else{ManuelleLadungBatt = false}
@@ -168,6 +175,7 @@ async function CreateState(){
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Notstrom_sockel`, {'def':20, 'name':'min. SOC Wert bei Tag-/Nachtgleiche 21.3./21.9.', 'type':'number', 'role':'value', 'desc':'min. SOC Wert bei Tag-/Nachtgleiche 21.3./21.9.', 'unit':'%'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Autonomiezeit`, {'def':"", 'name':'verbleibende Reichweite der Batterie in h und m', 'type':'string', 'role':'value', 'desc':'verbleibende Reichweite der Batterie in h'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Batteriekapazität_kWh`, {'def':0, 'name':'verbleibende Reichweite der Batterie in kWh', 'type':'number', 'role':'value', 'desc':'verbleibende Reichweite der Batterie in kWh', 'unit':'kWh'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Hausverbrauch`, {'def':0, 'name':'Eigenverbrauch ohne Wallbox' , 'type':'number', 'role':'value', 'unit':'W'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Notstrom_akt`, {'def':0, 'name':'aktuell berechnete Notstromreserve', 'type':'number', 'role':'value', 'desc':'aktuell berechnete Notstromreserve', 'unit':'%'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Listenelement_Nr`, {'def':0, 'name':'Aktive Anwahl Listenelement in VIS' , 'type':'number', 'role':'value'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.EinstellungAnwahl`, {'def':0, 'name':'Aktuell manuell angewählte Einstellung', 'type':'number', 'role':'State'});
@@ -189,7 +197,7 @@ async function CreateState(){
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.PrognoseAnwahl`, {'def':0, 'name':'Beide Berechnung nach min. Wert = 0 nur Proplanta=1 nur Solcast=2 Beide Berechnung nach max. Wert=3 Beide Berechnung nach Ø Wert=4 nur Solcast90=5' , 'type':'number', 'role':'value'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.FirmwareDate`, {'def':formatDate(new Date(), "DD.MM.YYYY hh:mm:ss"), 'name':'Datum Firmware Update' , 'type':'string', 'role':'value'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.LastFirmwareVersion`, {'def':"", 'name':'Alte Frimware Version' , 'type':'string', 'role':'value'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Akt_Berechnete_Ladeleistung_W`, {'def':0, 'name':'Aktuell berechnete Ladeleistung in W' , 'type':'number', 'role':'value', 'unit':'W'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Akt_Berechnete_Ladeleistung_W`, {'def':0, 'name':'Aktuell eingestellte ist Ladeleistung in W' , 'type':'number', 'role':'value', 'unit':'W'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.FreigabeHeizstab`, {'def':false, 'name':'Bei true kann der Heizstab über das my-pv Heizstab Script geregelt werden.' , 'type':'boolean', 'role':'State', 'desc':'Automatik Charge-Control ein/aus'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.HistoryJSON`, {'def':'[]', 'name':'JSON für materialdesign json chart' ,'type':'string'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.HistorySelect`, {'def':1, 'name':'Select Menü für materialdesign json chart' ,'type':'number'});
@@ -260,112 +268,82 @@ async function CreateState(){
     }
 }
 
-// Alle User Eingaben prüfen ob Werte eingetragen wurden
-async function CheckState()
-{
-    logflag = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_LogHistoryLokal`)).val
-    if(logflag == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_LogHistoryLokal enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
-        
-    sLogPath = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_LogHistoryPath`)).val
-    if(sLogPath == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_LogHistoryPath enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
-    
-    LogAusgabe = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_LogAusgabe`)).val
-    if(LogAusgabe == undefined){log(`${Logparser1} Die Objekt ID = ${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_LogAusgabe enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
-    
-    DebugAusgabe = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_DebugAusgabe`)).val
-    if(DebugAusgabe == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_DebugAusgabe enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
-    
-    DebugAusgabeDetail = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_DebugAusgabeDetail`)).val
-    if(DebugAusgabeDetail == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_DebugAusgabeDetail enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
-    
-    Offset_sunriseEnd_min = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Offset_sunriseEnd`)).val
-    if(Offset_sunriseEnd_min == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Offset_sunriseEnd enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
-    
-    minWertPrognose_kWh = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_minWertPrognose_kWh`)).val
-    if(minWertPrognose_kWh == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_minWertPrognose_kWh enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
-    
-    Entladetiefe_Pro = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_maxEntladetiefeBatterie`)).val
-    if(Entladetiefe_Pro == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_maxEntladetiefeBatterie enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
-    if(Entladetiefe_Pro < 0 || Entladetiefe_Pro >100){console.error("Entladetiefe Batterie muss zwischen 0% und 100% sein");}
+// Alle User Eingaben prüfen ob Werte eingetragen wurden und Werte zuweisen
+async function CheckState() {
+    const pfadBasis = `${instanz}.${PfadEbene1}.${PfadEbene2[4]}`;
 
-    Systemwirkungsgrad_Pro = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Systemwirkungsgrad`)).val
-    if(Systemwirkungsgrad_Pro == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Systemwirkungsgrad enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
-    if(Systemwirkungsgrad_Pro < 0 || Systemwirkungsgrad_Pro >100){console.error("Systemwirkungsgrad muss zwischen 0% und 100% sein");}
+    const objekte = [
+        { id: '10_LogHistoryLokal', varName: 'logflag', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '10_LogHistoryPath', varName: 'sLogPath', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '10_LogAusgabe', varName: 'LogAusgabe', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '10_DebugAusgabe', varName: 'DebugAusgabe', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '10_DebugAusgabeDetail', varName: 'DebugAusgabeDetail', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '10_Offset_sunriseEnd', varName: 'Offset_sunriseEnd_min', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '10_minWertPrognose_kWh', varName: 'minWertPrognose_kWh', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '10_maxEntladetiefeBatterie', varName: 'Entladetiefe_Pro', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen', min: 0, max: 100, errorMsg: 'Entladetiefe Batterie muss zwischen 0% und 100% sein' },
+        { id: '10_Systemwirkungsgrad', varName: 'Systemwirkungsgrad_Pro', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen', min: 0, max: 100, errorMsg: 'Systemwirkungsgrad muss zwischen 0% und 100% sein' },
+        { id: '10_ScriptTibber', varName: 'ScriptTibber', beschreibung: '' },
+        { id: '20_ProplantaCountry', varName: 'country', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '20_ProplantaOrt', varName: 'ProplantaOrt', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '20_ProplantaPlz', varName: 'ProplantaPlz', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '20_BewoelkungsgradGrenzwert', varName: 'BewoelkungsgradGrenzwert', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '30_AbfrageSolcast', varName: 'Solcast', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '40_ModulFlaeche', varName: 'nModulFlaeche', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '40_WirkungsgradModule', varName: 'nWirkungsgradModule', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '40_KorrekturFaktor', varName: 'nKorrFaktor', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '40_minPvLeistungTag_kWh', varName: 'nMinPvLeistungTag_kWh', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '40_maxPvLeistungTag_kWh', varName: 'nMaxPvLeistungTag_kWh', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' }
+    ];
+    const objekteSolcast = [
+        { id: '30_SolcastDachflaechen', varName: 'SolcastDachflaechen', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '30_SolcastResource_Id_Dach1', varName: 'Resource_Id_Dach[1]', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '30_SolcastResource_Id_Dach2', varName: 'Resource_Id_Dach[2]', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '30_SolcastAPI_key', varName: 'SolcastAPI_key', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+    ];
 
-    ScriptHausverbrauch = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_ScriptHausverbrauch`)).val
-    if(ScriptHausverbrauch){sID_Power_Home_W =`0_userdata.0.Heizung.E3DC.Hausverbrauch_ohne_Heizstab`;}else{sID_Power_Home_W =`${instanzE3DC_RSCP}.EMS.POWER_HOME`;}
-    try {
-        if((await getStateAsync(sID_Power_Home_W)).val == undefined){
-            log(`${Logparser1} Die Objekt ID =${sID_Power_Home_W} enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'warn');
+    for (const obj of objekte) {
+        const value = (await getStateAsync(`${pfadBasis}.${obj.id}`)).val;
+        if (value === undefined || value === null) {
+            logError(obj.beschreibung, `${pfadBasis}.${obj.id}`);
+        } else {
+            eval(`${obj.varName} = value`);
+            if (obj.min !== undefined && (value < obj.min || value > obj.max)) {
+                console.error(obj.errorMsg);
+            }
         }
-    } catch (error) {
-        log(`Fehler beim lesen von sID_Power_Home_W.`, 'warn');
-        log(`10_ScriptHausverbrauch = true aber Pfad = 0_userdata.0.Heizung.E3DC.Hausverbrauch_ohne_Heizstab existiert nicht`, 'error');
-        sID_Power_Home_W =`${instanzE3DC_RSCP}.EMS.POWER_HOME`;
-    }    
-    
-    ScriptTibber = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_ScriptTibber`)).val
+    }
 
-    country = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_ProplantaCountry`)).val
-    if(country == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_ProplantaCountry enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
-    baseurl = baseUrls[country];
-
-    ProplantaOrt = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_ProplantaOrt`)).val
-    if(ProplantaOrt == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_ProplantaOrt enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
-    
-    ProplantaPlz = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_ProplantaPlz`)).val
-    if(ProplantaPlz == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_ProplantaPlz enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
-    
-    BewoelkungsgradGrenzwert = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_BewoelkungsgradGrenzwert`)).val
-    if(BewoelkungsgradGrenzwert == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_BewoelkungsgradGrenzwert enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
-    
-    Solcast = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_AbfrageSolcast`)).val
-    if(Solcast == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_AbfrageSolcast enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
-    
     if (Solcast){
-        SolcastDachflaechen = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastDachflaechen`)).val
-        if(SolcastDachflaechen == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastDachflaechen enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
-    
-        Resource_Id_Dach[1] = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastResource_Id_Dach1`)).val
-        if(Resource_Id_Dach[1] == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastResource_Id_Dach1 enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
-    
-        if(SolcastDachflaechen == 2){
-            Resource_Id_Dach[2] = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastResource_Id_Dach2`)).val
-            if(Resource_Id_Dach[2] == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastResource_Id_Dach2 enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
+        for (const obj of objekteSolcast) {
+            const value = (await getStateAsync(`${pfadBasis}.${obj.id}`)).val;
+            if (value === undefined || value === null) {
+                logError(obj.beschreibung, `${pfadBasis}.${obj.id}`);
+            } else {
+                eval(`${obj.varName} = value`);
+                if (obj.min !== undefined && (value < obj.min || value > obj.max)) {
+                    console.error(obj.errorMsg);
+                }
+            }
         }
-
-        SolcastAPI_key = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastAPI_key`)).val
-        if(SolcastAPI_key == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastAPI_key enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
-        
         // Daten von Solcast immer zwischen 04:01 und 04:59 Uhr abholen wenn const Solcast = true
         schedule(`${Math.floor(Math.random() * (59 - 1 + 1)) + 1} 4 * * *`, function() {
             SheduleSolcast(SolcastDachflaechen);
         });
-    
     }
-    
-    nModulFlaeche = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_ModulFlaeche`)).val
-    if(nModulFlaeche == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_ModulFlaeche enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
-    
-    nWirkungsgradModule = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_WirkungsgradModule`)).val
-    if(nWirkungsgradModule == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_WirkungsgradModule enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
-    
-    nKorrFaktor = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_KorrekturFaktor`)).val
-    if(nKorrFaktor == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_KorrekturFaktor enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
-    
-    nMinPvLeistungTag_kWh = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_minPvLeistungTag_kWh`)).val
-    if(nMinPvLeistungTag_kWh == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_minPvLeistungTag_kWh enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
-    
-    nMaxPvLeistungTag_kWh = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_maxPvLeistungTag_kWh`)).val
-    if(nMaxPvLeistungTag_kWh == undefined){log(`${Logparser1} Die Objekt ID =${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_maxPvLeistungTag_kWh enthält keinen gültigen Wert, bitte prüfen ${Logparser2}`,'error');}
-    
+
     // Pfadangaben zu den Modulen Modbus und e3dc-rscp überprüfen
-    const PruefeID = [sID_Batterie_SOC,sID_PvLeistung_E3DC_W,sID_PvLeistung_ADD_W,
-    sID_Power_Home_W,sID_Power_Wallbox_W,sID_Bat_Discharge_Limit,sID_Bat_Charge_Limit,sID_Notrom_Status,sID_SPECIFIED_Battery_Capacity_0,sID_SET_POWER_MODE,
-    sID_SET_POWER_VALUE_W,sID_Max_Discharge_Power_W,sID_Max_Charge_Power_W,sID_startDischargeDefault,sID_Max_wrleistung_W,
-    sID_BAT0_Alterungszustand,sID_DISCHARGE_START_POWER,sID_PARAM_EP_RESERVE_W];
-    for (let i = 0; i < PruefeID.length; i++) {
-        if (!existsObject(PruefeID[i])){log(`${Logparser1} Pfad = ${PruefeID[i]} existiert nicht, bitte prüfen ${Logparser2}`,'error');}
+    const PruefeID = [
+        sID_Batterie_SOC, sID_PvLeistung_E3DC_W, sID_PvLeistung_ADD_W,
+        sID_Power_Home_W, sID_Power_Wallbox_W, sID_Bat_Discharge_Limit, sID_Bat_Charge_Limit,
+        sID_Notrom_Status, sID_SPECIFIED_Battery_Capacity_0, sID_SET_POWER_MODE, sID_SET_POWER_VALUE_W,
+        sID_Max_Discharge_Power_W, sID_Max_Charge_Power_W, sID_startDischargeDefault, sID_Max_wrleistung_W,
+        sID_BAT0_Alterungszustand, sID_DISCHARGE_START_POWER, sID_PARAM_EP_RESERVE_W
+    ];
+
+    for (const id of PruefeID) {
+        if (!existsObject(id)) {
+            logError('existiert nicht, bitte prüfen', id);
+        }
     }
 }
 
@@ -399,14 +377,7 @@ async function Ladesteuerung()
         await DebugLog();
         lastDebugLogTime = currentTime;
     }
-    // Heizstab Freigabe setzen wenn Script Hausverbrauch verwendet wird.
-    if (setFreigabeHeizstabStatus != (await getStateAsync(sID_FreigabeHeizstab)).val && ScriptHausverbrauch){
-        await setStateAsync(sID_FreigabeHeizstab,setFreigabeHeizstabStatus)
-        log(`${Logparser1} -==== Freigabe Heizstab wurde auf ${setFreigabeHeizstabStatus} gesetzt ====- ${Logparser2}`,'warn')
-    }
-    setFreigabeHeizstabStatus = (WallboxPower === 0) ? true : false;
-    
-    
+        
     // ProgrammAblauf kann nach LOG Erstellung gelöscht werden
     LogProgrammablauf = "";
 
@@ -422,7 +393,6 @@ async function Ladesteuerung()
         EMS(true);
         // Wenn NotstromVerwenden einmal true war, wird mit dem Merker bM_Notstrom das Ausschalten der Lade/Enladeleistung bis Sonnenaufgang verhindert
         if (NotstromVerwenden && !bM_Notstrom){bM_Notstrom = true };
-        setFreigabeHeizstabStatus = false;
     }else if(Batterie_SOC_Proz <= Notstrom_SOC_Proz && (new Date() > getAstroDate("sunset") && !bM_Notstrom || new Date() < getAstroDate("sunrise") && !bM_Notstrom)){
         // EMS Laden/Endladen ausschalten
         LogProgrammablauf += '2,';
@@ -526,7 +496,6 @@ async function Ladesteuerung()
                     if (!Ladeende_Proz_erreicht){
                         LogProgrammablauf += '23,';
                         M_Power = maximumLadeleistung_W;
-                        setFreigabeHeizstabStatus = false;
                     }else if (!Ladeende2_Proz_erreicht){
                         LogProgrammablauf += '24,';
                         // Berechnen der Ladeleistung bis zum Ladeende2 SOC in W/sek.
@@ -568,7 +537,6 @@ async function Ladesteuerung()
                         // SOC Ladeende2 nicht erreicht und ausreichend PV-Leistung vorhanden. (idle)
                         LogProgrammablauf += '31,';
                         M_Power = maximumLadeleistung_W;
-                        setFreigabeHeizstabStatus = false;
                     }else if(Ladeende2_Proz_erreicht2 && PV_Leistung_Summe_W -Power_Home_W > 0){
                         // SOC Ladeende2 erreicht und PV-Leistung höher als Eigenverbrauch. (0 W)
                         LogProgrammablauf += '32,';
@@ -584,7 +552,6 @@ async function Ladesteuerung()
                 // SOC Ladeschwelle wurde nicht erreicht.Regelung E3DC übelassen (Standard:laden mit voller PV-Leistung)
                 LogProgrammablauf += '10,';
                 M_Power = maximumLadeleistung_W;
-                setFreigabeHeizstabStatus = false;
             }
 
             // Zähler wieviel Leistung mit Charge-Control gesichert wurde
@@ -636,11 +603,13 @@ async function Ladesteuerung()
                     Set_Power_Value_W = 0;
                     await setStateAsync(sID_SET_POWER_MODE,1); // Idle
                     await setStateAsync(sID_SET_POWER_VALUE_W,0)
+                    await setStateAsync(sID_out_Akt_Ladeleistung_W,0);
                     bLadenEntladenStoppen = false
                 }else if(M_Power == maximumLadeleistung_W ){
                 // E3DC die Steuerung überlassen, dann wird mit der maximal möglichen Ladeleistung geladen oder entladen
                     Set_Power_Value_W = 0
                     await setStateAsync(sID_SET_POWER_MODE,0); // Normal
+                    await setStateAsync(sID_out_Akt_Ladeleistung_W,maximumLadeleistung_W);
                     
                 }else if(M_Power > 0){
                     // Beim ersten aufruf Wert M_Power übernehmen oder wenn Einspeisegrenze erreicht wurde und erst dann langsam erhöhen oder senken
@@ -654,7 +623,7 @@ async function Ladesteuerung()
                     }
                     await setStateAsync(sID_SET_POWER_MODE,3); // Laden
                     await setStateAsync(sID_SET_POWER_VALUE_W,Set_Power_Value_W) // E3DC bleib beim Laden im Schnitt um ca 82 W unter der eingestellten Ladeleistung
-                    
+                    await setStateAsync(sID_out_Akt_Ladeleistung_W,Set_Power_Value_W);
             
                 }else if(M_Power < 0 && Batterie_SOC_Proz > Notstrom_SOC_Proz){
                     // Beim ersten aufruf Wert M_Power übernehmen und erst dann langsam erhöhen oder senken
@@ -671,6 +640,7 @@ async function Ladesteuerung()
                     }
                     await setStateAsync(sID_SET_POWER_MODE,2); // Entladen
                     await setStateAsync(sID_SET_POWER_VALUE_W,Math.abs(Set_Power_Value_W)) // E3DC bleib beim Entladen im Schnitt um ca 65 W über der eingestellten Ladeleistung
+                    await setStateAsync(sID_out_Akt_Ladeleistung_W,Set_Power_Value_W);
                 }
                 
             }
@@ -1150,7 +1120,7 @@ async function writelog() {
             if (!err) {  
                 fsw.appendFileSync(sLogPath, string );
             }else{
-                if(logflag)log("-==== History lokal sichern: Routine writelog - Logfile nicht gefunden - wird angelegt ====-");
+                log("-==== History lokal sichern: Routine writelog - Logfile nicht gefunden - wird angelegt ====-");
                 fsw.writeFileSync(sLogPath, string );
             }
         });         
@@ -1751,35 +1721,32 @@ async function LadeNotstromSOC(){
     LadenAufNotstromSOC=false
 }
 
-async function LadeleistungSoll()
-{
-    let dAkt = new Date();
-    let Ladeende_Proz = (await getStateAsync(sID_Ladeende_Proz[EinstellungAnwahl])).val                             // Parameter Ladeende
-    let Ladeende2_Proz = (await getStateAsync(sID_Ladeende2_Proz[EinstellungAnwahl])).val                           // Parameter Ladeende2
-    let Ladeleistung = 0
-    let Akk_max_Charge_Power_W = (await getStateAsync(sID_Max_Charge_Power_W)).val; 
-    
-     
-    // Neuberechnung der Ladeleistung erfolgt, nach Ablauf von höchstens 6 sek. oder wenn die Parameter sich geändert haben.
-    if((dAkt.getTime() - alt_milisek) > 36000 || CheckConfig2){
-        CheckConfig2 = false;
-        alt_milisek = dAkt.getTime();                    
-        // Prüfen ob vor Regelbeginn
-        if (dAkt.getTime() < RB_AstroSolarNoon.getTime()) { 
-        // Prüfen ob nach Regelbeginn vor Regelende
-        }else if(dAkt.getTime() < RE_AstroSolarNoon.getTime()){
-            // Berechnen der Ladeleistung bis zum Ladeende SOC in W/sek.
-            Ladeleistung = Math.round(((Ladeende_Proz - Batterie_SOC_Proz)*Speichergroesse_kWh*10*3600) / (Math.trunc((RE_AstroSolarNoon.getTime()-dAkt.getTime())/1000)));
-        // Prüfen ob nach Regelende vor Ladeende
-        }else if(dAkt.getTime() < LE_AstroSunset.getTime()){
-            // Berechnen der Ladeleistung bis zum Ladeende2 SOC in W/sek.
-            Ladeleistung = Math.round(((Ladeende2_Proz - Batterie_SOC_Proz)*Speichergroesse_kWh*10*3600) / (Math.trunc((LE_AstroSunset.getTime()-dAkt.getTime())/1000)));
-        }
-        if (Ladeleistung > Akk_max_Charge_Power_W){Ladeleistung = Akk_max_Charge_Power_W}
-        if (Ladeleistung != (await getStateAsync(sID_out_Akt_Ladeleistung_W)).val) {await setStateAsync(sID_out_Akt_Ladeleistung_W,Ladeleistung)}
+// Funktion zur Berechnung der reinen Hausverbrauchsleistung
+async function berechneReinenHausverbrauch() {
+    try {
+        let powerHome = (await getStateAsync(sID_Power_Home_W)).val;
+
+        let leistungHeizstab = (sID_LeistungHeizstab_W) ? (await getStateAsync(sID_LeistungHeizstab_W)).val : 0;
+        let wallboxLeistung1 = (sID_WallboxLadeLeistung_1_W) ? (await getStateAsync(sID_WallboxLadeLeistung_1_W)).val : 0;
+        let wallboxLeistung2 = (sID_WallboxLadeLeistung_2_W) ? (await getStateAsync(sID_WallboxLadeLeistung_2_W)).val : 0;
+        let leistungWaermepumpe = (sID_LeistungLW_Pumpe_W) ? (await getStateAsync(sID_LeistungLW_Pumpe_W)).val : 0;
+
+        // Berechne die reine Hausverbrauchsleistung
+        let reinerHausverbrauch = powerHome - leistungHeizstab - wallboxLeistung1 - wallboxLeistung2 - leistungWaermepumpe;
+
+        // Speichere das Ergebnis
+        setState(sID_HausverbrauchBereinigt, reinerHausverbrauch);
+
+        //log(`Reiner Hausverbrauch: ${reinerHausverbrauch} W`);
+    } catch (error) {
+        log(`Fehler bei der Berechnung des reinen Hausverbrauchs: ${error.message}`);
     }
 }
 
+// Funktion zur Protokollierung von Fehlern
+function logError(message, id) {
+    log(`${Logparser1} Die Objekt ID = ${id} ${message} ${Logparser2}`, 'error');
+}
 //***************************************************************************************************
 //********************************** Schedules und Trigger Bereich **********************************
 //***************************************************************************************************
@@ -1829,6 +1796,7 @@ on(sID_Power_Home_W,async function(obj) {
         await setStateAsync(sID_PVErtragLM3,0)
     
     }
+    await berechneReinenHausverbrauch()
 });
 
 // Wird aufgerufen wenn State NotstromAusNetz in VIS geändert wird
@@ -2004,8 +1972,8 @@ on({ id: allParameterIDs, change: "ne" }, async function (obj) {
     const index = arrayID_Parameters.findIndex(params => params.includes(obj.id));
     if (EinstellungAnwahl === index) {
         log(`${Logparser1}-==== User Parameter ${obj.id.split('.')[4]} wurde in ${obj.state.val} geändert ====-${Logparser2}`, 'warn');
-        await MEZ_Regelzeiten();
         CheckConfig = true;
+        await MEZ_Regelzeiten();
     }
 });
 
@@ -2063,8 +2031,7 @@ if (existsState(sID_PVErtragLM1)){
 
 schedule('*/3 * * * * *', async function() {
     // Vor Regelung Skript Startdurchlauf erst abwarten  
-    if(!bStart && AutomatikRegelung && !ManuelleLadungBatt){Ladesteuerung();LadeleistungSoll();}
-    else if (!bStart && (!AutomatikRegelung || ManuelleLadungBatt)){LadeleistungSoll()}
+    if(!bStart && AutomatikRegelung && !ManuelleLadungBatt){Ladesteuerung();}
 });
 
 // jeden Monat am 1 History Daten Tag aktuelles Monat Löschen
@@ -2117,4 +2084,3 @@ onStop(function () {
     clearSchedule(Timer3);
     clearSchedule(TimerProplanta);
 }, 100);
-
