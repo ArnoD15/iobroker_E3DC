@@ -12,7 +12,7 @@ const sID_LeistungHeizstab_W = ``;                                              
 const sID_WallboxLadeLeistung_1_W = 'modbus.1.inputRegisters.120_Leistung_aktuell';                     // Pfad zu den Leistungswerte Wallbox1 eintragen ansonsten leer lassen
 const sID_WallboxLadeLeistung_2_W = '';                                                                 // Pfad zu den Leistungswerte Wallbox2 eintragen ansonsten leer lassen
 const sID_LeistungLW_Pumpe_W = 'modbus.2.holdingRegisters.41013_WP_Aufnahmeleistung';                   // Pfad zu den Leistungswerte Wärmepumpe eintragen ansonsten leer lassen
-
+const BUFFER_SIZE= 5;                                                                                   // Größe des Buffers für gleitenden Durchschnitt
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
 //------------------------------------------------------------------------------------------------------
 
@@ -54,8 +54,6 @@ const fsw = require('fs');
 // @ts-ignore
 const axios = require('axios');
 
-
-
 let Resource_Id_Dach=[];
 let sID_UntererLadekorridor_W =[],sID_Ladeschwelle_Proz =[],sID_Ladeende_Proz=[],sID_Ladeende2_Proz=[],sID_RegelbeginnOffset=[],sID_RegelendeOffset=[],sID_LadeendeOffset=[],sID_Unload_Proz=[];
 let logflag,sLogPath,LogAusgabe,DebugAusgabe,DebugAusgabeDetail,Offset_sunriseEnd_min,minWertPrognose_kWh,lastDebugLogTime = 0;
@@ -63,6 +61,7 @@ let country,ProplantaOrt,ProplantaPlz,BewoelkungsgradGrenzwert,ScriptTibber;
 let Solcast,SolcastDachflaechen,SolcastAPI_key,Entladetiefe_Pro,Systemwirkungsgrad_Pro;
 let nModulFlaeche,nWirkungsgradModule,nKorrFaktor,nMinPvLeistungTag_kWh,nMaxPvLeistungTag_kWh;     
 let bStart = true,bM_Notstrom = false,StoppTriggerParameter = false,StoppTriggerEinstellungAnwahl =false,LogProgrammablauf = "",Notstrom_Status,NotstromVerwenden,Status_Notstrom_SOC=false;
+let hausverbrauchBuffer = []; // Buffer für Hausverbrauchswerte
 
 const sID_Saved_Power_W =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Saved_Power_W`;             // Leistung die mit Charge-Control gerettet wurde
 const sID_PVErtragLM2 =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Saved_PowerLM2_kWh`;          // Leistungszähler für PV Leistung die mit Charge-Control gerettet wurde
@@ -1730,14 +1729,35 @@ async function berechneReinenHausverbrauch() {
         let wallboxLeistung1 = (sID_WallboxLadeLeistung_1_W) ? (await getStateAsync(sID_WallboxLadeLeistung_1_W)).val : 0;
         let wallboxLeistung2 = (sID_WallboxLadeLeistung_2_W) ? (await getStateAsync(sID_WallboxLadeLeistung_2_W)).val : 0;
         let leistungWaermepumpe = (sID_LeistungLW_Pumpe_W) ? (await getStateAsync(sID_LeistungLW_Pumpe_W)).val : 0;
-
+        
+        // Fehler abfangen das Wallbox sporadisch Leistungswerte über 35000 W übermittelt ohne das geladen wird
+        wallboxLeistung1 = (wallboxLeistung1 < 35000) ? wallboxLeistung1 : 0;
+       
         // Berechne die reine Hausverbrauchsleistung
-        let reinerHausverbrauch = powerHome - leistungHeizstab - wallboxLeistung1 - wallboxLeistung2 - leistungWaermepumpe;
+        let reinerHausverbrauch_W = powerHome - leistungHeizstab - wallboxLeistung1 - wallboxLeistung2 - leistungWaermepumpe;
+        
+        // Sicherstellen, dass der Hausverbrauch ohne Heizstab nicht negativ ist
+        reinerHausverbrauch_W = (reinerHausverbrauch_W < 0) ? 0 : reinerHausverbrauch_W;
 
+        // Wert in den Buffer einfügen
+        hausverbrauchBuffer.push(reinerHausverbrauch_W);
+        
+        // Buffergröße begrenzen
+        if (hausverbrauchBuffer.length > BUFFER_SIZE) {
+            hausverbrauchBuffer.shift(); // Ältesten Wert entfernen
+        }
+
+        // Gleitenden Durchschnitt berechnen
+        //let averageReinerHausverbrauch_W = hausverbrauchBuffer.reduce((acc, val) => acc + val, 0) / hausverbrauchBuffer.length;
+        let averageReinerHausverbrauch_W = Math.round(hausverbrauchBuffer.reduce((acc, val) => acc + val, 0) / hausverbrauchBuffer.length);
+        
+        // Durchschnitt verwenden wenn der Berechnete Hausverbrauch 0 W ist
+        reinerHausverbrauch_W = (reinerHausverbrauch_W == 0) ? averageReinerHausverbrauch_W : reinerHausverbrauch_W;
+        
         // Speichere das Ergebnis
-        setState(sID_HausverbrauchBereinigt, reinerHausverbrauch);
-
-        //log(`Reiner Hausverbrauch: ${reinerHausverbrauch} W`);
+        setState(sID_HausverbrauchBereinigt, reinerHausverbrauch_W);
+        
+        //log(`averageReinerHausverbrauch_W: ${averageReinerHausverbrauch_W} W`);
     } catch (error) {
         log(`Fehler bei der Berechnung des reinen Hausverbrauchs: ${error.message}`);
     }
@@ -2084,3 +2104,4 @@ onStop(function () {
     clearSchedule(Timer3);
     clearSchedule(TimerProplanta);
 }, 100);
+
