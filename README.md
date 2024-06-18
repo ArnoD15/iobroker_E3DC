@@ -76,24 +76,24 @@ verbunden sein.
 
 ### Version: 1.4.1
 * XMLHttpRequest ausgetauscht durch axios
-* Neue Konstante im Script im Bereich USER ANPASSUNGEN um die Leistung Hausverbrauch zu berechnen ohne LW-Pumpe,Heizstab oder Wallbox
-__sID_LeistungHeizstab_W hier kann der Pfad zu den Leistungswerte Heizstab eingetragen werden, ansonsten leer lassen
-__sID_WallboxLadeLeistung_1_W hier kann der Pfad zu den Leistungswerte der Wallbox eingetragen werden, ansonsten leer lassen
-__sID_LeistungLW_Pumpe_W hier kann der Pfad zu den Leistungswerte der LW-Pumpe eingetragen werden, ansonsten leer lassen
-das Ergebniss wird unter der neuen Objekt ID 0_userdata.0.Charge_Control.Allgemein.Hausverbrauch eingetragen. - [Issue #3](https://github.com/ArnoD15/iobroker_E3DC/issues/3)
-* Objekt ID 0_userdata.0.Charge_Control.Allgemein.Akt_Berechnete_Ladeleistung_W enthält nun den vom Script ChargeControl eingestellte Ladeleistung und nicht mehr 
+* Neue Konstante im Script im Bereich USER ANPASSUNGEN um die Leistung Hausverbrauch zu berechnen ohne LW-Pumpe,Heizstab oder Wallbox<br>
+__sID_LeistungHeizstab_W__ hier kann der Pfad zu den Leistungswerte Heizstab eingetragen werden, ansonsten leer lassen<br>
+__sID_WallboxLadeLeistung_1_W__ hier kann der Pfad zu den Leistungswerte der Wallbox eingetragen werden, ansonsten leer lassen<br>
+__sID_LeistungLW_Pumpe_W__ hier kann der Pfad zu den Leistungswerte der LW-Pumpe eingetragen werden, ansonsten leer lassen<br>
+das Ergebniss wird unter der neuen Objekt ID __0_userdata.0.Charge_Control.Allgemein.Hausverbrauch__ eingetragen. - [Issue #3](https://github.com/ArnoD15/iobroker_E3DC/issues/3)
+* Objekt ID __0_userdata.0.Charge_Control.Allgemein.Akt_Berechnete_Ladeleistung_W__ enthält nun den vom Script ChargeControl eingestellte Ladeleistung und nicht mehr 
 die Berechnete Ladeleistung um die Batterie auf 100% zu laden
 
-<h3>Version: 1.4.0</h3>
-<li>Wenn die Notstromreserve bis zum Sonnenaufgang reicht, wird das Entladen der Batterie freigegeben und nicht mehr gestoppt, bis die Batterie leer ist.<br>
-Die ständige Neuberechnung des Batterie SOC führte zu ständigem Ein- und Ausschalten der Entladeleistung.</li>
-<li>Neue Objekt ID "0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_ScriptHausverbrauch". Wenn das Script "Hausverbrauch" zusammen mit dem Script "my-pv Heizstab" für den Heizstab von ORuessel verwendet wird, dann
-bitte auf true setzen.   </li>
-<li>Neue Objekt ID "0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_ScriptTibber". Vorbereitung für Tibber, aktuell noch nicht umgesetzt.</li>
-<li>Geänderte Objekt ID "0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_DebugAusgabeDetail". Die LOG-Ausgabe zur Fehlersuche wurde geändert, um mir die Hilfe aus der Ferne zu erleichtern.
+### Version: 1.4.0
+* Wenn die Notstromreserve bis zum Sonnenaufgang reicht, wird das Entladen der Batterie freigegeben und nicht mehr gestoppt, bis die Batterie leer ist.<br>
+Die ständige Neuberechnung des Batterie SOC führte zu ständigem Ein- und Ausschalten der Entladeleistung.
+* Neue Objekt ID "0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_ScriptHausverbrauch". Wenn das Script "Hausverbrauch" zusammen mit dem Script "my-pv Heizstab" für den Heizstab von ORuessel verwendet wird, dann
+bitte auf true setzen.
+* Neue Objekt ID "0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_ScriptTibber". Vorbereitung für Tibber, aktuell noch nicht umgesetzt.
+* Geänderte Objekt ID "0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_DebugAusgabeDetail". Die LOG-Ausgabe zur Fehlersuche wurde geändert, um mir die Hilfe aus der Ferne zu erleichtern.
 Es gibt jetzt zwei LOG-Stufen DebugAusgabe, um den Programmdurchlauf zu logen und DebugAusgabeDetail, um auch die Werte und Einstellungen im Logfile auszugeben.
-Die Objekt ID 10_LogAusgabeRegelung entfällt somit. </li>
-<li>Script aufgeräumt und optimiert</li>
+Die Objekt ID 10_LogAusgabeRegelung entfällt somit.
+* Script aufgeräumt und optimiert
 
 <h3>Version: 1.3.1</h3>
 <li>Parameter in VIS können jetzt auch einzeln unter "Einstellung Manuell" geändert werden. </li>
