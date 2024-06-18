@@ -468,7 +468,7 @@
         "e00007": {
             "tpl": "tplValueFloat",
             "data": {
-                "oid": "0_userdata.0.E3DC_Wallbox.Allgemein.Hausverbrauch",
+                "oid": "0_userdata.0.Charge_Control.Allgemein.Hausverbrauch",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -1900,8 +1900,8 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "signals-oid-0": "0_userdata.0.E3DC_Wallbox.Allgemein.Hausverbrauch",
-                "signals-oid-1": "0_userdata.0.E3DC_Wallbox.Allgemein.Hausverbrauch"
+                "signals-oid-0": "0_userdata.0.Charge_Control.Allgemein.Hausverbrauch",
+                "signals-oid-1": "0_userdata.0.Charge_Control.Allgemein.Hausverbrauch"
             },
             "style": {
                 "left": "861px",
@@ -2351,8 +2351,8 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "signals-oid-0": "0_userdata.0.E3DC_Wallbox.Allgemein.Hausverbrauch",
-                "signals-oid-1": "0_userdata.0.E3DC_Wallbox.Allgemein.Hausverbrauch"
+                "signals-oid-0": "0_userdata.0.Charge_Control.Allgemein.Hausverbrauch",
+                "signals-oid-1": "0_userdata.0.Charge_Control.Allgemein.Hausverbrauch"
             },
             "style": {
                 "left": "829px",
