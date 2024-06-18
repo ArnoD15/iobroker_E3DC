@@ -13,7 +13,7 @@ const sID_Batterie_Status   = `${instanzE3DC_RSCP}.EMS.BAT_SOC`; // Battery stat
 // selbst definierte Variablen
 const sID_Eigenverbrauch    = '0_userdata.0.Heizung.E3DC.Hausverbrauch_ohne_Heizstab'; // Household consumption power
 const sID_M_Power_W         = '0_userdata.0.Charge_Control.Allgemein.Akt_Berechnete_Ladeleistung_W'; // Calculated required charging power
-const sID_Batterie_Ladeende = '0_userdata.0.Charge_Control.Parameter.Ladeende2_0'; // Ladeende status set by the battery script
+const sID_Freigabe_Heizstab = '0_userdata.0.Charge_Control.Allgemein.FreigabeHeizstab'; // Release heating element from charge control script
 
 // Heistab Modbus Variablen 
 const sID_LeistungHeizstab_W        = `${instanzHeizstab_Modbus}.holdingRegisters.1000_Power`; // Current power consumption of heating element in W
@@ -51,20 +51,20 @@ async function fetchAndUpdateHeizstabLeistung() {
             getStateAsync(sID_previousHeizstabLeistung_W),
             getStateAsync(sID_Power_Mode),
             getStateAsync(sID_Batterie_Status),
-            getStateAsync(sID_Batterie_Ladeende)
+            getStateAsync(sID_Freigabe_Heizstab)
         ]);
 
         const [
             Netz_Leistung, LeistungHeizstab, Eigenverbrauch, M_Power, Batterie_Leistung,
             IstTempHeizstab, MaxTempHeizstab, PV_Leistung, SollLeistungHeizstab, previousHeizstabLeistung,
-            Power_Mode, Batterie_Status, Batterie_Ladeende_Status
+            Power_Mode, Batterie_Status, Freigabe_Heizstab_Status
         ] = states;
 
         // Ensure all states are fetched correctly
         const stateNames = [
             'Netz_Leistung', 'LeistungHeizstab', 'Eigenverbrauch', 'M_Power', 'Batterie_Leistung',
             'IstTempHeizstab', 'MaxTempHeizstab', 'PV_Leistung', 'SollLeistungHeizstab', 'previousHeizstabLeistung',
-            'Power_Mode', 'Batterie_Status', 'Batterie_Ladeende_Status'
+            'Power_Mode', 'Batterie_Status', 'Freigabe_Heizstab_Status'
         ];
 
         stateNames.forEach((name, index) => {
@@ -81,14 +81,14 @@ async function fetchAndUpdateHeizstabLeistung() {
         let [
             NetzLeistung_W, LeistungHeizstab_W, Hausverbrauch_W, M_Power_W, BatterieLeistung_W,
             IstTemp, MaxTemp, PV_Leistung_W, SollLeistungHeizstab_W, previousHeizstabLeistung_W,
-            PowerMode, BatterieStatus, BatterieLadeende
+            PowerMode, BatterieStatus, FreigabeHeizstab
         ] = states.map(state => state.val);
 
         console.log(`Zustände abgefragt: Netz=${NetzLeistung_W}W, PV=${PV_Leistung_W}W, Hausverbrauch=${Hausverbrauch_W}W, LeistungHeizstab=${LeistungHeizstab_W}W, Batterie=${BatterieLeistung_W}W, IstTemp=${IstTemp}°C, MaxTemp=${MaxTemp}°C, SollLeistungHeizstab=${SollLeistungHeizstab_W}W, PowerMode=${PowerMode}, BatterieStatus=${BatterieStatus}, BatterieLadeende=${BatterieLadeende}`);
 
         // Bedingungen prüfen
-        if (PowerMode === 2 && !BatterieLadeende) {
-            console.log('Power_Mode ist 2 und Batterie hat nicht Ladeende erreicht. Heizstab wird nicht aktiviert.');
+        if (PowerMode === 2 && !FreigabeHeizstab) {
+            console.log('Power_Mode ist 2 und keine Freigabe von Charge-Control. Heizstab wird nicht aktiviert.');
             await setStateAsync(sID_Soll_LeistungHeizstab_W, 0);
             return;
         }
@@ -142,7 +142,7 @@ const ids = [
     sID_M_Power_W,
     sID_Power_Mode,
     sID_Batterie_Status,
-    sID_Batterie_Ladeende
+    sID_Freigabe_Heizstab
 ];
 
 ids.forEach(id => {
