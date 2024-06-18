@@ -76,13 +76,13 @@ verbunden sein.
 
 ### Version: 1.4.1
 * XMLHttpRequest ausgetauscht durch axios
-* Neue Konstante im Script im Bereich USER ANPASSUNGEN um die Leistung Hausverbrauch zu berechnen ohne LW-Pumpe,Heizstab oder Wallbox<br>
-__sID_LeistungHeizstab_W__ hier kann der Pfad zu den Leistungswerte Heizstab eingetragen werden, ansonsten leer lassen<br>
-__sID_WallboxLadeLeistung_1_W__ hier kann der Pfad zu den Leistungswerte der Wallbox eingetragen werden, ansonsten leer lassen<br>
-__sID_LeistungLW_Pumpe_W__ hier kann der Pfad zu den Leistungswerte der LW-Pumpe eingetragen werden, ansonsten leer lassen<br>
-das Ergebniss wird unter der neuen Objekt ID __0_userdata.0.Charge_Control.Allgemein.Hausverbrauch__ eingetragen. - [Issue #3](https://github.com/ArnoD15/iobroker_E3DC/issues/3)
-* Objekt ID __0_userdata.0.Charge_Control.Allgemein.Akt_Berechnete_Ladeleistung_W__ enthält nun den vom Script ChargeControl eingestellte Ladeleistung und nicht mehr 
-die Berechnete Ladeleistung um die Batterie auf 100% zu laden
+* Neue Konstante im Script im Bereich USER ANPASSUNGEN um die Leistung Hausverbrauch zu berechnen ohne LW-Pumpe, Heizstab oder Wallbox<br>
+__sID_LeistungHeizstab_W__ hier kann der Pfad zu den Leistungswerten Heizstab eingetragen werden, ansonsten leer lassen<br>
+__sID_WallboxLadeLeistung_1_W__ hier kann der Pfad zu den Leistungswerten der Wallbox eingetragen werden, ansonsten leer lassen<br>
+__sID_LeistungLW_Pumpe_W__ hier kann der Pfad zu den Leistungswerten der LW-Pumpe eingetragen werden, ansonsten leer lassen<br>
+Das Ergebnis wird unter der neuen Objekt ID __0_userdata.0.Charge_Control.Allgemein.Hausverbrauch__ eingetragen. - [Issue #3](https://github.com/ArnoD15/iobroker_E3DC/issues/3)
+* Objekt ID __0_userdata.0.Charge_Control.Allgemein.Akt_Berechnete_Ladeleistung_W__ enthält nun den vom Script Charge-Control eingestellte Ladeleistung und nicht mehr 
+die berechnete Ladeleistung um die Batterie auf 100% zu laden.
 
 ### Version: 1.4.0
 * Wenn die Notstromreserve bis zum Sonnenaufgang reicht, wird das Entladen der Batterie freigegeben und nicht mehr gestoppt, bis die Batterie leer ist.<br>
