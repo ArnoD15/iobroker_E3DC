@@ -80,7 +80,7 @@ verbunden sein.
 - <b>sID_LeistungHeizstab_W</b> hier kann der Pfad zu den Leistungswerte Heizstab eingetragen werden, ansonsten leer lassen<br>
 - <b>sID_WallboxLadeLeistung_1_W</b>  hier kann der Pfad zu den Leistungswerte der Wallbox eingetragen werden, ansonsten leer lassen<br>
 - <b>sID_LeistungLW_Pumpe_W</b>  hier kann der Pfad zu den Leistungswerte der LW-Pumpe eingetragen werden, ansonsten leer lassen<br>
-das Ergebniss wird unter der neuen Objekt ID 0_userdata.0.Charge_Control.Allgemein.Hausverbrauch eingetragen.</li>
+das Ergebniss wird unter der neuen Objekt ID 0_userdata.0.Charge_Control.Allgemein.Hausverbrauch eingetragen. - [Issues #3](https://github.com/ArnoD15/iobroker_E3DC/issues/3)</li>
 <li>Die Objekt <b>ID 0_userdata.0.Charge_Control.Allgemein.Akt_Berechnete_Ladeleistung_W</b> enthält nun den vom Script ChargeControl eingestellte Ladeleistung und nicht mehr 
 die Berechnete Ladeleistung um die Batterie auf 100% zu laden</li>
 
