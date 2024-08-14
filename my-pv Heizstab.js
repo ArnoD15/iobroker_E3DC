@@ -87,7 +87,7 @@ async function fetchAndUpdateHeizstabLeistung() {
         console.log(`Zustände abgefragt: Netz=${NetzLeistung_W}W, PV=${PV_Leistung_W}W, Hausverbrauch=${Hausverbrauch_W}W, LeistungHeizstab=${LeistungHeizstab_W}W, Batterie=${BatterieLeistung_W}W, IstTemp=${IstTemp}°C, MaxTemp=${MaxTemp}°C, SollLeistungHeizstab=${SollLeistungHeizstab_W}W, PowerMode=${PowerMode}, BatterieStatus=${BatterieStatus}, Charge_Limit=${Charge_Limit}, M_Power_W=${M_Power_W}`);
 
         // Bedingungen prüfen
-        if (PowerMode === 2 && Charge_Limit == M_Power_W) {
+        if (PowerMode === 2 && Charge_Limit == M_Power_W && BatterieLeistung_W > 0) {
             console.log('Power_Mode ist 2 und Batterie soll mit max. Leistung geladen werden. Heizstab wird nicht aktiviert.');
             await setStateAsync(sID_Soll_LeistungHeizstab_W, 0);
             return;
