@@ -39,6 +39,7 @@ async function fetchAndUpdateHeizstabLeistung() {
     try {
         // Zustände abfragen
         const states = await Promise.all([
+            getStateAsync(sID_Wallbox_Leistung),
             getStateAsync(sID_Netz_Leistung),
             getStateAsync(sID_LeistungHeizstab_W),
             getStateAsync(sID_Eigenverbrauch),
@@ -48,22 +49,21 @@ async function fetchAndUpdateHeizstabLeistung() {
             getStateAsync(sID_MaxTempHeizstab),
             getStateAsync(sID_PV_Leistung),
             getStateAsync(sID_Soll_LeistungHeizstab_W),
-            getStateAsync(sID_previousHeizstabLeistung_W),
             getStateAsync(sID_Power_Mode),
             getStateAsync(sID_Batterie_Status),
             getStateAsync(sID_Bat_Charge_Limit)
         ]);
 
         const [
-            Netz_Leistung, LeistungHeizstab, Eigenverbrauch, M_Power, Batterie_Leistung,
-            IstTempHeizstab, MaxTempHeizstab, PV_Leistung, SollLeistungHeizstab, previousHeizstabLeistung,
+            Wallbox_Leistung, Netz_Leistung, LeistungHeizstab, Eigenverbrauch, M_Power, Batterie_Leistung,
+            IstTempHeizstab, MaxTempHeizstab, PV_Leistung, SollLeistungHeizstab, 
             Power_Mode, Batterie_Status, Bat_Charge_Limit
         ] = states;
 
         // Ensure all states are fetched correctly
         const stateNames = [
-            'Netz_Leistung', 'LeistungHeizstab', 'Eigenverbrauch', 'M_Power', 'Batterie_Leistung',
-            'IstTempHeizstab', 'MaxTempHeizstab', 'PV_Leistung', 'SollLeistungHeizstab', 'previousHeizstabLeistung',
+            'Wallbox_Leistung', 'Netz_Leistung', 'LeistungHeizstab', 'Eigenverbrauch', 'M_Power', 'Batterie_Leistung',
+            'IstTempHeizstab', 'MaxTempHeizstab', 'PV_Leistung', 'SollLeistungHeizstab',
             'Power_Mode', 'Batterie_Status', 'Bat_Charge_Limit'
         ];
 
@@ -79,8 +79,8 @@ async function fetchAndUpdateHeizstabLeistung() {
 
         // Werte extrahieren
         let [
-            NetzLeistung_W, LeistungHeizstab_W, Hausverbrauch_W, M_Power_W, BatterieLeistung_W,
-            IstTemp, MaxTemp, PV_Leistung_W, SollLeistungHeizstab_W, previousHeizstabLeistung_W,
+            Wallbox_Leistung_W, NetzLeistung_W, LeistungHeizstab_W, Hausverbrauch_W, M_Power_W, BatterieLeistung_W,
+            IstTemp, MaxTemp, PV_Leistung_W, SollLeistungHeizstab_W, 
             PowerMode, BatterieStatus, Charge_Limit
         ] = states.map(state => state.val);
 
@@ -94,7 +94,7 @@ async function fetchAndUpdateHeizstabLeistung() {
         }
 
         // Verfügbaren Überschuss berechnen
-        let verfuegbarerUeberschuss_W = PV_Leistung_W - Hausverbrauch_W - M_Power_W - sicherheitspuffer; // Verfügbarer Überschuss unter Berücksichtigung von PV-Leistung, Hausverbrauch, Soll-Ladeleistung und Sicherheitspuffer
+        let verfuegbarerUeberschuss_W = PV_Leistung_W - Hausverbrauch_W - M_Power_W- Wallbox_Leistung_W - sicherheitspuffer; // Verfügbarer Überschuss unter Berücksichtigung von PV-Leistung, Hausverbrauch, Soll-Ladeleistung und Sicherheitspuffer
         verfuegbarerUeberschuss_W = Math.max(verfuegbarerUeberschuss_W, 0); // Stellen Sie sicher, dass der Wert nicht negativ wird
 
         // Heizstab-Leistung bestimmen
@@ -129,12 +129,16 @@ async function fetchAndUpdateHeizstabLeistung() {
 }
 
 function debounceUpdate() {
-    if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(fetchAndUpdateHeizstabLeistung, debounceInterval);
+    if (debounceTimer) return;
+    fetchAndUpdateHeizstabLeistung();
+    debounceTimer = setTimeout(() => {
+        debounceTimer = null;
+    }, debounceInterval);
 }
 
 // Register listeners for relevant state changes
 const ids = [
+    sID_Wallbox_Leistung,
     sID_PV_Leistung,
     sID_Netz_Leistung,
     sID_Eigenverbrauch,
