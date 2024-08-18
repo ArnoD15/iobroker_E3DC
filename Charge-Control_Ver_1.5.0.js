@@ -15,14 +15,15 @@ const sID_LeistungLW_Pumpe_W = 'modbus.2.holdingRegisters.41013_WP_Aufnahmeleist
 const BUFFER_SIZE= 5;                                                                                   // Größe des Buffers für gleitenden Durchschnitt
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
 //------------------------------------------------------------------------------------------------------
-
-//******************************************************************************************************
-//**************************************** Deklaration Variablen ***************************************
-//******************************************************************************************************
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.4.2 ====- ${Logparser2}`);
-//****************************************** Adapter e3dc.rscp *****************************************
+log(`${Logparser1} -==== Charge-Control Version 1.5.0 ====- ${Logparser2}`);
+
+//******************************************************************************************************
+//****************************************** Objekt ID anlegen *****************************************
+//******************************************************************************************************
+
+//*************************************** ID's Adapter e3dc.rscp ***************************************
 const sID_Power_Home_W =`${instanzE3DC_RSCP}.EMS.POWER_HOME`;                                           // aktueller Hausverbrauch E3DC                                         // Pfad ist abhängig von Variable ScriptHausverbrauch siehe function CheckState()
 const sID_Batterie_SOC =`${instanzE3DC_RSCP}.EMS.BAT_SOC`;                                              // aktueller Batterie_SOC
 const sID_PvLeistung_E3DC_W =`${instanzE3DC_RSCP}.EMS.POWER_PV`;                                        // aktuelle PV_Leistung
@@ -39,7 +40,6 @@ const sID_SPECIFIED_Battery_Capacity_1 =`${instanzE3DC_RSCP}.BAT.BAT_1.SPECIFIED
 const sID_FirmwareVersion =`${instanzE3DC_RSCP}.INFO.SW_RELEASE`;                                       // Aktuelle Virmware Version E3DC
 const sID_POWER_LIMITS_USED =`${instanzE3DC_RSCP}.EMS.POWER_LIMITS_USED`;                               // Leistungs-Limits aktiviert
 const sID_Manual_Charge_Energy = `${instanzE3DC_RSCP}.EMS.MANUAL_CHARGE_ENERGY`;                        // Manuelle Ladung Batterie aus dem Netz
-
 const sID_SET_POWER_MODE =`${instanzE3DC_RSCP}.EMS.SET_POWER_MODE`;                                     // Lademodus
 const sID_SET_POWER_VALUE_W =`${instanzE3DC_RSCP}.EMS.SET_POWER_VALUE`;                                 // Eingestellte Ladeleistung
 const sID_Max_wrleistung_W =`${instanzE3DC_RSCP}.EMS.SYS_SPECS.maxAcPower`;                             // Maximale Wechselrichter Leistung
@@ -49,33 +49,13 @@ const sID_Max_Discharge_Power_W =`${instanzE3DC_RSCP}.EMS.MAX_DISCHARGE_POWER`; 
 const sID_Max_Charge_Power_W =`${instanzE3DC_RSCP}.EMS.MAX_CHARGE_POWER`;                               // Eingestellte maximale Batterie-Ladeleistung. (Variable Einstellung E3DC)
 const sID_DISCHARGE_START_POWER =`${instanzE3DC_RSCP}.EMS.DISCHARGE_START_POWER`;                       // Anfängliche Batterie-Entladeleistung
 const sID_PARAM_EP_RESERVE_W =`${instanzE3DC_RSCP}.EP.PARAM_0.PARAM_EP_RESERVE_ENERGY`;                 // Eingestellte Notstrom Reserve E3DC
-// @ts-ignore
-const fs = require('fs').promises;
-// @ts-ignore
-const axios = require('axios');
 
-let Resource_Id_Dach=[];
-let sID_UntererLadekorridor_W =[],sID_Ladeschwelle_Proz =[],sID_Ladeende_Proz=[],sID_Ladeende2_Proz=[],sID_RegelbeginnOffset=[],sID_RegelendeOffset=[],sID_LadeendeOffset=[],sID_Unload_Proz=[];
-let logflag,sLogPath,LogAusgabe,DebugAusgabe,DebugAusgabeDetail,Offset_sunriseEnd_min,minWertPrognose_kWh,lastDebugLogTime = 0;
-let country,ProplantaOrt,ProplantaPlz,BewoelkungsgradGrenzwert,ScriptTibber;
-let Solcast,SolcastDachflaechen,SolcastAPI_key,Entladetiefe_Pro,Systemwirkungsgrad_Pro,lastExecutionTime = 0;
-let nModulFlaeche,nWirkungsgradModule,nKorrFaktor,nMinPvLeistungTag_kWh,nMaxPvLeistungTag_kWh;     
-let bStart = true,bM_Notstrom = false,StoppTriggerParameter = false,StoppTriggerEinstellungAnwahl =false,LogProgrammablauf = "",Notstrom_Status,NotstromVerwenden,Status_Notstrom_SOC=false;
-let hausverbrauchBuffer = []; // Buffer für Hausverbrauchswerte
-let homeConsumption ={Montag: { night: [], day: [] },Dienstag: { night: [], day: [] },Mittwoch: { night: [], day: [] },
-        Donnerstag: { night: [], day: [] },Freitag: { night: [], day: [] },Samstag: { night: [], day: [] },Sonntag: { night: [], day: [] }
-};
-let homeAverage ={Montag: { night: [], day: [] },Dienstag: { night: [], day: [] },Mittwoch: { night: [], day: [] },
-        Donnerstag: { night: [], day: [] },Freitag: { night: [], day: [] },Samstag: { night: [], day: [] },Sonntag: { night: [], day: [] }
-};
-const MAX_ENTRIES = 480; // 8 Stunden x 3600 Sekunden pro Tag /60 executionInterval
-
-
+//************************************* ID's Skript ChargeControl *************************************
 const sID_Saved_Power_W =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Saved_Power_W`;                                                     // Leistung die mit Charge-Control gerettet wurde
 const sID_PVErtragLM2 =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Saved_PowerLM2_kWh`;                                                  // Leistungszähler für PV Leistung die mit Charge-Control gerettet wurde
 const sID_Automatik_Prognose =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Automatik`;                                                    // Vorwahl in VIS true = automatik false = manuell
 const sID_Automatik_Regelung =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Automatik_Regelung`;                                           // Vorwahl in VIS true = automatik false = manuell
-const sID_NotstromAusNetz =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.NotstromAusNetz`;                                                 // Vorwahl in VIS true = Notstrom aus Netz nachladen 
+const sID_NotstromAusNetz =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.bNotstromAusNetz`;                                                 // Vorwahl in VIS true = Notstrom aus Netz nachladen 
 const sID_EinstellungAnwahl =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.EinstellungAnwahl`;                                             // Vorwahl in VIS Einstellung 1-5
 const sID_PVErtragLM0 =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.IstPvErtragLM0_kWh`;                                                  // Leistungszähler PV-Leistung
 const sID_PVErtragLM1 =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.IstPvErtragLM1_kWh`;                                                  // Leistungszähler zusätzlicher WR (extern)
@@ -85,6 +65,11 @@ const sID_HausverbrauchBereinigt_W = `${instanz}.${PfadEbene1}.${PfadEbene2[1]}.
 const sID_arrayHausverbrauchDurchschnitt = `${instanz}.${PfadEbene1}.${PfadEbene2[1]}.arrayHausverbrauchDurchschnitt`;                  // Array zum speichern vom durchschnittlicher Hausverbrauch ohne WB, LW-Pumpe oder Heizstab
 const sID_arrayHausverbrauch = `${instanz}.${PfadEbene1}.${PfadEbene2[1]}.arrayHausverbrauch`;                                          // Array zum speichern der Leistung Hausverbrauch ohne WB, LW-Pumpe oder Heizstab
 const sID_AnzeigeHistoryMonat =`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.HistorySelect`;                                               // Vorwahl in VIS: Umschaltung der Monate im View Prognose
+const sID_arrayPV_LeistungTag_kWh =`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.istPV_LeistungTag_kWh`;
+const sID_PrognoseProp_kWh =`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseProp_kWh`;
+const sID_PrognoseAuto_kWh =`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseAuto_kWh`;
+const sID_PrognoseSolcast90_kWh =`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast90_kWh`;
+const sID_PrognoseSolcast_kWh =`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast_kWh`;
 const sID_Regelbeginn_MEZ =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Regelbeginn_MEZ`;                                                 // Anzeige in VIS: Regelbeginn in MEZ Zeit
 const sID_Regelende_MEZ =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Regelende_MEZ`;                                                     // Anzeige in VIS: Regelende in MEZ Zeit
 const sID_Ladeende_MEZ =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Ladeende_MEZ`;                                                       // Anzeige in VIS: Ladeende in MEZ Zeit
@@ -96,6 +81,7 @@ const sID_BatSoc_kWh =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Batteriekapazit
 const sID_FirmwareDate =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.FirmwareDate`;                                                       // Anzeige in VIS: Firmware Datum
 const sID_LastFirmwareVersion =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.LastFirmwareVersion`;                                         // Anzeige in VIS: Firmware Version
 const sID_out_Akt_Ladeleistung_W=`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Akt_Berechnete_Ladeleistung_W`;                             // Ausgabe der berechneten Ladeleistung um diese in VIS anzuzeigen.
+let sID_UntererLadekorridor_W =[],sID_Ladeschwelle_Proz =[],sID_Ladeende_Proz=[],sID_Ladeende2_Proz=[],sID_RegelbeginnOffset=[],sID_RegelendeOffset=[],sID_LadeendeOffset=[],sID_Unload_Proz=[];
 for (let i = 0; i <= 5; i++) {
     sID_UntererLadekorridor_W[i] =`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.UntererLadekorridor_${i}`;
     sID_Ladeschwelle_Proz[i] =`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Ladeschwelle_${i}`;
@@ -119,31 +105,54 @@ const arrayID_Parameters = [
 // Flache Liste aller Parameter-IDs erstellen
 const allParameterIDs = arrayID_Parameters.flat();
 
+//************************************** Globale Variable ***************************************
 
-let Max_wrleistung_W = getState(sID_Max_wrleistung_W).val - 200;                        // Maximale Wechselrichter Leistung (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
-let InstalliertPeakLeistung = getState(sID_Installed_Peak_Power).val;                   // Installierte Peak Leistung der PV-Module
-let Einspeiselimit_Pro = getState(sID_Einspeiselimit_Pro).val;                          // Einspeiselimit in Prozent
-let Einspeiselimit_kWh = ((InstalliertPeakLeistung/100)*Einspeiselimit_Pro-200)/1000    // Einspeiselimit (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
-let maximumLadeleistung_W = getState(sID_Bat_Charge_Limit).val;                         // Maximal mögliche Batterie Ladeleistung
-let Bat_Discharge_Limit_W = getState(sID_Bat_Discharge_Limit).val;                      // Maximal mögliche Batterie Entladeleistung
-let startDischargeDefault = getState(sID_startDischargeDefault).val;                    // Anfängliche Entladeleistung Standard
-let Batterie_SOC_Proz = getState(sID_Batterie_SOC).val;
-let Speichergroesse_kWh                                                                 // Installierte Batterie Speicher Kapazität wird in Funktion Speichergroesse() berechnet
+// @ts-ignore
+const fs = require('fs').promises;
+// @ts-ignore
+const axios = require('axios');
+const MAX_ENTRIES = 480; // 8 Stunden x 3600 Sekunden pro Tag /60 executionInterval
 
-
-let AutomatikAnwahl,AutomatikRegelung,ManuelleLadungBatt,NotstromAusNetz,EinstellungAnwahl,PrognoseAnwahl,count0 = 0, count1 = 0, count2 = 0, count3 = 0, Summe0 = 0, Summe1 = 0, Summe2 = 0, Summe3 = 0;
-let RE_AstroSolarNoon,LE_AstroSunset,RB_AstroSolarNoon,RE_AstroSolarNoon_alt_milisek,RB_AstroSolarNoon_alt_milisek,Zeit_alt_milisek=0,ZeitE3DC_SetPowerAlt_ms=0,ReichweiteAktVerbrauchAlt=0;
-let M_Power=0,M_Power_alt=0,Set_Power_Value_W=0,Batterie_SOC_alt_Proz=0,bLadenEntladenStoppen= false,bLadenEntladenStoppen_alt=false;
-let Notstrom_SOC_Proz = 0, M_Abriegelung=false,LadenAufNotstromSOC=false,HeuteNotstromVerbraucht=false;
-let Timer0 = null, Timer1 = null,Timer2 = null,TimerProplanta= null;
-let CheckConfig = true, Ladeschwelle_Proz_erreicht=false,Ladeende_Proz_erreicht=false,Ladeende2_Proz_erreicht = false,Ladeende2_Proz_erreicht2 = false;
+//******************** Globale Variable Array ********************
+let hausverbrauchBuffer = []; // Buffer für Hausverbrauchswerte
+let homeConsumption ={Montag: { night: [], day: [] },Dienstag: { night: [], day: [] },Mittwoch: { night: [], day: [] },
+        Donnerstag: { night: [], day: [] },Freitag: { night: [], day: [] },Samstag: { night: [], day: [] },Sonntag: { night: [], day: [] }
+};
+let homeAverage ={Montag: { night: [], day: [] },Dienstag: { night: [], day: [] },Mittwoch: { night: [], day: [] },
+        Donnerstag: { night: [], day: [] },Freitag: { night: [], day: [] },Samstag: { night: [], day: [] },Sonntag: { night: [], day: [] }
+};
 let SummePV_Leistung_Tag_kW =[{0:'',1:'',2:'',3:'',4:'',5:'',6:'',7:''},{0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0},{0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0},{0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0}];
-let baseUrls = {
+let baseUrlsCountrys = {
     "de" : "https://www.proplanta.de/Wetter/profi-wetter.php?SITEID=60&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=0",
     "at" : "https://www.proplanta.de/Wetter-Oesterreich/profi-wetter-at.php?SITEID=70&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=0",
     "ch" : "https://www.proplanta.de/Wetter-Schweiz/profi-wetter-ch.php?SITEID=80&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=0",
 };
-let baseurl
+let arrayPV_LeistungTag_kWh = new Array(32), arrayPrognoseProp_kWh = new Array(32), arrayPrognoseAuto_kWh = new Array(32);
+let arrayPrognoseSolcast90_kWh = new Array(32), arrayPrognoseSolcast_kWh = new Array(32);
+
+//******************** Globale Variable zuweisung in Funktion CheckState() ********************
+let logflag,sLogPath,LogAusgabe,DebugAusgabe,DebugAusgabeDetail,Offset_sunriseEnd_min,minWertPrognose_kWh,Entladetiefe_Pro;
+let Systemwirkungsgrad_Pro,ScriptTibber,country,ProplantaOrt,ProplantaPlz,BewoelkungsgradGrenzwert,Solcast;
+let nModulFlaeche,nWirkungsgradModule,nKorrFaktor,nMinPvLeistungTag_kWh,nMaxPvLeistungTag_kWh;
+let SolcastDachflaechen,Resource_Id_Dach=[],SolcastAPI_key,tibberMaxLadeleistung_W;
+     
+//******************************* Globale Variable Time Counter *******************************
+let lastDebugLogTime = 0,lastExecutionTime = 0, count0 = 0, count1 = 0, count2 = 0, count3 = 0;
+let Timer0 = null, Timer1 = null,Timer2 = null,TimerProplanta= null;
+let RE_AstroSolarNoon,LE_AstroSunset,RB_AstroSolarNoon,RE_AstroSolarNoon_alt_milisek,RB_AstroSolarNoon_alt_milisek,Zeit_alt_milisek=0,ZeitE3DC_SetPowerAlt_ms=0;
+
+//******************************* Globale Variable Boolean *******************************
+let bStart = true, bM_Notstrom = false, bStoppTriggerParameter = false, bStoppTriggerEinstellungAnwahl =false, bNotstromVerwenden;
+let bStatus_Notstrom_SOC=false, bLadenEntladenStoppen= false, bLadenEntladenStoppen_alt=false, bLadeschwelle_Proz_erreicht = false;
+let bM_Abriegelung = false, bLadenAufNotstromSOC = false, bHeuteNotstromVerbraucht = false, bCheckConfig = true;
+let bLadeende_Proz_erreicht = false, bLadeende2_Proz_erreicht = false, bLadeende2_Proz_erreicht2 = false;
+let bNotstromAusNetz, bAutomatikAnwahl, bAutomatikRegelung, bManuelleLadungBatt, bTibberLaden = false, bTibberEntladesperre = false;
+
+//*********************************** Globale Variable ***********************************
+let LogProgrammablauf = "", Notstrom_Status, startDischargeDefault, Batterie_SOC_Proz, Speichergroesse_kWh
+let Max_wrleistung_W ,InstalliertPeakLeistung, Einspeiselimit_Pro, Einspeiselimit_kWh, maximumLadeleistung_W, Bat_Discharge_Limit_W
+let EinstellungAnwahl,PrognoseAnwahl,ReichweiteAktVerbrauchAlt=0, M_Power=0,M_Power_alt=0,Set_Power_Value_W=0;
+let Batterie_SOC_alt_Proz=0, Notstrom_SOC_Proz = 0, Summe0 = 0, Summe1 = 0, Summe2 = 0, Summe3 = 0, baseurl, TibberSubscribeID;
 
 //***************************************************************************************************
 //**************************************** Function Bereich *****************************************
@@ -157,18 +166,37 @@ async function ScriptStart()
     await CheckState();
     log(`${Logparser1} -==== alle Objekte ID\'s überprüft ====- ${Logparser2}`);
     // Proplanta Länderauswahl zuordnen
-    baseurl = await baseUrls[country];
+    baseurl = await baseUrlsCountrys[country];
     homeConsumption = JSON.parse((await getStateAsync(sID_arrayHausverbrauch)).val);
     homeAverage = JSON.parse((await getStateAsync(sID_arrayHausverbrauchDurchschnitt)).val);
-    [AutomatikAnwahl,AutomatikRegelung,NotstromAusNetz,Notstrom_Status,PrognoseAnwahl,EinstellungAnwahl]= await Promise.all([
-        getStateAsync(sID_Automatik_Prognose),
-        getStateAsync(sID_Automatik_Regelung),
-        getStateAsync(sID_NotstromAusNetz),
-        getStateAsync(sID_Notrom_Status),
-        getStateAsync(sID_PrognoseAnwahl),
-        getStateAsync(sID_EinstellungAnwahl)
+    [arrayPrognoseProp_kWh, arrayPrognoseAuto_kWh, arrayPrognoseSolcast90_kWh, arrayPrognoseSolcast_kWh, arrayPV_LeistungTag_kWh
+    , bAutomatikAnwahl, bAutomatikRegelung, bNotstromAusNetz, Notstrom_Status,PrognoseAnwahl, EinstellungAnwahl, Max_wrleistung_W
+    , InstalliertPeakLeistung, Einspeiselimit_Pro, maximumLadeleistung_W, Bat_Discharge_Limit_W, startDischargeDefault, Batterie_SOC_Proz
+    ]= await Promise.all([
+        getStateAsync(sID_PrognoseProp_kWh),
+        getStateAsync(sID_PrognoseAuto_kWh),
+        getStateAsync(sID_PrognoseSolcast90_kWh),
+        getStateAsync(sID_PrognoseSolcast_kWh),
+        getStateAsync(sID_arrayPV_LeistungTag_kWh),
+        getStateAsync(sID_Automatik_Prognose),      // Vorwahl in VIS true = automatik false = manuell
+        getStateAsync(sID_Automatik_Regelung),      // Vorwahl in VIS true = automatik false = manuell
+        getStateAsync(sID_NotstromAusNetz),         // Vorwahl in VIS true = Notstrom aus Netz nachladen
+        getStateAsync(sID_Notrom_Status),           // 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
+        getStateAsync(sID_PrognoseAnwahl),          // Aktuelle Einstellung welche Prognose für Berechnung verwendet wird
+        getStateAsync(sID_EinstellungAnwahl),       // Vorwahl in VIS Einstellung 1-5
+        getStateAsync(sID_Max_wrleistung_W),        // Maximale Wechselrichter Leistung
+        getStateAsync(sID_Installed_Peak_Power),    // Installierte Peak Leistung der PV-Module
+        getStateAsync(sID_Einspeiselimit_Pro),      // Einspeiselimit in Prozent
+        getStateAsync(sID_Bat_Charge_Limit),        // Maximal mögliche Batterie Ladeleistung
+        getStateAsync(sID_Bat_Discharge_Limit),     // Maximal mögliche Batterie Entladeleistung
+        getStateAsync(sID_startDischargeDefault),   // Anfängliche Entladeleistung Standard
+        getStateAsync(sID_Batterie_SOC)             // Aktueller Batterie SOC
     ]).then(states => states.map(state => state.val));
-    if ((await getStateAsync(sID_Manual_Charge_Energy)).val > 0){ManuelleLadungBatt = true}else{ManuelleLadungBatt = false}
+
+    Max_wrleistung_W = Max_wrleistung_W - 200;                                         // Maximale Wechselrichter Leistung (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
+    Einspeiselimit_kWh = ((InstalliertPeakLeistung/100)*Einspeiselimit_Pro-200)/1000   // Einspeiselimit (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
+    
+    if ((await getStateAsync(sID_Manual_Charge_Energy)).val > 0){bManuelleLadungBatt = true}else{bManuelleLadungBatt = false}
     // Wetterdaten beim Programmstart aktualisieren und Timer starten.
     await Speichergroesse()                                             // aktuell verfügbare Batterie Speichergröße berechnen
     if (Solcast) {await SheduleSolcast(SolcastDachflaechen);}           // Wetterdaten Solcast abrufen wenn User Variable 30_AbfrageSolcast = true
@@ -193,8 +221,7 @@ async function CreateState(){
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.EigenverbrauchTag`, {'def':0, 'name':'min. Eigenverbrauch von 6:00 Uhr bis 19:00 Uhr in kWh', 'type':'number', 'role':'value'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Automatik`, {'def':false, 'name':'Bei true werden die Parameter automatisch nach Wetterprognose angepast' , 'type':'boolean', 'role':'State', 'desc':'Automatik Charge-Control ein/aus'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Automatik_Regelung`, {'def':false, 'name':'Bei true ist die Lade Regelung eingeschaltet' , 'type':'boolean', 'role':'State', 'desc':'Automatik Charge-Control ein/aus'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.NotstromAusNetz`, {'def':false, 'name':'Bei true wird aus dem Netz bis Notstrom SOC nachgeladen' , 'type':'boolean', 'role':'State', 'desc':'Notstrom aus Netz nachladen'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.IstSummePvLeistung_kWh`, {'def':0, 'name':'Summe kWh Leistungsmesser 0 und Leistungsmesser 1 ' , 'type':'number', 'role':'value', 'unit':'kWh'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.bNotstromAusNetz`, {'def':false, 'name':'Bei true wird aus dem Netz bis Notstrom SOC nachgeladen' , 'type':'boolean', 'role':'State', 'desc':'Notstrom aus Netz nachladen'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.PrognoseBerechnung_kWh_heute`, {'def':0, 'name':'Prognose für Berechnung' , 'type':'number', 'role':'value', 'unit':'kWh'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Regelbeginn_MEZ`, {'def':'00:00', 'name':'Regelbeginn MEZ', 'type':'string', 'role':'string', 'desc':'Regelbeginn MEZ Zeit', 'unit':'Uhr'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Regelende_MEZ`, {'def':'00:00', 'name':'Regelende MEZ', 'type':'string', 'role':'string', 'desc':'Regelende MEZ Zeit', 'unit':'Uhr'});
@@ -208,6 +235,11 @@ async function CreateState(){
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.LastFirmwareVersion`, {'def':"", 'name':'Alte Frimware Version' , 'type':'string', 'role':'value'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Akt_Berechnete_Ladeleistung_W`, {'def':0, 'name':'Aktuell eingestellte ist Ladeleistung in W' , 'type':'number', 'role':'value', 'unit':'W'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.HistoryJSON`, {'def':'[]', 'name':'JSON für materialdesign json chart' ,'type':'string'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.istPV_LeistungTag_kWh`, {'def':'[null,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Summe PV Leistung Tag in kWh' ,'type':'array'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseProp_kWh`, {'def':'[null,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Prognose Proplanta PV Leistung Tag in kWh' ,'type':'array'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseAuto_kWh`, {'def':'[null,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für verwendete Prognose im Automatikmodus' ,'type':'array'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast90_kWh`, {'def':'[null,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Prognose Solcast PV-Leistung in Kilowatt (kW) 90. Perzentil (hohes Szenario)' ,'type':'array'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast_kWh`, {'def':'[null,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Prognose Solcast PV-Leistung in Kilowatt (kW)' ,'type':'array'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.HistorySelect`, {'def':1, 'name':'Select Menü für materialdesign json chart' ,'type':'number'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.NaesteAktualisierung`, {'def':'0', 'name':'Aktualisierung Proplanta' ,'type':'string'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Bewoelkungsgrad_12`, {'def':NaN, 'name':'Bewölkungsgrad 12 Uhr Proplanta' ,'type':'number'});
@@ -259,25 +291,17 @@ async function CreateState(){
             createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.LadeendeOffset_${i}`, {'def':"02:00", 'name':'Offset Wert Ladeende in min. von sunset (Sonnenuntergang) = 0 ', 'type':'string', 'role':'value', 'desc':'LE_Offset'});
             createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Unload_${i}`, {'def':100, 'name':'Zielwert beim entladen.Die ladeschwelle muss < unload sein', 'type':'number', 'role':'value', 'desc':'Unload', 'unit':'%'});
         }
-        if(i > 0){
+        if (i > 0 && i < 13){
             let n = i.toString().padStart(2,"0");
-            createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.IstPvLeistung_kWh_${n}`, {'def':0, 'name':'PV-Leistung Tag' ,'type':'number', 'unit':'kWh'});
-            createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseProp_kWh_${n}`, {'def':0, 'name':'Tagesprognose Proplanta', 'type':'number', 'unit':'kWh'});
-            createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseAuto_kWh_${n}`, {'def':0, 'name':'Berechnete Prognose bei Anwahl Automatik' ,'type':'number', 'unit':'kWh'});
-            createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast_kWh_${n}`, {'def':0, 'name':'Schätzung der PV-Leistung Solcast in Kilowatt (kW)' ,'type':'number', 'unit':'kWh'});
-            createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast90_kWh_${n}`, {'def':0, 'name':'Schätzung der PV-Leistung in Kilowatt (kW) 90. Perzentil (hohes Szenario)' ,'type':'number', 'unit':'kWh'});
-    
-            if (i < 13){
-                createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.HistoryJSON_${n}`, {'def':'[]', 'name':'JSON für materialdesign json chart' ,'type':'string'});
-            }
+            createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.HistoryJSON_${n}`, {'def':'[]', 'name':'JSON für materialdesign json chart' ,'type':'string'});
         }
-    
     }
 }
 
 // Alle User Eingaben prüfen ob Werte eingetragen wurden und Werte zuweisen
 async function CheckState() {
     const idUSER_ANPASSUNGEN = `${instanz}.${PfadEbene1}.${PfadEbene2[4]}`;
+    const idTibber = `${instanz}.Tibber`;
     const e3dc_rscp_Adapter = getObject(`system.adapter.${instanzE3DC_RSCP}`);
     if(e3dc_rscp_Adapter.native.setpower_interval != 0){
         log(`!! Bei den Instanzeinstellungen vom Adapter e3dc-rscp wurde das SET_POWER Wiederholintervall nicht auf 0 eingestellt. Bitte ändern !!`,'error')
@@ -293,7 +317,7 @@ async function CheckState() {
         { id: '10_minWertPrognose_kWh', varName: 'minWertPrognose_kWh', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
         { id: '10_maxEntladetiefeBatterie', varName: 'Entladetiefe_Pro', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen', min: 0, max: 100, errorMsg: 'Entladetiefe Batterie muss zwischen 0% und 100% sein' },
         { id: '10_Systemwirkungsgrad', varName: 'Systemwirkungsgrad_Pro', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen', min: 0, max: 100, errorMsg: 'Systemwirkungsgrad muss zwischen 0% und 100% sein' },
-        { id: '10_ScriptTibber', varName: 'ScriptTibber', beschreibung: '' },
+        { id: '10_ScriptTibber', varName: 'ScriptTibber', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen'},
         { id: '20_ProplantaCountry', varName: 'country', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
         { id: '20_ProplantaOrt', varName: 'ProplantaOrt', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
         { id: '20_ProplantaPlz', varName: 'ProplantaPlz', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
@@ -311,6 +335,11 @@ async function CheckState() {
         { id: '30_SolcastResource_Id_Dach2', varName: 'Resource_Id_Dach[2]', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
         { id: '30_SolcastAPI_key', varName: 'SolcastAPI_key', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
     ];
+    const objekteTibber = [
+        { id: 'BatterieEntladesperre', varName: 'bTibberEntladesperre', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: 'BatterieLaden', varName: 'bTibberLaden', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: 'maxLadeleistung', varName: 'tibberMaxLadeleistung_W', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+    ];
 
     for (const obj of objekte) {
         const value = (await getStateAsync(`${idUSER_ANPASSUNGEN}.${obj.id}`)).val;
@@ -323,7 +352,36 @@ async function CheckState() {
             }
         }
     }
-
+    
+    if(ScriptTibber){
+        for (const obj of objekteTibber) {
+            let value;
+            if(obj.id == 'maxLadeleistung'){
+                value = (await getStateAsync(`${idTibber}.USER_ANPASSUNGEN.${obj.id}`)).val;
+            }else{
+                value = (await getStateAsync(`${idTibber}.OutputSignal.${obj.id}`)).val;    
+            }
+            if (value === undefined || value === null) {
+                logError(obj.beschreibung, `${idTibber}...${obj.id}`);
+            } else {
+                eval(`${obj.varName} = value`);
+                if (obj.min !== undefined && (value < obj.min || value > obj.max)) {
+                    console.error(obj.errorMsg);
+                }
+            }
+        }
+        
+        TibberSubscribeID = on({id: /\Tibber.OutputSignal/, change: "ne"}, async function (obj){	
+            log(`-==== Tibber output signal ${obj.id.split('.')[4]} wurde in ${obj.state.val} geändert ====-`,'warn')
+            if (obj.id.split('.')[4] == 'BatterieEntladesperre' ){bTibberEntladesperre = obj.state.val}
+            if (obj.id.split('.')[4] == 'BatterieLaden' ){bTibberLaden = obj.state.val}
+        });
+    }else{
+        unsubscribe(TibberSubscribeID);    
+        bTibberEntladesperre = false;
+        bTibberLaden = false;
+    }
+    
     if (Solcast){
         for (const obj of objekteSolcast) {
             const value = (await getStateAsync(`${idUSER_ANPASSUNGEN}.${obj.id}`)).val;
@@ -385,7 +443,7 @@ async function Ladesteuerung()
     const Power_Home_W =(await getStateAsync(sID_Power_Home_W)).val + WallboxPower;                                 // Aktueller Hausverbrauch + Ladeleistung Wallbox E3DC 
     const PV_Leistung_Summe_W = PV_Leistung_E3DC_W + Math.abs(PV_Leistung_ADD_W);                                   // Summe PV-Leistung  
     Notstrom_Status = (await getStateAsync(sID_Notrom_Status)).val;                                                 // aktueller Notstrom Status E3DC 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
-    NotstromVerwenden = CheckPrognose();                                                                            // Prüfen ob Notstrom verwendet werden kann bei hoher PV Prognose für den nächsten Tag
+    bNotstromVerwenden = CheckPrognose();                                                                           // Prüfen ob Notstrom verwendet werden kann bei hoher PV Prognose für den nächsten Tag
     
     // LOG nur alle 6 sek. aufrufen
     if (DebugAusgabe && (currentTime - lastDebugLogTime >= 6000)) {
@@ -397,17 +455,18 @@ async function Ladesteuerung()
     LogProgrammablauf = "";
 
     // Das Entladen aus dem Speicher wird freigegeben wenn:
-    // Notstrom oder Inselbetrieb aktiv ist oder NotstromVerwenden = true oder LadenAufNotstromSOC = true
+    // Notstrom oder Inselbetrieb aktiv ist oder b = true oder LadenAufNotstromSOC = true
     // oder der Batterie SOC > der berechneten Reserve liegt oder PV-Leistung > 100W ist und vor Sonnenuntergang
     // Das Entladen aus dem Speicher wird gesperrt wenn:
-    // Notstrom SOC erreicht wurde und aktuelle Zeit zwischen Sonnenuntergang und Sonnenaufgang liegt und Merker NotstromVerwenden nicht true ist.
-    if (Notstrom_Status == 1 || Notstrom_Status == 4 || NotstromVerwenden|| LadenAufNotstromSOC || Batterie_SOC_Proz > Notstrom_SOC_Proz || (PV_Leistung_E3DC_W > 100 && new Date() < getAstroDate("sunset"))){
+    // Notstrom SOC erreicht wurde und aktuelle Zeit zwischen Sonnenuntergang und Sonnenaufgang liegt und Merker b nicht true ist.
+    
+    if (Notstrom_Status == 1 || Notstrom_Status == 4 || bNotstromVerwenden|| bTibberLaden || bLadenAufNotstromSOC || Batterie_SOC_Proz > Notstrom_SOC_Proz || (PV_Leistung_E3DC_W > 100 && new Date() < getAstroDate("sunset"))){
         // Notstrom_Status 0=nicht möglich 1=active 2= nicht active 3= nicht verfügbar 4= Inselbetrieb
         // EMS Laden/Endladen einschalten
         LogProgrammablauf += '1,';
         EMS(true);
-        // Wenn NotstromVerwenden einmal true war, wird mit dem Merker bM_Notstrom das Ausschalten der Lade/Enladeleistung bis Sonnenaufgang verhindert
-        if (NotstromVerwenden && !bM_Notstrom){bM_Notstrom = true };
+        // Wenn b einmal true war, wird mit dem Merker bM_Notstrom das Ausschalten der Lade/Enladeleistung bis Sonnenaufgang verhindert
+        if (bNotstromVerwenden && !bM_Notstrom){bM_Notstrom = true };
     }else if(Batterie_SOC_Proz <= Notstrom_SOC_Proz && (new Date() > getAstroDate("sunset") && !bM_Notstrom || new Date() < getAstroDate("sunrise") && !bM_Notstrom)){
         // EMS Laden/Endladen ausschalten
         LogProgrammablauf += '2,';
@@ -420,19 +479,19 @@ async function Ladesteuerung()
     if (new Date() < getAstroDate("sunset") && new Date() > getAstroDate("sunrise")){bM_Notstrom = false;LogProgrammablauf += '3,';}
     
     // Nur wenn PV-Leistung vorhanden ist oder Entladen freigegeben ist Regelung starten.
-    if(PV_Leistung_Summe_W > 0 || getState(sID_Max_Discharge_Power_W).val > 0 || getState(sID_Max_Charge_Power_W).val > 0){
+    if((PV_Leistung_Summe_W > 0 || getState(sID_Max_Discharge_Power_W).val > 0 || getState(sID_Max_Charge_Power_W).val > 0) && !bTibberLaden){
         LogProgrammablauf += '6,';
-        Status_Notstrom_SOC = await Notstrom_SOC_erreicht();
+        bStatus_Notstrom_SOC = await Notstrom_SOC_erreicht();
         // Wenn Notstrom SOC nicht erreicht ist oder Notstrom SOC erreicht wurde und mehr PV-Leistung als benötigt vorhanden ist (Überschuss) regelung starten
-        if((Status_Notstrom_SOC && (PV_Leistung_Summe_W - Power_Home_W) > UntererLadekorridor_W ) || !Status_Notstrom_SOC){
+        if(((bStatus_Notstrom_SOC && (PV_Leistung_Summe_W - Power_Home_W) > UntererLadekorridor_W ) || !bStatus_Notstrom_SOC) && !bTibberEntladesperre){
             LogProgrammablauf += '7,';
             let Ladeschwelle_Proz = (await getStateAsync(sID_Ladeschwelle_Proz[EinstellungAnwahl])).val                 // Parameter Ladeschwelle
             
             // Hysterese -1% um Batterieschwankungen auszugleiche und ein ständiges ein-/aus-schalten zu verhindern
-            if(Batterie_SOC_Proz > Ladeschwelle_Proz){Ladeschwelle_Proz_erreicht = true}else if(Batterie_SOC_Proz < Ladeschwelle_Proz-1){Ladeschwelle_Proz_erreicht = false}
+            if(Batterie_SOC_Proz > Ladeschwelle_Proz){bLadeschwelle_Proz_erreicht = true}else if(Batterie_SOC_Proz < Ladeschwelle_Proz-1){bLadeschwelle_Proz_erreicht = false}
             
             // Wenn SOC Ladeschwelle erreicht wurde, mit der Laderegelung starten
-            if(Ladeschwelle_Proz_erreicht){
+            if(bLadeschwelle_Proz_erreicht){
                 LogProgrammablauf += '9,';
                 
                 // Prüfen ob vor Regelbeginn
@@ -449,8 +508,8 @@ async function Ladesteuerung()
                             LogProgrammablauf += '13,';
                             // Batterie SoC > Unload und PV Leistung vorhanden
                             // Neuberechnung der Ladeleistung erfolgt, wenn der SoC sich ändert oder nach Ablauf von höchstens 5 Minuten oder tLadezeitende sich ändert oder die letzte Ladeleistung 0 W war oder die Parameter sich geändert haben.
-                            if(Batterie_SOC_Proz != Batterie_SOC_alt_Proz || (dAkt.getTime() - Zeit_alt_milisek) > 30000 || RB_AstroSolarNoon.getTime() != RB_AstroSolarNoon_alt_milisek || M_Power == 0 || M_Power == maximumLadeleistung_W || CheckConfig){
-                                Batterie_SOC_alt_Proz = Batterie_SOC_Proz; CheckConfig = false; RB_AstroSolarNoon_alt_milisek = RB_AstroSolarNoon.getTime(); Zeit_alt_milisek = dAkt.getTime();
+                            if(Batterie_SOC_Proz != Batterie_SOC_alt_Proz || (dAkt.getTime() - Zeit_alt_milisek) > 30000 || RB_AstroSolarNoon.getTime() != RB_AstroSolarNoon_alt_milisek || M_Power == 0 || M_Power == maximumLadeleistung_W || bCheckConfig){
+                                Batterie_SOC_alt_Proz = Batterie_SOC_Proz; bCheckConfig = false; RB_AstroSolarNoon_alt_milisek = RB_AstroSolarNoon.getTime(); Zeit_alt_milisek = dAkt.getTime();
                                 LogProgrammablauf += '14,';
                                 // Berechnen der Entladeleistung bis zum Unload SOC in W/sek.
                                 M_Power = Math.round(((Unload_Proz - Batterie_SOC_Proz)*Speichergroesse_kWh*10*3600) / (Math.trunc((RB_AstroSolarNoon.getTime()- dAkt.getTime())/1000)));
@@ -480,8 +539,8 @@ async function Ladesteuerung()
                     // Nach Regelbeginn vor Regelende    
                             
                     // Neuberechnung der Ladeleistung erfolgt, wenn der SoC sich ändert oder nach Ablauf von höchstens 5 Minuten oder tLadezeitende sich ändert oder die letzte Ladeleistung 0 W war oder die Parameter sich geändert haben.
-                    if(Batterie_SOC_Proz != Batterie_SOC_alt_Proz || (dAkt.getTime() - Zeit_alt_milisek) > 30000 || RE_AstroSolarNoon.getTime() != RE_AstroSolarNoon_alt_milisek || M_Power == 0 || M_Power == maximumLadeleistung_W || CheckConfig){
-                        Batterie_SOC_alt_Proz = Batterie_SOC_Proz; CheckConfig = false; RE_AstroSolarNoon_alt_milisek = RE_AstroSolarNoon.getTime(); Zeit_alt_milisek = dAkt.getTime();
+                    if(Batterie_SOC_Proz != Batterie_SOC_alt_Proz || (dAkt.getTime() - Zeit_alt_milisek) > 30000 || RE_AstroSolarNoon.getTime() != RE_AstroSolarNoon_alt_milisek || M_Power == 0 || M_Power == maximumLadeleistung_W || bCheckConfig){
+                        Batterie_SOC_alt_Proz = Batterie_SOC_Proz; bCheckConfig = false; RE_AstroSolarNoon_alt_milisek = RE_AstroSolarNoon.getTime(); Zeit_alt_milisek = dAkt.getTime();
                         let Ladeende_Proz = (await getStateAsync(sID_Ladeende_Proz[EinstellungAnwahl])).val // Parameter Ladeende
                         LogProgrammablauf += '19,';
                         // Berechnen der Ladeleistung bis zum Ladeende SOC in W/sek.
@@ -506,17 +565,17 @@ async function Ladesteuerung()
                     let Ladeende2_Proz = (await getStateAsync(sID_Ladeende2_Proz[EinstellungAnwahl])).val   // Parameter Ladeende2
         
                     // Wenn SOC Ladeende_Proz oder Ladeende2_Proz erreicht wurde, Merker setzen um Batterieschwankungen -1% zu ignorieren.
-                    if(Batterie_SOC_Proz > Ladeende_Proz){Ladeende_Proz_erreicht = true}else if(Batterie_SOC_Proz < Ladeende_Proz-1){Ladeende_Proz_erreicht = false}
-                    if(Batterie_SOC_Proz > Ladeende2_Proz){Ladeende2_Proz_erreicht = true}else if(Batterie_SOC_Proz < Ladeende2_Proz-1){Ladeende2_Proz_erreicht = false}
-                    if (!Ladeende_Proz_erreicht){
+                    if(Batterie_SOC_Proz > Ladeende_Proz){bLadeende_Proz_erreicht = true}else if(Batterie_SOC_Proz < Ladeende_Proz-1){bLadeende_Proz_erreicht = false}
+                    if(Batterie_SOC_Proz > Ladeende2_Proz){bLadeende2_Proz_erreicht = true}else if(Batterie_SOC_Proz < Ladeende2_Proz-1){bLadeende2_Proz_erreicht = false}
+                    if (!bLadeende_Proz_erreicht){
                         LogProgrammablauf += '23,';
                         M_Power = maximumLadeleistung_W;
-                    }else if (!Ladeende2_Proz_erreicht){
+                    }else if (!bLadeende2_Proz_erreicht){
                         LogProgrammablauf += '24,';
                         // Berechnen der Ladeleistung bis zum Ladeende2 SOC in W/sek.
                         // Neuberechnung der Ladeleistung erfolgt, wenn der SoC sich ändert oder nach Ablauf von höchstens 5 Minuten oder tLadezeitende sich ändert oder die letzte Ladeleistung 0 W war oder die Parameter sich geändert haben.
-                        if(Batterie_SOC_Proz != Batterie_SOC_alt_Proz || (dAkt.getTime() - Zeit_alt_milisek) > 30000 || RE_AstroSolarNoon.getTime() != RE_AstroSolarNoon_alt_milisek || M_Power == 0 || M_Power == maximumLadeleistung_W || CheckConfig){
-                            Batterie_SOC_alt_Proz = Batterie_SOC_Proz; CheckConfig = false; RE_AstroSolarNoon_alt_milisek = RE_AstroSolarNoon.getTime(); Zeit_alt_milisek = dAkt.getTime();
+                        if(Batterie_SOC_Proz != Batterie_SOC_alt_Proz || (dAkt.getTime() - Zeit_alt_milisek) > 30000 || RE_AstroSolarNoon.getTime() != RE_AstroSolarNoon_alt_milisek || M_Power == 0 || M_Power == maximumLadeleistung_W || bCheckConfig){
+                            Batterie_SOC_alt_Proz = Batterie_SOC_Proz; bCheckConfig = false; RE_AstroSolarNoon_alt_milisek = RE_AstroSolarNoon.getTime(); Zeit_alt_milisek = dAkt.getTime();
                             LogProgrammablauf += '25,';
                             M_Power = Math.round(((Ladeende2_Proz - Batterie_SOC_Proz)*Speichergroesse_kWh*10*3600) / (Math.trunc((LE_AstroSunset.getTime()-dAkt.getTime())/1000)));
                             if (M_Power < UntererLadekorridor_W && PV_Leistung_Summe_W -Power_Home_W > 0){
@@ -547,17 +606,17 @@ async function Ladesteuerung()
                     let Ladeende2_Proz = (await getStateAsync(sID_Ladeende2_Proz[EinstellungAnwahl])).val    // Parameter Ladeende2
         
                     // Wurde Batterie SOC Ladeende2 erreicht, dann Ladung beenden ansonsten mit maximal möglicher Ladeleistung Laden.
-                    if(Batterie_SOC_Proz > Ladeende2_Proz){Ladeende2_Proz_erreicht2 = true}else if(Batterie_SOC_Proz < Ladeende2_Proz-1){Ladeende2_Proz_erreicht2 = false}
-                    if (!Ladeende2_Proz_erreicht2 && PV_Leistung_Summe_W > UntererLadekorridor_W){
+                    if(Batterie_SOC_Proz > Ladeende2_Proz){bLadeende2_Proz_erreicht2 = true}else if(Batterie_SOC_Proz < Ladeende2_Proz-1){bLadeende2_Proz_erreicht2 = false}
+                    if (!bLadeende2_Proz_erreicht2 && PV_Leistung_Summe_W > UntererLadekorridor_W){
                         // SOC Ladeende2 nicht erreicht und ausreichend PV-Leistung vorhanden. (idle)
                         LogProgrammablauf += '31,';
                         M_Power = maximumLadeleistung_W;
-                    }else if(Ladeende2_Proz_erreicht2 && PV_Leistung_Summe_W -Power_Home_W > 0){
+                    }else if(bLadeende2_Proz_erreicht2 && PV_Leistung_Summe_W -Power_Home_W > 0){
                         // SOC Ladeende2 erreicht und PV-Leistung höher als Eigenverbrauch. (0 W)
                         LogProgrammablauf += '32,';
                         bLadenEntladenStoppen = true
                         M_Power = 0;
-                    }else if(Ladeende2_Proz_erreicht2 && PV_Leistung_Summe_W-Power_Home_W <= 0 ){
+                    }else if(bLadeende2_Proz_erreicht2 && PV_Leistung_Summe_W-Power_Home_W <= 0 ){
                         // SOC Ladeende2 erreicht und PV-Leistung < Eigenverbrauch. (idle)
                         LogProgrammablauf += '33,';
                         M_Power = maximumLadeleistung_W;
@@ -576,7 +635,7 @@ async function Ladesteuerung()
             await setStateAsync(sID_Saved_Power_W, MaxPower);
             if (MaxPower > 0 && M_Power < MaxPower) {
                 M_Power = MaxPower;
-                M_Abriegelung = true;
+                bM_Abriegelung = true;
             }
             // Prüfen ob Berechnete Ladeleistung innerhalb der min. und max. Grenze ist
             if (M_Power < Bat_Discharge_Limit_W*-1){M_Power = Bat_Discharge_Limit_W*-1;} 
@@ -595,12 +654,12 @@ async function Ladesteuerung()
                     LogProgrammablauf += '35,';
                     M_Power = PowerGrid
                     // Merker um neu Berechnung zu triggern
-                    CheckConfig = true;
+                    bCheckConfig = true;
                 }   
             }
         }else{
-            LogProgrammablauf += '8,';
-            // Notstrom SOC erreicht und nicht ausreichend PV-Leistung vorhanden
+            if(bTibberEntladesperre){LogProgrammablauf += '37,';}else{LogProgrammablauf += '8,';}
+            // Notstrom SOC erreicht und nicht ausreichend PV-Leistung vorhanden oder Tibber Entladesperre aktiv
             // Entladen der Batterie stoppen
             bLadenEntladenStoppen = true
        }
@@ -609,7 +668,7 @@ async function Ladesteuerung()
         if(M_Power_alt != maximumLadeleistung_W || M_Power != maximumLadeleistung_W || bLadenEntladenStoppen ){
                 
             // Alle 6 sek. muss mindestens ein Steuerbefehl an e3dc.rscp Adapter gesendet werden sonst übernimmt E3DC die Steuerung
-            if((bLadenEntladenStoppen != bLadenEntladenStoppen_alt || M_Power != M_Power_alt || (dAkt.getTime()- ZeitE3DC_SetPowerAlt_ms)> 5000) && !LadenAufNotstromSOC){
+            if((bLadenEntladenStoppen != bLadenEntladenStoppen_alt || M_Power != M_Power_alt || (dAkt.getTime()- ZeitE3DC_SetPowerAlt_ms)> 5000) && !bLadenAufNotstromSOC){
                 ZeitE3DC_SetPowerAlt_ms = dAkt.getTime();
                 M_Power_alt = M_Power;
                 bLadenEntladenStoppen_alt = bLadenEntladenStoppen
@@ -629,8 +688,8 @@ async function Ladesteuerung()
                 }else if(M_Power > 0){
                     // Beim ersten aufruf Wert M_Power übernehmen oder wenn Einspeisegrenze erreicht wurde und erst dann langsam erhöhen oder senken
                     if(Set_Power_Value_W < 1 ){Set_Power_Value_W=M_Power}
-                    if(M_Abriegelung){Set_Power_Value_W=M_Power+100;M_Abriegelung= false}
-                    // Leistung langsam erhöhrn oder senken um Schwankungen auszugleichen
+                    if(bM_Abriegelung){Set_Power_Value_W=M_Power+100;bM_Abriegelung= false}
+                    // Leistung langsam erhöhen oder senken um Schwankungen auszugleichen
                     if(M_Power > Set_Power_Value_W){
                         Set_Power_Value_W++
                     }else if(M_Power < Set_Power_Value_W){
@@ -643,7 +702,7 @@ async function Ladesteuerung()
                 }else if(M_Power < 0 && Batterie_SOC_Proz > Notstrom_SOC_Proz){
                     // Beim ersten aufruf Wert M_Power übernehmen und erst dann langsam erhöhen oder senken
                     if(Set_Power_Value_W >= 0){Set_Power_Value_W=M_Power}
-                    if(!CheckConfig){
+                    if(!bCheckConfig){
                         // Leistung langsam erhöhen oder senken um Schwankungen auszugleichen
                         if(M_Power > Set_Power_Value_W){
                             Set_Power_Value_W++
@@ -667,6 +726,12 @@ async function Ladesteuerung()
             }
         }
         
+    }else if(ScriptTibber && bTibberLaden && (dAkt.getTime()- ZeitE3DC_SetPowerAlt_ms)> 5000){
+        LogProgrammablauf += '36,';
+        ZeitE3DC_SetPowerAlt_ms = dAkt.getTime();
+        Batterie_SOC_Proz = (await getStateAsync(sID_Batterie_SOC)).val;
+        await setStateAsync(sID_SET_POWER_MODE,3); // Laden
+        await setStateAsync(sID_SET_POWER_VALUE_W,tibberMaxLadeleistung_W) // E3DC bleib beim Laden im Schnitt um ca 82 W unter der eingestellten Ladeleistung
     }
 }
 
@@ -684,8 +749,8 @@ async function DebugLog()
     if (DebugAusgabeDetail){log(`40_maxPvLeistungTag_kWh = ${nMaxPvLeistungTag_kWh}`)}
     if (DebugAusgabeDetail){log(`40_KorrekturFaktor = ${nKorrFaktor}`)}
     if (DebugAusgabeDetail){log(`40_WirkungsgradModule = ${nWirkungsgradModule}`)}
-    if (DebugAusgabeDetail){log(`AutomatikAnwahl =${AutomatikAnwahl}`)}
-    if (DebugAusgabeDetail){log(`AutomatikRegelung =${AutomatikRegelung}`)}
+    if (DebugAusgabeDetail){log(`bAutomatikAnwahl =${bAutomatikAnwahl}`)}
+    if (DebugAusgabeDetail){log(`bAutomatikRegelung =${bAutomatikRegelung}`)}
     if (DebugAusgabeDetail){log(`Einstellungen =${EinstellungAnwahl}`)}
     if (DebugAusgabeDetail){log(`Start Regelzeitraum = ${RB_AstroSolarNoon.getHours().toString().padStart(2,"0")}:${RB_AstroSolarNoon.getMinutes().toString().padStart(2,"0")}`)}
     if (DebugAusgabeDetail){log(`Ende Regelzeitraum= ${RE_AstroSolarNoon.getHours().toString().padStart(2,"0")}:${RE_AstroSolarNoon.getMinutes().toString().padStart(2,"0")}`)}
@@ -707,8 +772,8 @@ async function DebugLog()
     if (DebugAusgabeDetail){log(`Speichergroesse = ${Speichergroesse_kWh}kWh `)}
     if (DebugAusgabeDetail){log(`Batterie SoC = ${(await getStateAsync(sID_Batterie_SOC)).val} %`)}
     if (DebugAusgabeDetail){log(`Notstrom_SOC_Proz= ${Notstrom_SOC_Proz} %`)}
-    if (DebugAusgabeDetail){log(`Notstrom_SOC_erreicht = ${Status_Notstrom_SOC}`)}
-    if (DebugAusgabeDetail){log(`NotstromAusNetz =${NotstromAusNetz}`)}
+    if (DebugAusgabeDetail){log(`Notstrom_SOC_erreicht = ${bStatus_Notstrom_SOC}`)}
+    if (DebugAusgabeDetail){log(`bNotstromAusNetz =${bNotstromAusNetz}`)}
     if (DebugAusgabeDetail){log(`Notstrom_Status = ${(await getStateAsync(sID_Notrom_Status)).val}`)}
     if (DebugAusgabeDetail){log(`bM_Notstrom = ${bM_Notstrom}`)}
     if (DebugAusgabeDetail){log(`M_Power = ${M_Power}`)}
@@ -721,7 +786,7 @@ async function DebugLog()
 // Prüfen ob Notstrom SOC erreicht wurde um das entladen der Batterie zu verhindern.
 async function Notstrom_SOC_erreicht()
 {   
-    if (Notstrom_Status == 1 || Notstrom_Status == 4 || Batterie_SOC_Proz > Notstrom_SOC_Proz || NotstromVerwenden){
+    if (Notstrom_Status == 1 || Notstrom_Status == 4 || Batterie_SOC_Proz > Notstrom_SOC_Proz || bNotstromVerwenden){
         // Entladen einschalten
         Notstrom_SOC_Proz = (await getStateAsync(sID_Notstrom_akt)).val
         LogProgrammablauf += '4,';
@@ -799,7 +864,7 @@ async function Einstellung(UeberschussPrognoseProzent)
     Bedeckungsgrad15 = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Bewoelkungsgrad_15`)).val;
     if (LogAusgabe){log(`${Logparser1} Bewölkungsgrad 12 Uhr Proplanta ${Bedeckungsgrad12}${Logparser2}`);}
     if (LogAusgabe){log(`${Logparser1} Bewölkungsgrad 15 Uhr Proplanta ${Bedeckungsgrad15}${Logparser2}`);}
-    if (Number.isNaN(Bedeckungsgrad12) && AutomatikAnwahl || Number.isNaN(Bedeckungsgrad15) && AutomatikAnwahl )
+    if (Number.isNaN(Bedeckungsgrad12) && bAutomatikAnwahl || Number.isNaN(Bedeckungsgrad15) && bAutomatikAnwahl )
     {
       log(`${Logparser1} -==== Bewölkungsgrad_12 oder Bewölkungsgrad_15 wurde nicht abgerufen. 12=${Bedeckungsgrad12} 15=${Bedeckungsgrad15} ====- ${Logparser2}`,'warn');  
       return  
@@ -807,7 +872,7 @@ async function Einstellung(UeberschussPrognoseProzent)
           
     // Einstellung 1
     // Prognose PV-Leistung geringer als benötigter Eigenverbrauch, Überschuss zu 100% in Batterie speichern
-	if (UeberschussPrognoseProzent === 0 && AutomatikAnwahl)
+	if (UeberschussPrognoseProzent === 0 && bAutomatikAnwahl)
 	{
 		if (LogAusgabe){log(`${Logparser1}-==== Einstellung 1 aktiv ====-${Logparser2}`);}
         if(EinstellungAnwahl != 1){
@@ -818,7 +883,7 @@ async function Einstellung(UeberschussPrognoseProzent)
     // Einstellung 2
     // Prognose PV-Leistung höher als benötigter Eigenverbrauch,Batterie laden und Überschuss ins Netz einspeisen
     // und keine Bewölkung > 90% 
-	if (UeberschussPrognoseProzent > 0 && Bedeckungsgrad12 < BewoelkungsgradGrenzwert && Bedeckungsgrad15 < BewoelkungsgradGrenzwert && AutomatikAnwahl) 
+	if (UeberschussPrognoseProzent > 0 && Bedeckungsgrad12 < BewoelkungsgradGrenzwert && Bedeckungsgrad15 < BewoelkungsgradGrenzwert && bAutomatikAnwahl) 
     {
 		if (LogAusgabe){log(`${Logparser1}-==== Einstellung 2 aktiv ====-${Logparser2}`);}
         if(EinstellungAnwahl != 2){
@@ -829,7 +894,7 @@ async function Einstellung(UeberschussPrognoseProzent)
     // Einstellung 3
     // Prognose PV-Leistung höher als benötigter Eigenverbrauch,Batterie laden und Überschuss ins Netz einspeisen.
 	// ab 12:00 - 18:00 Uhr Bewölkung > 90%
-	if ((UeberschussPrognoseProzent > 0 && Bedeckungsgrad12 >= BewoelkungsgradGrenzwert && Bedeckungsgrad15 >= BewoelkungsgradGrenzwert && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===3))
+	if ((UeberschussPrognoseProzent > 0 && Bedeckungsgrad12 >= BewoelkungsgradGrenzwert && Bedeckungsgrad15 >= BewoelkungsgradGrenzwert && bAutomatikAnwahl) || (bAutomatikAnwahl === false && EinstellungAnwahl ===3))
 	{
 		if (LogAusgabe){log(`${Logparser1}-==== Einstellung 3 aktiv ====-${Logparser2}`);}
         if(EinstellungAnwahl != 3){
@@ -840,7 +905,7 @@ async function Einstellung(UeberschussPrognoseProzent)
     // Einstellung 4
     // Prognose PV-Leistung höher als benötigter Eigenverbrauch,Batterie laden und Überschuss ins Netz einspeisen.
 	// ab 12:00 - 15:00 Uhr Bewölkung > 90%
-	if ((UeberschussPrognoseProzent > 0 && Bedeckungsgrad12 >= BewoelkungsgradGrenzwert && Bedeckungsgrad15 < BewoelkungsgradGrenzwert && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===4))
+	if ((UeberschussPrognoseProzent > 0 && Bedeckungsgrad12 >= BewoelkungsgradGrenzwert && Bedeckungsgrad15 < BewoelkungsgradGrenzwert && bAutomatikAnwahl) || (bAutomatikAnwahl === false && EinstellungAnwahl ===4))
 	{
 		if (LogAusgabe){log(`${Logparser1}-==== Einstellung 4 aktiv ====-${Logparser2}`);}
         if(EinstellungAnwahl != 4){
@@ -851,7 +916,7 @@ async function Einstellung(UeberschussPrognoseProzent)
     // Einstellung 5
     // Prognose PV-Leistung höher als benötigter Eigenverbrauch,Batterie laden und Überschuss ins Netz einspeisen.
 	// ab 15:00 - 18:00 Uhr Bewölkung > 90%
-	if ((UeberschussPrognoseProzent > 0 && Bedeckungsgrad12 < BewoelkungsgradGrenzwert && Bedeckungsgrad15 >= BewoelkungsgradGrenzwert && AutomatikAnwahl) || (AutomatikAnwahl === false && EinstellungAnwahl ===5))
+	if ((UeberschussPrognoseProzent > 0 && Bedeckungsgrad12 < BewoelkungsgradGrenzwert && Bedeckungsgrad15 >= BewoelkungsgradGrenzwert && bAutomatikAnwahl) || (bAutomatikAnwahl === false && EinstellungAnwahl ===5))
     {
         if (LogAusgabe){log(`${Logparser1}-==== Einstellung 5 aktiv ====-${Logparser2}`);}
         if(EinstellungAnwahl != 5){
@@ -865,16 +930,18 @@ async function Einstellung(UeberschussPrognoseProzent)
 async function Prognosen_Berechnen()
 {
     let Tag =[], PrognoseProplanta_kWh_Tag =[],PrognoseSolcast_kWh_Tag=[],PrognoseSolcast90_kWh_Tag=[],Prognose_kWh_Tag =[];
-	let IstSummePvLeistung_kWh = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.IstSummePvLeistung_kWh`)).val;
+	let DatumAk = new Date();
+	let TagHeute = DatumAk.getDate().toString().padStart(2,"0");
+    let IstSummePvLeistung_kWh = arrayPV_LeistungTag_kWh[TagHeute]
     // Array Tag Datum von heute bis + 5 Tag eintragen
     for (let i = 0; i < 7 ; i++){
         Tag[i] = nextDayDate(i).slice(8,10);
     }
     // Array die Aktuellen kWh von Heute + 5 Tage vorraus zuweisen
     for (let i = 0; i < 7 ; i++){
-        PrognoseProplanta_kWh_Tag[i] = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseProp_kWh_${Tag[i]}`)).val;  
-        PrognoseSolcast_kWh_Tag[i] = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast_kWh_${Tag[i]}`)).val;  
-        PrognoseSolcast90_kWh_Tag[i] = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast90_kWh_${Tag[i]}`)).val;  
+        PrognoseProplanta_kWh_Tag[i] = arrayPrognoseProp_kWh[Tag[i]];  
+        PrognoseSolcast_kWh_Tag[i] = arrayPrognoseSolcast_kWh[Tag[i]];  
+        PrognoseSolcast90_kWh_Tag[i] = arrayPrognoseSolcast90_kWh[Tag[i]];
     }
     
     if (LogAusgabe){log(`${Logparser1} Prognose Solcast in kWh = ${PrognoseSolcast_kWh_Tag[0]}${Logparser2}`);}
@@ -929,18 +996,18 @@ async function Prognosen_Berechnen()
     // wenn die produzierte PV-Leistung < als Prognose ist.
     if (Prognose_kWh_Tag[0] > IstSummePvLeistung_kWh) {
         Prognose_kWh_Tag[0] = Prognose_kWh_Tag[0]-IstSummePvLeistung_kWh;
-        setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseAuto_kWh_${Tag[0]}`, Prognose_kWh_Tag[0]+IstSummePvLeistung_kWh);
+        arrayPrognoseAuto_kWh[Tag[0]] = Prognose_kWh_Tag[0]+IstSummePvLeistung_kWh;
     }else{
-        setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseAuto_kWh_${Tag[0]}`, Prognose_kWh_Tag[0]);
+        arrayPrognoseAuto_kWh[Tag[0]] = Prognose_kWh_Tag[0]
     }
     if (LogAusgabe){log(`${Logparser1} Bereits produzierte PV-Leistung  = ${IstSummePvLeistung_kWh}${Logparser2}`);}
     await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.PrognoseBerechnung_kWh_heute`, Prognose_kWh_Tag[0]);
     // Nur bis ende vom aktuellen Monat werte eintragen, sonst werden die ersten Tage vom aktuellen Monat mit den Werten vom nächsten Monat überschrieben. 
     for (let i = 1; i < 7 ; i++){
         if (Tag[i] == '01'){break;}
-        setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseAuto_kWh_${Tag[i]}`, Prognose_kWh_Tag[i]);
+        arrayPrognoseAuto_kWh[Tag[i]] = Prognose_kWh_Tag[i]
     }
-    
+    await setStateAsync(sID_PrognoseAuto_kWh,arrayPrognoseAuto_kWh)
     
     if (LogAusgabe){log(`${Logparser1} Prognose_kWh_heute für Berechnung = ${Prognose_kWh_Tag[0]}${Logparser2}`);}
     
@@ -988,26 +1055,11 @@ async function Ueberschuss_Prozent()
 // materialdesing JSON Chart Werte speichern
 async function makeJson(){
     let chart = {}
-    let values1 = [], values2 = [], values3 = [], values4 = [], values5 = [], axisLabels = [];
-    let akkPV_Leistung, akkProgProp, akkProgAuto,akkProgSolcast,akkProgSolcast90;
+    let axisLabels = [];
     let date = new Date();
 	let mm = (date.getMonth()+1).toString().padStart(2,"0");
     
-    for (let i = 1; i <= 31; i++) {
-	    let n= i.toString().padStart(2,"0");
-        akkPV_Leistung = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.IstPvLeistung_kWh_${n}`)).val
-        akkProgProp = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseProp_kWh_${n}`)).val
-        akkProgSolcast = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast_kWh_${n}`)).val
-        akkProgSolcast90 = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast90_kWh_${n}`)).val
-        akkProgAuto = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseAuto_kWh_${n}`)).val
-            
-        values1.push(akkProgAuto)
-        values2.push(akkProgProp)
-        values3.push(akkProgSolcast)
-        values4.push(akkProgSolcast90)
-        values5.push(akkPV_Leistung)
-
-    }
+    
     for (let i = 1; i <= 31; i++) {
         axisLabels.push(i);
     }
@@ -1016,7 +1068,7 @@ async function makeJson(){
         axisLabels: axisLabels,
         graphs: [
             {
-                data: values1,
+                data: arrayPrognoseAuto_kWh.slice(1),
                 type: 'line',
                 datalabel_show: 'false',
                 datalabel_offset: -12,
@@ -1038,7 +1090,7 @@ async function makeJson(){
                 yAxis_zeroLineWidth: 0.4,
             },
             {
-                data: values2,
+                data: arrayPrognoseProp_kWh.slice(1),
                 type: 'line',
                 datalabel_show: 'false',
                 datalabel_offset: -12,
@@ -1060,7 +1112,7 @@ async function makeJson(){
                 yAxis_zeroLineWidth: 0.4,
             },
             {
-                data: values3,
+                data: arrayPrognoseSolcast_kWh.slice(1),
                 type: 'line',
                 datalabel_show: 'false',
                 datalabel_offset: -12,
@@ -1082,7 +1134,7 @@ async function makeJson(){
                 yAxis_zeroLineWidth: 0.4,
             },
             {
-                data: values4,
+                data: arrayPrognoseSolcast90_kWh.slice(1),
                 type: 'line',
                 datalabel_show: 'false',
                 datalabel_offset: -12,
@@ -1104,7 +1156,7 @@ async function makeJson(){
                 yAxis_zeroLineWidth: 0.4,
             },
             {
-                data: values5,
+                data: arrayPV_LeistungTag_kWh.slice(1),
                 type: 'bar',
                 datalabel_color: 'white',
                 datalabel_offset: 12,
@@ -1216,7 +1268,8 @@ async function SummePvLeistung(){
 	let IstPvLeistung0_kWh = 0;
 	let IstPvLeistung1_kWh = 0;
 	let IstPvLeistung_kWh = 0;
-	if (existsState(sID_PVErtragLM0)){
+	
+    if (existsState(sID_PVErtragLM0)){
 	    IstPvLeistung0_kWh = parseFloat((await getStateAsync(sID_PVErtragLM0)).val);
 	    //if (DebugAusgabe) {log(`${Logparser1} PV-Leistung Leistungsmesser 0 Heute = ${IstPvLeistung0_kWh}${Logparser2}`);}
 	}
@@ -1225,8 +1278,8 @@ async function SummePvLeistung(){
 	    //if (DebugAusgabe) {log(`${Logparser1} PV-Leistung Leistungsmesser 1 Heute = ${IstPvLeistung1_kWh}${Logparser2}`);}
 	}
 	IstPvLeistung_kWh = IstPvLeistung0_kWh + IstPvLeistung1_kWh;
-	await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.IstPvLeistung_kWh_${TagHeute}`, IstPvLeistung_kWh);
-    await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.IstSummePvLeistung_kWh`, IstPvLeistung_kWh);
+	arrayPV_LeistungTag_kWh[TagHeute] = IstPvLeistung_kWh
+    await setStateAsync(sID_arrayPV_LeistungTag_kWh, arrayPV_LeistungTag_kWh);
     
     makeJson();
 };
@@ -1357,13 +1410,13 @@ async function SheduleProplanta() {
             let PrognoseProplanta_kWh_Tag1 = (GlobalstrahlungTag1 * nModulFlaeche) * (nWirkungsgradModule/100);
             let PrognoseProplanta_kWh_Tag2 = (GlobalstrahlungTag2 * nModulFlaeche) * (nWirkungsgradModule/100);
             let PrognoseProplanta_kWh_Tag3 = (GlobalstrahlungTag3 * nModulFlaeche) * (nWirkungsgradModule/100);
-            await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseProp_kWh_${Tag0}`, PrognoseProplanta_kWh_Tag0);
+            arrayPrognoseProp_kWh[Tag0] = PrognoseProplanta_kWh_Tag0
             if (Tag1!= '01'){
-                await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseProp_kWh_${Tag1}`, PrognoseProplanta_kWh_Tag1);
+                arrayPrognoseProp_kWh[Tag1] = PrognoseProplanta_kWh_Tag1
                 if (Tag2!= '01'){
-                    await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseProp_kWh_${Tag2}`, PrognoseProplanta_kWh_Tag2);
+                    arrayPrognoseProp_kWh[Tag2] = PrognoseProplanta_kWh_Tag2
                     if (Tag3!= '01'){
-                        await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseProp_kWh_${Tag3}`, PrognoseProplanta_kWh_Tag3);
+                        arrayPrognoseProp_kWh[Tag3] = PrognoseProplanta_kWh_Tag3
                     }
                 }
             }
@@ -1375,7 +1428,7 @@ async function SheduleProplanta() {
                 await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.NaesteAktualisierung`,"6:00");
                 if(LogAusgabe){log(`${Logparser1} Näste Aktualisierung Wetterdaten = konnte nicht abgerufen werden. Standard 6:00 Uhr wurde gesetzt ${Logparser2}`)}
             }
-                
+            await setStateAsync(sID_PrognoseProp_kWh,arrayPrognoseProp_kWh)    
             
         }
     }, function(error) {
@@ -1418,15 +1471,15 @@ async function SheduleProplanta() {
         let PrognoseProplanta_kWh_Tag5 = (GlobalstrahlungTag5 * nModulFlaeche) * (nWirkungsgradModule/100);
         let PrognoseProplanta_kWh_Tag6 = (GlobalstrahlungTag6 * nModulFlaeche) * (nWirkungsgradModule/100);
         if (Tag0!= '01'){
-            await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseProp_kWh_${Tag0}`, PrognoseProplanta_kWh_Tag4);
+            arrayPrognoseProp_kWh[Tag0] = PrognoseProplanta_kWh_Tag4
             if (Tag1!= '01'){
-                await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseProp_kWh_${Tag1}`, PrognoseProplanta_kWh_Tag5);
+                arrayPrognoseProp_kWh[Tag1] = PrognoseProplanta_kWh_Tag5
                 if (Tag2!= '01'){
-                    await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseProp_kWh_${Tag2}`, PrognoseProplanta_kWh_Tag6);
+                    arrayPrognoseProp_kWh[Tag2] = PrognoseProplanta_kWh_Tag6
                 }
             }
         }
-            
+        await setStateAsync(sID_PrognoseProp_kWh,arrayPrognoseProp_kWh)   
         
     }, function(error) {
         log (`${Logparser1}-==== Error in der function InterrogateProplanta. Fehler = ${error} ====- ${Logparser2}`,'warn')
@@ -1540,8 +1593,10 @@ async function SheduleSolcast(DachFl) {
                 log(`${Logparser1} Summe PV Leistung Tag ${Datum} pv_estimate= ${Prognose} pv_estimate90= ${Prognose90}${Logparser2}`);
                 
                 if (Datum.slice(5, 7) === Monat && (hours <= 4 || d !== 0)) {
-                    await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast_kWh_${Datum.slice(8, 10)}`, Prognose);
-                    await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast90_kWh_${Datum.slice(8, 10)}`, Prognose90);
+                    arrayPrognoseSolcast_kWh[Datum.slice(8, 10)] = Prognose
+                    arrayPrognoseSolcast90_kWh[Datum.slice(8, 10)] = Prognose90
+                    await setStateAsync(sID_PrognoseSolcast_kWh,arrayPrognoseSolcast_kWh)
+                    await setStateAsync(sID_PrognoseSolcast90_kWh,arrayPrognoseSolcast90_kWh)
                 }
                 SummePV_Leistung_Tag_kW[1][d] = 0;
                 SummePV_Leistung_Tag_kW[3][d] = 0;
@@ -1643,31 +1698,31 @@ async function CheckPrognose(){
             // Nach Sonnenaufgang
             //if (DebugAusgabe){log(`CheckPrognose: Nach Sonnenaufgang`)}
             let Tag = nextDayDate(1).slice(8,10);
-            let PrognoseMorgen_kWh = getState(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseAuto_kWh_${Tag}`).val
+            let PrognoseMorgen_kWh = arrayPrognoseAuto_kWh[Tag]
             //if (DebugAusgabe){log(`CheckPrognose: Reichweite ms =${ReichweiteTime_ms} Reichweite Stunden =${round((ReichweiteTime_ms-heute.getTime())/3600000,2)} sunriseEndTimeMorgen_ms = ${sunriseEndTimeMorgen_ms} sunriseEndTimeMorgen Stunden =${round((sunriseEndTimeMorgen_ms-heute.getTime())/3600000,2)} PrognoseMorgen_kWh =${PrognoseMorgen_kWh} minWertPrognose_kWh =${minWertPrognose_kWh}`)}
             // Prüfen ob die Reichweite Batterie SOC größer ist als Sonnenaufgang + offset
             if(ReichweiteTime_ms > sunriseEndTimeMorgen_ms && PrognoseMorgen_kWh > minWertPrognose_kWh && minWertPrognose_kWh > 0){
                 // Batterie reicht bis zum Sonnenaufgang, es kann entladen werden
-                HeuteNotstromVerbraucht = true;
+                bHeuteNotstromVerbraucht = true;
                 return true
             }
         }else{
             // Vor Sonnenaufgang
             //if (DebugAusgabe){log(`CheckPrognose: Vor Sonnenaufgang`)}
             let Tag = nextDayDate(0).slice(8,10);
-            let PrognoseMorgen_kWh = getState(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseAuto_kWh_${Tag}`).val
+            let PrognoseMorgen_kWh = arrayPrognoseAuto_kWh[Tag]
             //if (DebugAusgabe){log(`CheckPrognose: Reichweite ms =${ReichweiteTime_ms} Reichweite Stunden =${round((ReichweiteTime_ms-heute.getTime())/3600000,2)} sunriseEndTimeHeute_ms = ${sunriseEndTimeHeute_ms} sunriseEndTimeHeute Stunden =${round((sunriseEndTimeHeute_ms-heute.getTime())/3600000,2)} PrognoseMorgen_kWh =${PrognoseMorgen_kWh} minWertPrognose_kWh =${minWertPrognose_kWh}`)}
             // Prüfen ob die Reichweite Batterie SOC größer ist als Sonnenaufgang + offset
             if(ReichweiteTime_ms > sunriseEndTimeHeute_ms && PrognoseMorgen_kWh > minWertPrognose_kWh && minWertPrognose_kWh > 0){
                 // Batterie reicht bis zum Sonnenaufgang, es kann entladen werden
-                HeuteNotstromVerbraucht = true;
+                bHeuteNotstromVerbraucht = true;
                 return true
             }
     
         }
     }
     // Wenn Notstrom einmal zum entladen freigegeben wurde, soll bis 0 kWh entladen werden
-    if (HeuteNotstromVerbraucht){return true}
+    if (bHeuteNotstromVerbraucht){return true}
     return false
 }
 
@@ -1735,7 +1790,7 @@ async function LadeNotstromSOC(){
         Batterie_SOC_Proz = (await getStateAsync(sID_Batterie_SOC)).val;
         if ((await getStateAsync(sID_Notrom_Status)).val == 4 || (await getStateAsync(sID_Notrom_Status)).val == 1){break;}
     }
-    LadenAufNotstromSOC=false
+    bLadenAufNotstromSOC=false
 }
 
 // Funktion zur Berechnung der reinen Hausverbrauchsleistung je Wochentag unterteilt in Tag und Nacht
@@ -2096,10 +2151,10 @@ on(sID_Power_Home_W,async function(obj) {
     }
 });
 
-// Triggern wenn State NotstromAusNetz in VIS geändert wird
+// Triggern wenn State bNotstromAusNetz in VIS geändert wird
 on({id: sID_NotstromAusNetz, change: "ne"}, async function (obj){
-	NotstromAusNetz = (await getStateAsync(obj.id)).val;
-    if(NotstromAusNetz) {
+	bNotstromAusNetz = (await getStateAsync(obj.id)).val;
+    if(bNotstromAusNetz) {
         if (LogAusgabe){log(`${Logparser1} -==== Notstrom SOC aus Netz nachladen eingeschaltet ====- ${Logparser2}`);}
     }else{
         if (LogAusgabe){log(`${Logparser1} -==== Notstrom SOC aus Netz nachladen ausgeschaltet ====- ${Logparser2}`);}
@@ -2108,11 +2163,11 @@ on({id: sID_NotstromAusNetz, change: "ne"}, async function (obj){
 
 // Triggern wenn State Automatik Prognose in VIS geändert wird
 on({id: sID_Automatik_Prognose, change: "ne"}, async function (obj){
-	AutomatikAnwahl = (await getStateAsync(obj.id)).val;
-    if(AutomatikAnwahl) {
-        StoppTriggerEinstellungAnwahl = true;
+	bAutomatikAnwahl = (await getStateAsync(obj.id)).val;
+    if(bAutomatikAnwahl) {
+        bStoppTriggerEinstellungAnwahl = true;
         WetterprognoseAktualisieren()
-        StoppTriggerEinstellungAnwahl = false
+        bStoppTriggerEinstellungAnwahl = false
         await setStateAsync(sID_EinstellungAnwahl,0);
         EinstellungAnwahl = 0
     }else{
@@ -2123,9 +2178,9 @@ on({id: sID_Automatik_Prognose, change: "ne"}, async function (obj){
 
 // Triggern wenn manuelle Ladung Batterie eingeschalten wird
 on({id: sID_Manual_Charge_Energy, change: "ne"}, async function (obj){
-	if ((await getStateAsync(obj.id)).val>0){ManuelleLadungBatt = true}else{ManuelleLadungBatt = false}
+	if ((await getStateAsync(obj.id)).val>0){bManuelleLadungBatt = true}else{bManuelleLadungBatt = false}
      
-    if(ManuelleLadungBatt) {
+    if(bManuelleLadungBatt) {
         if (LogAusgabe){log(`${Logparser1} -==== manuelles Laden der Batterie ist eingeschalten ====- ${Logparser2}`);}
         if ((await getStateAsync(sID_Max_Discharge_Power_W)).val == 0 || (await getStateAsync(sID_DISCHARGE_START_POWER)).val == 0 || (await getStateAsync(sID_Max_Charge_Power_W)).val == 0){
             await setStateAsync(sID_Max_Discharge_Power_W, Bat_Discharge_Limit_W)
@@ -2139,8 +2194,8 @@ on({id: sID_Manual_Charge_Energy, change: "ne"}, async function (obj){
 
 // Triggern wenn State Automatik Regelung in VIS geändert wird
 on({id: sID_Automatik_Regelung, change: "ne"}, async function (obj){
-	 AutomatikRegelung = (await getStateAsync(obj.id)).val;
-     if(AutomatikRegelung) {
+	 bAutomatikRegelung = (await getStateAsync(obj.id)).val;
+     if(bAutomatikRegelung) {
         if (LogAusgabe){log(`${Logparser1} -==== Automatik Laderegelung eingeshaltet ====- ${Logparser2}`);}
     }else{
         if (LogAusgabe){log(`${Logparser1} -==== Automatik Laderegelung gestoppt Laden/Entladen der Batterie ist eingeschaltet ====- ${Logparser2}`);}
@@ -2155,9 +2210,9 @@ on({id: sID_Automatik_Regelung, change: "ne"}, async function (obj){
 // Triggern bei Änderung Eigenverbrauch soll der Überschuss neu berechnet werden.
 on({id: sID_EigenverbrauchTag_kWh, change: "ne"}, function (obj){
 	if (LogAusgabe){log(`${Logparser1} -==== Wert Eigenverbrauch wurde auf  ${getState(obj.id).val} kWh geändert ====- ${Logparser2}`);}
-    StoppTriggerEinstellungAnwahl = true
+    bStoppTriggerEinstellungAnwahl = true
     WetterprognoseAktualisieren();
-    StoppTriggerEinstellungAnwahl = false
+    bStoppTriggerEinstellungAnwahl = false
 });  
 
 
@@ -2205,9 +2260,9 @@ on({id: sID_PrognoseAnwahl, change: "ne"},async function(obj) {
         if(LogAusgabe && PrognoseAnwahl == 4){log("-==== Proplanta u. Solcast angewählt, Berechnung nach Ø Wert ====-")};
         if(LogAusgabe && PrognoseAnwahl == 5){log("-==== Solcast 90 angewählt ====-")};
         if(LogAusgabe && PrognoseAnwahl == 6){log("-==== Solcast 90 u. Solcast angewählt, Berechnung nach Ø Wert ====-")};
-        StoppTriggerEinstellungAnwahl = true
+        bStoppTriggerEinstellungAnwahl = true
         WetterprognoseAktualisieren();
-        StoppTriggerEinstellungAnwahl = false
+        bStoppTriggerEinstellungAnwahl = false
     }else{
         log(`${Logparser1} -==== Falscher Wert State PrognoseAnwahl ====- ${Logparser2}`,'warn');
     }
@@ -2224,24 +2279,24 @@ on({id: arrayID_Notstrom  , change: "ne"}, async function (obj) {
 on({ id: sID_EinstellungAnwahl, change: "ne", valGt: 0 }, async function (obj) {
     const val = obj.state.val;
     
-    if (AutomatikAnwahl) {
+    if (bAutomatikAnwahl) {
         let CallingJavascript = ''+obj.state.from.match(/javascript/ig)
         if (CallingJavascript !== 'javascript'){
-            AutomatikAnwahl = false
+            bAutomatikAnwahl = false
             await setStateAsync(sID_Automatik_Prognose, false);
             log(`${Logparser1} -==== Manuelle Anwahl ! Automatische Einstellung nach Prognose beendet ====- ${Logparser2}`,'warn');
             return
         }
         EinstellungAnwahl = obj.state.val
-        CheckConfig = true;
+        bCheckConfig = true;
         await MEZ_Regelzeiten();
         if (val !== 0) {
             log(`${Logparser1} -==== Automatische Änderung der Einstellung nach Prognose. Einstellung ${EinstellungAnwahl} aktiv ====- ${Logparser2}`,'warn');
-            if (StoppTriggerEinstellungAnwahl){return}
+            if (bStoppTriggerEinstellungAnwahl){return}
             WetterprognoseAktualisieren();
         }
     } else {
-        StoppTriggerParameter = true;
+    bStoppTriggerParameter = true;
         // Dynamisch die Werte der Parameter-IDs setzen
         const setStatePromises = arrayID_Parameters[0].map((param, index) => {
             return setStateAsync(param, getState(arrayID_Parameters[val][index]).val);
@@ -2250,21 +2305,21 @@ on({ id: sID_EinstellungAnwahl, change: "ne", valGt: 0 }, async function (obj) {
         EinstellungAnwahl = 0;
         await setStateAsync(sID_EinstellungAnwahl, 0);
         await MEZ_Regelzeiten();
-        CheckConfig = true;
+        bCheckConfig = true;
         log(`${Logparser1} -==== Manuelle Änderung der Einstellung. ====- ${Logparser2}`,'warn');
-        StoppTriggerParameter = false;
+    bStoppTriggerParameter = false;
     }
 });
 
 // Triggern wenn sich an den einzelnen Parameter (Einstellung 0 -1) was ändert um die Ladeleistung neu zu berechnen.
 on({ id: allParameterIDs, change: "ne" }, async function (obj) {
     // Wenn die Einstellung 0 im manuellen Betrieb geändert wird muss das Triggern der einzelnen Parameter ignoriert werden. 
-    if (StoppTriggerParameter) return;
+    if (bStoppTriggerParameter) return;
     // Den Index des Parameters finden, der sich geändert hat
     const index = arrayID_Parameters.findIndex(params => params.includes(obj.id));
     if (EinstellungAnwahl === index) {
         log(`${Logparser1}-==== User Parameter ${obj.id.split('.')[4]} wurde in ${obj.state.val} geändert ====-${Logparser2}`, 'warn');
-        CheckConfig = true;
+        bCheckConfig = true;
         await MEZ_Regelzeiten();
     }
 });
@@ -2273,7 +2328,7 @@ on({ id: allParameterIDs, change: "ne" }, async function (obj) {
 // Triggern wenn sich an den Batterie Leistungswerten oder Spannung was ändert
 on({id: sID_BAT0_Alterungszustand, change: "ne"}, async function (obj) {
     await Speichergroesse();
-    CheckConfig = true
+    bCheckConfig = true
     log(`${Logparser1} -==== Speichergröße hat sich geändert Speichergroesse_kWh = ${Speichergroesse_kWh} ====- ${Logparser2}`,'warn')
 });
 
@@ -2308,25 +2363,29 @@ if (existsState(sID_PVErtragLM1)){
 
 schedule('*/3 * * * * *', async function() {
     // Vor Regelung Skript Startdurchlauf erst abwarten  
-    if(!bStart && AutomatikRegelung && !ManuelleLadungBatt){Ladesteuerung();}
+    if(!bStart && bAutomatikRegelung && !bManuelleLadungBatt){Ladesteuerung();}
 });
 
 // jeden Monat am 1 History Daten Tag aktuelles Monat Löschen
 schedule("0 0 1 * *", async function() {
-   for (let i = 1; i <= 31; i++) {
-        let n = i.toString().padStart(2,"0");
-        await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.IstPvLeistung_kWh_${n}`, 0);
-        await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseProp_kWh_${n}`, 0);
-	    await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseAuto_kWh_${n}`, 0);
-        await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast_kWh_${n}`, 0);
-        await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast90_kWh_${n}`, 0);
-    }
+    arrayPrognoseProp_kWh.fill(0)
+    arrayPrognoseAuto_kWh.fill(0)
+    arrayPrognoseSolcast90_kWh.fill(0)
+    arrayPrognoseSolcast_kWh.fill(0)
+    arrayPV_LeistungTag_kWh.fill(0)
+    await Promise.all([
+        setStateAsync(sID_PrognoseProp_kWh,arrayPrognoseProp_kWh),
+        setStateAsync(sID_PrognoseAuto_kWh,arrayPrognoseAuto_kWh),
+        setStateAsync(sID_PrognoseSolcast90_kWh,arrayPrognoseSolcast90_kWh),
+        setStateAsync(sID_PrognoseSolcast_kWh,arrayPrognoseSolcast_kWh),
+        setStateAsync(sID_arrayPV_LeistungTag_kWh,arrayPV_LeistungTag_kWh)
+    ]);
     writelog();
 });
 
 // jeden Tag um 12:00 aktualisieren.
 schedule({hour: 12, minute: 0}, function () { 
-	HeuteNotstromVerbraucht = false
+	bHeuteNotstromVerbraucht = false
 });
 
 // jeden Tag um 00:01 Tageswert nullen und Regelzeiten aktualisieren.
@@ -2340,12 +2399,12 @@ schedule({hour: 0, minute: 1}, function () {
 
 // jeden Tag um 02:00 prüfen ob Notstrom SOC mit Batterie SOC übereinstimmt.
 schedule({hour: 2, minute: 0}, async function () { 
-    if (NotstromAusNetz){
+    if (bNotstromAusNetz){
         let nbr_Notstrom_SOC_Proz = (await getStateAsync(sID_Notstrom_akt)).val                             // Berechneter Notstrom SOC
         Batterie_SOC_Proz = (await getStateAsync(sID_Batterie_SOC)).val;                                    // Aktueller Batterie SOC E3DC 
         let Notstrom_Status = (await getStateAsync(sID_Notrom_Status)).val;                                 // aktueller Notstrom Status E3DC 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
-        if (Batterie_SOC_Proz < nbr_Notstrom_SOC_Proz && !HeuteNotstromVerbraucht && Notstrom_Status != 4){
-            LadenAufNotstromSOC=true
+        if (Batterie_SOC_Proz < nbr_Notstrom_SOC_Proz && !bHeuteNotstromVerbraucht && Notstrom_Status != 4){
+            bLadenAufNotstromSOC=true
             await setStateAsync(sID_POWER_LIMITS_USED,true);
             log(`${Logparser1} -==== Batterie wird bis NotstromSOC aus dem Netz geladen ====- ${Logparser2}`,'warn')
             LadeNotstromSOC();

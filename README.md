@@ -73,13 +73,19 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
-### Version: 1.4.2
+### Version: 1.5.0
 * Es wird überprüft ob bei den Instanzeinstellungen des e3dc-rscp Adapter __SET_POWER __Wiederholintervall__ auf 0 eingestellt ist.
 * Fehler behoben, dass bei Leerlauf Script ChargeControl __SET_POWER_MODE__ nicht auf 0 gesetzt wurde.
 * Fehler im DebugLog behoben wo zweimal die gleichen Werte __sID_PvLeistung_ADD_W__ addiert wurden. (Danke an @psrelax für den Hinweis)
 * Kleinere Optimierungen und Fehler behoben für das Script my-pv Heizstab
+* Vorbereitung Schnittstelle Skript Tibber
 * Berechnung des durchschnittlichen Hausverbrauchs neu erstellt. Es wird jetzt der Durchschnitt für jeden Tag, getrennt in Verbrauch Tag und Nacht berechnet.
 Die Anzeige Autonomiezeit in VIS wurde dadurch auch angepasst. Es wird jetzt die Reichweite der Batterie mit dem neuen Durchschnittsverbrauch berechnet und mit dem aktuellen Verbrauch bei Entladung der Batterie.
+* Alle Objekt ID`s __IstPvLeistung_kWh_1 bis __31 werden nicht mehr benötigt. Daten werden unter der neuen Objekt ID __0_userdata.0.Charge_Control.History.istPV_LeistungTag_kWh gespeichert.
+* Alle Objekt ID`s __PrognoseProp_kWh_1 bis __31 werden nicht mehr benötigt. Daten werden unter der neuen Objekt ID __0_userdata.0.Charge_Control.History.PrognoseProp_kWh gespeichert.
+* Alle Objekt ID`s __PrognoseAuto_kWh_1 bis __31 werden nicht mehr benötigt. Daten werden unter der neuen Objekt ID __0_userdata.0.Charge_Control.History.PrognoseAuto_kWh gespeichert.
+* Alle Objekt ID`s __PrognoseSolcast90_kWh_1 bis __31 werden nicht mehr benötigt. Daten werden unter der neuen Objekt ID __0_userdata.0.Charge_Control.History.PrognoseSolcast90_kWh gespeichert.
+* Alle Objekt ID`s __PrognoseSolcast_kWh_1 bis __31 werden nicht mehr benötigt. Daten werden unter der neuen Objekt ID __0_userdata.0.Charge_Control.History.PrognoseSolcast_kWh gespeichert.
 
 ### Version: 1.4.1
 * XMLHttpRequest ausgetauscht durch axios
