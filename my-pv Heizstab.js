@@ -12,7 +12,7 @@ const sID_Batterie_Status   = `${instanzE3DC_RSCP}.EMS.BAT_SOC`; // Battery stat
 const sID_Bat_Charge_Limit  = `${instanzE3DC_RSCP}.EMS.SYS_SPECS.maxBatChargePower`;// Batterie Ladelimit
 
 // selbst definierte Variablen
-const sID_Eigenverbrauch    = '0_userdata.0.Heizung.E3DC.Hausverbrauch_ohne_Heizstab'; // Household consumption power
+const sID_Eigenverbrauch    = '0_userdata.0.Charge_Control.Allgemein.Hausverbrauch'; // Household consumption power
 const sID_M_Power_W         = '0_userdata.0.Charge_Control.Allgemein.Akt_Berechnete_Ladeleistung_W'; // Calculated required charging power
 
 // Heistab Modbus Variablen 
