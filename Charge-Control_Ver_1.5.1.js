@@ -11,13 +11,13 @@ const PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUN
 const sID_LeistungHeizstab_W = ``;                                                                      // Pfad zu den Leistungswerte Heizstab eintragen ansonsten leer lassen
 const sID_WallboxLadeLeistung_1_W = ``;                                                                 // Pfad zu den Leistungswerte Wallbox1 die nicht vom E3DC gesteuert wird eintragen ansonsten leer lassen
 const sID_WallboxLadeLeistung_2_W = ``;                                                                 // Pfad zu den Leistungswerte Wallbox2 die nicht vom E3DC gesteuert wirdeintragen ansonsten leer lassen
-const sID_LeistungLW_Pumpe_W = 'modbus.2.holdingRegisters.41013_WP_Aufnahmeleistung';                   // Pfad zu den Leistungswerte Wärmepumpe eintragen ansonsten leer lassen
+const sID_LeistungLW_Pumpe_W = ``;                   													// Pfad zu den Leistungswerte Wärmepumpe eintragen ansonsten leer lassen
 const BUFFER_SIZE= 5;                                                                                   // Größe des Buffers für gleitenden Durchschnitt
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
 //------------------------------------------------------------------------------------------------------
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.5.0 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.5.1 ====- ${Logparser2}`);
 
 //******************************************************************************************************
 //****************************************** Objekt ID anlegen *****************************************
@@ -214,8 +214,8 @@ async function CreateState(){
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Autonomiezeit`, {'def':"", 'name':'verbleibende Reichweite der Batterie in h und m', 'type':'string', 'role':'value', 'desc':'verbleibende Reichweite der Batterie in h'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Batteriekapazität_kWh`, {'def':0, 'name':'verbleibende Reichweite der Batterie in kWh', 'type':'number', 'role':'value', 'desc':'verbleibende Reichweite der Batterie in kWh', 'unit':'kWh'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Hausverbrauch`, {'def':0, 'name':'Reiner Hausverbrauch ohne WB, LW-Pumpe oder Heizstab' , 'type':'number', 'role':'value', 'unit':'W'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.arrayHausverbrauchDurchschnitt`, {'def':{Montag: { night: [], day: [] },Dienstag: { night: [], day: [] },Mittwoch: { night: [], day: [] },Donnerstag: { night: [], day: [] },Freitag: { night: [], day: [] },Samstag: { night: [], day: [] },Sonntag: { night: [], day: [] }}, 'name':'Merker durchschnittlicher Hausverbrauch ohne Wallbox und Heizstab' , 'type':'string', 'role':'value'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.arrayHausverbrauch`, {'def':{Montag: { night: [], day: [] },Dienstag: { night: [], day: [] },Mittwoch: { night: [], day: [] },Donnerstag: { night: [], day: [] },Freitag: { night: [], day: [] },Samstag: { night: [], day: [] },Sonntag: { night: [], day: [] }}, 'name':'Merker Leistung Hausverbrauch ohne Wallbox und Heizstab' , 'type':'string', 'role':'value'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.arrayHausverbrauchDurchschnitt`, {'def':{"Montag":{"night":100,"day":100},"Dienstag":{"night":100,"day":100},"Mittwoch":{"night":100,"day":100},"Donnerstag":{"night":100,"day":100},"Freitag":{"night":100,"day":100},"Samstag":{"night":100,"day":100},"Sonntag":{"night":100,"day":100}}, 'name':'Merker durchschnittlicher Hausverbrauch ohne Wallbox und Heizstab' , 'type':'string', 'role':'value'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.arrayHausverbrauch`, {'def':{"Montag":{"night":[100],"day":[100]},"Dienstag":{"night":[100],"day":[100]},"Mittwoch":{"night":[100],"day":[100]},"Donnerstag":{"night":[100],"day":[100]},"Freitag":{"night":[100],"day":[100]},"Samstag":{"night":[100],"day":[100]},"Sonntag":{"night":[100],"day":[100]}}, 'name':'Merker Leistung Hausverbrauch ohne Wallbox und Heizstab' , 'type':'string', 'role':'value'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Notstrom_akt`, {'def':0, 'name':'aktuell berechnete Notstromreserve', 'type':'number', 'role':'value', 'desc':'aktuell berechnete Notstromreserve', 'unit':'%'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.EinstellungAnwahl`, {'def':0, 'name':'Aktuell manuell angewählte Einstellung', 'type':'number', 'role':'State'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.EigenverbrauchTag`, {'def':0, 'name':'min. Eigenverbrauch von 6:00 Uhr bis 19:00 Uhr in kWh', 'type':'number', 'role':'value'});
@@ -253,7 +253,7 @@ async function CreateState(){
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_2`, {'def':0, 'name':'Min Temperatur Übermorgen' ,'type':'number', 'unit':'°C'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_3`, {'def':0, 'name':'Min Temperatur in vier Tagen' ,'type':'number', 'unit':'°C'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_LogHistoryLokal`, {'def':false,'name':'History Daten in Lokaler Datei speichern' ,'type':'boolean', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_LogHistoryPath`, {'name':'Pfad zur Sicherungsdatei History ' ,'type':'string', 'unit':'','role':'state'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_LogHistoryPath`, {'def':'','name':'Pfad zur Sicherungsdatei History ' ,'type':'string', 'unit':'','role':'state'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_LogAusgabe`, {'def':false,'name':'Zusätzliche allgemeine LOG Ausgaben' ,'type':'boolean', 'unit':'','role':'state'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_DebugAusgabe`, {'def':false,'name':'Debug Ausgabe im LOG zur Fehlersuche' ,'type':'boolean', 'unit':'','role':'State'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_DebugAusgabeDetail`, {'def':false,'name':'Zusätzliche LOG Ausgaben der Lade-Regelung' ,'type':'boolean', 'unit':'','role':'state'});
@@ -264,15 +264,15 @@ async function CreateState(){
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_ScriptTibber`, {'def':false,'name':'Wenn das Script Tibber verwendet wird auf True setzen)' ,'type':'boolean', 'unit':'','role':'state'});
     
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_ProplantaCountry`, {'def':'de','name':'Ländercode für Proplanta de,at, ch, fr, it' ,'type':'string', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_ProplantaOrt`, {'name':'Wohnort für Abfrage Wetterdaten Proplanta' ,'type':'string', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_ProplantaPlz`, {'name':'Postleitzahl für Abfrage Wetterdaten Proplanta' ,'type':'string', 'unit':'','role':'state'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_ProplantaOrt`, {'def':'','name':'Wohnort für Abfrage Wetterdaten Proplanta' ,'type':'string', 'unit':'','role':'state'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_ProplantaPlz`, {'def':'','name':'Postleitzahl für Abfrage Wetterdaten Proplanta' ,'type':'string', 'unit':'','role':'state'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_BewoelkungsgradGrenzwert`, {'def':90,'name':'wird als Umschaltkriterium für die Einstellung 2-5 verwendet' ,'type':'number', 'unit':'%','role':'value'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_AbfrageSolcast`, {'def':false,'name':'true = Daten Solcast werden abgerufen false = Daten Solcast werden nicht abgerufen' ,'type':'boolean', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastDachflaechen`, {'name':'Aktuell max. zwei Dachflächen möglich' ,'type':'number', 'unit':'Stück','role':'value'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastResource_Id_Dach1`, {'name':'Rooftop 1 Id von der Homepage Solcast' ,'type':'string', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastResource_Id_Dach2`, {'name':'Rooftop 2 Id von der Homepage Solcast' ,'type':'string', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastAPI_key`, {'name':'API Key von der Homepage Solcast' ,'type':'string', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_ModulFlaeche`, {'name':'Installierte Modulfläche in m² (Silizium-Zelle 156x156x60 Zellen x 50 Module)' ,'type':'number', 'unit':'m²','role':'value'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastDachflaechen`, {'def':0,'name':'Aktuell max. zwei Dachflächen möglich' ,'type':'number', 'unit':'Stück','role':'value'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastResource_Id_Dach1`, {'def':'','name':'Rooftop 1 Id von der Homepage Solcast' ,'type':'string', 'unit':'','role':'state'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastResource_Id_Dach2`, {'def':'','name':'Rooftop 2 Id von der Homepage Solcast' ,'type':'string', 'unit':'','role':'state'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastAPI_key`, {'def':'','name':'API Key von der Homepage Solcast' ,'type':'string', 'unit':'','role':'state'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_ModulFlaeche`, {'def':0,'name':'Installierte Modulfläche in m² (Silizium-Zelle 156x156x60 Zellen x 50 Module)' ,'type':'number', 'unit':'m²','role':'value'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_WirkungsgradModule`, {'def':21,'name':'Wirkungsgrad / Effizienzgrad der Solarmodule in % bezogen auf die Globalstrahlung (aktuelle Module haben max. 24 %)' ,'type':'number', 'unit':'%','role':'value'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_KorrekturFaktor`, {'def':0,'name':'Korrektur Faktor in Prozent. Reduziert die berechnete Prognose um diese anzugleichen.nKorrFaktor= 0 ohne Korrektur' ,'type':'number', 'unit':'%','role':'value'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_minPvLeistungTag_kWh`, {'def':3,'name':'minimal Mögliche PV-Leistung. Wenn Prognose niedriger ist wird mit diesem Wert gerechnet' ,'type':'number', 'unit':'kWh','role':'value'});
@@ -2106,7 +2106,7 @@ async function calculateBatteryRange(currentConsumptionW) {
     // Aktualisierung der Autonomiezeit, wenn sich die Reichweite signifikant geändert hat
     if (Math.abs(currentRangeHours - ReichweiteAktVerbrauchAlt) > 0.5) {
         ReichweiteAktVerbrauchAlt = currentRangeHours;
-        await setStateAsync(sID_Autonomiezeit, `${currentHours}:${currentMinutes} h / ${totalHours}:${totalMinutes} h` );
+        await setStateAsync(sID_Autonomiezeit, `${currentHours}:${currentMinutes.toString().padStart(2,"0")} h / ${totalHours}:${totalMinutes.toString().padStart(2,"0")} h` );
     }
 }
 
