@@ -76,10 +76,10 @@ verbunden sein.
 <a name="log"></a>
 
 <h3>Changelog Charge-Control</h3>
+
 ### Version: 1.5.1
 * Fehler behoben, dass neue Objekte ohne Definition angelegt wurden.
 * Fehler behoben, dass bei der Autonomiezeit die Minuten ohne führende Null eingetragen wurden.
-
 
 ### Version: 1.5.0
 * Es wird überprüft ob bei den Instanzeinstellungen des e3dc-rscp Adapter __SET_POWER __Wiederholintervall__ auf 0 eingestellt ist.
