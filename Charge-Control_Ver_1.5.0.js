@@ -371,11 +371,13 @@ async function CheckState() {
             }
         }
         
-        TibberSubscribeID = on({id: /\Tibber.OutputSignal/, change: "ne"}, async function (obj){	
+        TibberSubscribeID = on({id: /\0_userdata.0.Tibber/, change: "ne"}, async function (obj){	
             log(`-==== Tibber output signal ${obj.id.split('.')[4]} wurde in ${obj.state.val} geändert ====-`,'warn')
             if (obj.id.split('.')[4] == 'BatterieEntladesperre' ){bTibberEntladesperre = obj.state.val}
             if (obj.id.split('.')[4] == 'BatterieLaden' ){bTibberLaden = obj.state.val}
+            if (obj.id.split('.')[4] == 'maxLadeleistung' ){tibberMaxLadeleistung_W = obj.state.val}
         });
+        
     }else{
         unsubscribe(TibberSubscribeID);    
         bTibberEntladesperre = false;
