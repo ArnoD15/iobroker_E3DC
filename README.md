@@ -55,6 +55,10 @@ verbunden sein.
 <p>View Import Datei für iobroker VIS</p>
 <p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/VIS_View_E3DC_RSCP_Wechselrichter.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/VIS_View_E3DC_RSCP_Wechselrichter.png" alt="VIS View E3DC RSCP Wechselrichter" style="max-width:100%;"></a></p>
 
+<h3>iobroker_VIS_View_Tibber.js</h3>
+<p>View Import Datei für iobroker VIS</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/VIS_View_Tibber.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/VIS_View_Tibber.png" alt="VIS View Tibber" style="max-width:100%;"></a></p>
+
 <h3>iobroker_VIS_View_E3DC_WR_Diagramm.js</h3>
 <p>View Import Datei für iobroker VIS</p>
 <p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/E3DC_WR_Diagramm.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/E3DC_WR_Diagramm.png" alt="VIS View E3DC WR Diagramm" style="max-width:100%;"></a></p>
@@ -73,6 +77,18 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.5.0
+* Es wird überprüft ob bei den Instanzeinstellungen des e3dc-rscp Adapter __SET_POWER __Wiederholintervall__ auf 0 eingestellt ist.
+* Fehler behoben, dass bei Leerlauf Script ChargeControl __SET_POWER_MODE__ nicht auf 0 gesetzt wurde.
+* Fehler im DebugLog behoben wo zweimal die gleichen Werte __sID_PvLeistung_ADD_W__ addiert wurden. (Danke an @psrelax für den Hinweis)
+* Kleinere Optimierungen und Fehler behoben für das Script my-pv Heizstab
+* Vorbereitung Schnittstelle Skript Tibber
+* Berechnung des durchschnittlichen Hausverbrauchs neu erstellt. Es wird jetzt der Durchschnitt für jeden Tag, getrennt in Verbrauch Tag und Nacht berechnet.<br>Die Anzeige Autonomiezeit in VIS wurde dadurch auch angepasst. Es wird jetzt die Reichweite der Batterie mit dem neuen Durchschnittsverbrauch berechnet und mit dem aktuellen Verbrauch bei Entladung der Batterie.
+* Alle Objekt ID`s __IstPvLeistung_kWh_1__ bis __31__ werden nicht mehr benötigt. Daten werden unter der neuen Objekt ID __0_userdata.0.Charge_Control.History.istPV_LeistungTag_kWh__ gespeichert.
+* Alle Objekt ID`s __PrognoseProp_kWh_1__ bis __31__ werden nicht mehr benötigt. Daten werden unter der neuen Objekt ID __0_userdata.0.Charge_Control.History.PrognoseProp_kWh__ gespeichert.
+* Alle Objekt ID`s __PrognoseAuto_kWh_1__ bis __31__ werden nicht mehr benötigt. Daten werden unter der neuen Objekt ID __0_userdata.0.Charge_Control.History.PrognoseAuto_kWh__ gespeichert.
+* Alle Objekt ID`s __PrognoseSolcast90_kWh_1__ bis __31__ werden nicht mehr benötigt. Daten werden unter der neuen Objekt ID __0_userdata.0.Charge_Control.History.PrognoseSolcast90_kWh__ gespeichert.
+* Alle Objekt ID`s __PrognoseSolcast_kWh_1__ bis __31__ werden nicht mehr benötigt. Daten werden unter der neuen Objekt ID __0_userdata.0.Charge_Control.History.PrognoseSolcast_kWh__ gespeichert.
 
 ### Version: 1.4.1
 * XMLHttpRequest ausgetauscht durch axios
