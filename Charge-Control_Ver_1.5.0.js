@@ -726,10 +726,8 @@ async function Ladesteuerung()
             }
         }
         
-    }else if(ScriptTibber && bTibberLaden && (dAkt.getTime()- ZeitE3DC_SetPowerAlt_ms)> 5000){
+    }else if(ScriptTibber && bTibberLaden){
         LogProgrammablauf += '36,';
-        ZeitE3DC_SetPowerAlt_ms = dAkt.getTime();
-        Batterie_SOC_Proz = (await getStateAsync(sID_Batterie_SOC)).val;
         await setStateAsync(sID_SET_POWER_MODE,3); // Laden
         await setStateAsync(sID_SET_POWER_VALUE_W,tibberMaxLadeleistung_W) // E3DC bleib beim Laden im Schnitt um ca 82 W unter der eingestellten Ladeleistung
     }
@@ -1890,7 +1888,7 @@ async function Hausverbrauch(timeInterval) {
     // Prüfen, ob für den aktuellen Tag Daten vorhanden sind
     if (homeAverage[currentDay] && homeAverage[currentDay][timeInterval] !== undefined) {
         const consumption = homeAverage[currentDay][timeInterval];
-        if (LogAusgabe){log(`Verbrauch für ${timeInterval} am ${currentDay}: ${consumption} Wh`);}
+        if (DebugAusgabeDetail){log(`Verbrauch für ${timeInterval} am ${currentDay}: ${consumption} Wh`);}
         return consumption;
     } else {
         log(`Keine Verbrauchsdaten für ${timeInterval} am ${currentDay} vorhanden.`,'warn');
@@ -1929,13 +1927,13 @@ async function calculateBatteryRange(currentConsumptionW) {
     // Berechnung der aktuellen Batteriekapazität in kWh basierend auf dem SOC
     const batterieSocProzent = (await getStateAsync(sID_Batterie_SOC)).val;
     const batterieSocKWh = (Speichergroesse_kWh / 100) * batterieSocProzent;
-
     // Berechnung der Notstromreserve in kWh
     let notstromKWh= (await getStateAsync(sID_PARAM_EP_RESERVE_W)).val / 1000;
     if (Notstrom_SOC_Proz != 0) {
         notstromKWh = (Speichergroesse_kWh / 100) * Notstrom_SOC_Proz;
     }
-
+    // prüfen ob eingestellter Notstrom unterschritten wurde, wenn ja bei der Reichweite nicht mehr berücksichtigen
+    if(notstromKWh > batterieSocKWh){notstromKWh = 0}
     // Berechnung der verfügbaren kWh unter Berücksichtigung der Notstromreserve und des Wirkungsgrads
     let verfuegbareKWh = (batterieSocKWh - notstromKWh) * (Systemwirkungsgrad_Pro / 100);
     const battkWh = verfuegbareKWh;
