@@ -77,6 +77,9 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.5.2
+* Fehler behoben, dass eingestellter Notstrom SOC ignoriert wurde. (Danke an @psrelax für den Hinweis)
+
 ### Version: 1.5.1
 * Fehler behoben, dass neue Objekte ohne Definition angelegt wurden.
 * Fehler behoben, dass bei der Autonomiezeit die Minuten ohne führende Null eingetragen wurden.

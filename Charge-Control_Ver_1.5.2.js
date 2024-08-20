@@ -11,13 +11,13 @@ const PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUN
 const sID_LeistungHeizstab_W = ``;                                                                      // Pfad zu den Leistungswerte Heizstab eintragen ansonsten leer lassen
 const sID_WallboxLadeLeistung_1_W = ``;                                                                 // Pfad zu den Leistungswerte Wallbox1 die nicht vom E3DC gesteuert wird eintragen ansonsten leer lassen
 const sID_WallboxLadeLeistung_2_W = ``;                                                                 // Pfad zu den Leistungswerte Wallbox2 die nicht vom E3DC gesteuert wirdeintragen ansonsten leer lassen
-const sID_LeistungLW_Pumpe_W = ``;                   													// Pfad zu den Leistungswerte Wärmepumpe eintragen ansonsten leer lassen
+const sID_LeistungLW_Pumpe_W = 'modbus.2.holdingRegisters.41013_WP_Aufnahmeleistung';                   // Pfad zu den Leistungswerte Wärmepumpe eintragen ansonsten leer lassen
 const BUFFER_SIZE= 5;                                                                                   // Größe des Buffers für gleitenden Durchschnitt
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
 //------------------------------------------------------------------------------------------------------
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.5.1 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.5.2 ====- ${Logparser2}`);
 
 //******************************************************************************************************
 //****************************************** Objekt ID anlegen *****************************************
@@ -426,7 +426,7 @@ async function WetterprognoseAktualisieren()
     // Diagramm aktualisieren
     await makeJson();
     // Einstellungen 1-5 je nach Überschuss PV Leistung Wetterprognose und Bewölkung anwählen 
-    Einstellung(await Ueberschuss_Prozent());
+    await Einstellung(await Ueberschuss_Prozent());
 }
 
 // Programmablauf für die Laderegelung der Batterie wird im 3 sek. Takt getriggert
@@ -445,7 +445,7 @@ async function Ladesteuerung()
     const Power_Home_W =(await getStateAsync(sID_Power_Home_W)).val + WallboxPower;                                 // Aktueller Hausverbrauch + Ladeleistung Wallbox E3DC 
     const PV_Leistung_Summe_W = PV_Leistung_E3DC_W + Math.abs(PV_Leistung_ADD_W);                                   // Summe PV-Leistung  
     Notstrom_Status = (await getStateAsync(sID_Notrom_Status)).val;                                                 // aktueller Notstrom Status E3DC 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
-    bNotstromVerwenden = CheckPrognose();                                                                           // Prüfen ob Notstrom verwendet werden kann bei hoher PV Prognose für den nächsten Tag
+    bNotstromVerwenden = await CheckPrognose();                                                                           // Prüfen ob Notstrom verwendet werden kann bei hoher PV Prognose für den nächsten Tag
     
     // LOG nur alle 6 sek. aufrufen
     if (DebugAusgabe && (currentTime - lastDebugLogTime >= 6000)) {
@@ -466,13 +466,13 @@ async function Ladesteuerung()
         // Notstrom_Status 0=nicht möglich 1=active 2= nicht active 3= nicht verfügbar 4= Inselbetrieb
         // EMS Laden/Endladen einschalten
         LogProgrammablauf += '1,';
-        EMS(true);
-        // Wenn b einmal true war, wird mit dem Merker bM_Notstrom das Ausschalten der Lade/Enladeleistung bis Sonnenaufgang verhindert
+        await EMS(true);
+        // Wenn bNotstromVerwenden einmal true war, wird mit dem Merker bM_Notstrom das Ausschalten der Lade/Enladeleistung bis Sonnenaufgang verhindert
         if (bNotstromVerwenden && !bM_Notstrom){bM_Notstrom = true };
     }else if(Batterie_SOC_Proz <= Notstrom_SOC_Proz && (new Date() > getAstroDate("sunset") && !bM_Notstrom || new Date() < getAstroDate("sunrise") && !bM_Notstrom)){
         // EMS Laden/Endladen ausschalten
         LogProgrammablauf += '2,';
-        EMS(false);    
+        await EMS(false);    
         // Notstrom SOC um 2% erhöhen, um ein ständiges ein und ausschalten zu verhindern, da die Batterieladung nach dem ausschalten wieder ansteigen kann.
         Notstrom_SOC_Proz = (await getStateAsync(sID_Notstrom_akt)).val +2
     }
@@ -765,7 +765,7 @@ async function DebugLog()
     if (DebugAusgabeDetail){log(`Offset Ladeende = ${(await getStateAsync(sID_LadeendeOffset[EinstellungAnwahl])).val}`)}
     if (DebugAusgabeDetail){log(`Notstrom min = ${(await getStateAsync(sID_Notstrom_min_Proz)).val}`)}
     if (DebugAusgabeDetail){log(`Notstrom Sockel = ${(await getStateAsync(sID_Notstrom_sockel_Proz)).val}`)}
-    if (DebugAusgabeDetail){log(`Eigenverbrauch Nacht = ${Hausverbrauch('night')}`)}
+    if (DebugAusgabeDetail){log(`Eigenverbrauch Nacht = ${await Hausverbrauch('night')} Wh`)}
     if (DebugAusgabeDetail){log(`Power_Home_W (Hausverbrauch & Wallbox) = ${(await getStateAsync(sID_Power_Home_W)).val+(await getStateAsync(sID_Power_Wallbox_W)).val}W`)}
     if (DebugAusgabeDetail){log(`Batterie Leistung = ${(await getStateAsync(sID_Power_Bat_W)).val} W`)}
     if (DebugAusgabeDetail){log(`PV Leistung = ${(await getStateAsync(sID_PvLeistung_E3DC_W)).val+Math.abs((await getStateAsync(sID_PvLeistung_ADD_W)).val)} W`)}
@@ -773,11 +773,13 @@ async function DebugLog()
     if (DebugAusgabeDetail){log(`Batterie SoC = ${(await getStateAsync(sID_Batterie_SOC)).val} %`)}
     if (DebugAusgabeDetail){log(`Notstrom_SOC_Proz= ${Notstrom_SOC_Proz} %`)}
     if (DebugAusgabeDetail){log(`Notstrom_SOC_erreicht = ${bStatus_Notstrom_SOC}`)}
+    if (DebugAusgabeDetail){log(`bNotstromVerwenden =${bNotstromVerwenden}`)}
     if (DebugAusgabeDetail){log(`bNotstromAusNetz =${bNotstromAusNetz}`)}
     if (DebugAusgabeDetail){log(`Notstrom_Status = ${(await getStateAsync(sID_Notrom_Status)).val}`)}
     if (DebugAusgabeDetail){log(`bM_Notstrom = ${bM_Notstrom}`)}
     if (DebugAusgabeDetail){log(`M_Power = ${M_Power}`)}
     if (DebugAusgabeDetail){log(`Set_Power_Value_W = ${Set_Power_Value_W}`)} 
+    
     log(`ProgrammAblauf = ${LogProgrammablauf} `,'warn')
     
 }
@@ -1281,7 +1283,7 @@ async function SummePvLeistung(){
 	arrayPV_LeistungTag_kWh[TagHeute] = IstPvLeistung_kWh
     await setStateAsync(sID_arrayPV_LeistungTag_kWh, arrayPV_LeistungTag_kWh);
     
-    makeJson();
+    await makeJson();
 };
 
 // Methode zum Addieren/Subtrahieren einer Menge an Minuten auf eine Uhrzeit
@@ -1502,7 +1504,7 @@ async function SheduleProplanta() {
         TimerProplanta = schedule({ hour: 3, minute: 0 }, SheduleProplanta);
         log(`${Logparser1}-==== Nächste Aktualisierung Wetterdaten 3:00 Uhr ====-${Logparser2}`);
     }
-    WetterprognoseAktualisieren();
+    await WetterprognoseAktualisieren();
 }
 
 function HTML_CleanUp(data) {
@@ -1613,7 +1615,7 @@ async function SheduleSolcast(DachFl) {
     }
     
     await Promise.all(requests);
-    if (!bStart) WetterprognoseAktualisieren();
+    if (!bStart) await WetterprognoseAktualisieren();
 }
 
 
@@ -2120,7 +2122,7 @@ async function calculateBatteryRange(currentConsumptionW) {
 on(sID_PvLeistung_E3DC_W,async function(obj) {
     let Leistung = (await getStateAsync(obj.id)).val;
     if(Leistung > 0){
-		if(!Timer0)Wh_Leistungsmesser0();
+		if(!Timer0)await Wh_Leistungsmesser0();
 		count0 ++
 		Summe0 = Summe0 + Leistung;
 	}
@@ -2130,15 +2132,15 @@ on(sID_PvLeistung_E3DC_W,async function(obj) {
 on(sID_PvLeistung_ADD_W,async function(obj) {
     let Leistung = Math.abs((await getStateAsync(obj.id)).val);
     if(Leistung > 0){
-		if(!Timer1)Wh_Leistungsmesser1();
+		if(!Timer1)await Wh_Leistungsmesser1();
 		count1 ++
 		Summe1 = Summe1 + Leistung;
 	}
 });
 
 // Zaehler LM2 Leistung durch Regelung Charge-Control gerettet 
-on({id: sID_Saved_Power_W, valGt: 0}, function (obj) {
-    if(!Timer2)Wh_Leistungsmesser2();
+on({id: sID_Saved_Power_W, valGt: 0},async function (obj) {
+    if(!Timer2)await Wh_Leistungsmesser2();
     count2 ++
 	Summe2 = Summe2 + obj.state.val;
 });
@@ -2166,7 +2168,7 @@ on({id: sID_Automatik_Prognose, change: "ne"}, async function (obj){
 	bAutomatikAnwahl = (await getStateAsync(obj.id)).val;
     if(bAutomatikAnwahl) {
         bStoppTriggerEinstellungAnwahl = true;
-        WetterprognoseAktualisieren()
+        await WetterprognoseAktualisieren()
         bStoppTriggerEinstellungAnwahl = false
         await setStateAsync(sID_EinstellungAnwahl,0);
         EinstellungAnwahl = 0
@@ -2208,10 +2210,10 @@ on({id: sID_Automatik_Regelung, change: "ne"}, async function (obj){
 });  
 
 // Triggern bei Änderung Eigenverbrauch soll der Überschuss neu berechnet werden.
-on({id: sID_EigenverbrauchTag_kWh, change: "ne"}, function (obj){
+on({id: sID_EigenverbrauchTag_kWh, change: "ne"}, async function (obj){
 	if (LogAusgabe){log(`${Logparser1} -==== Wert Eigenverbrauch wurde auf  ${getState(obj.id).val} kWh geändert ====- ${Logparser2}`);}
     bStoppTriggerEinstellungAnwahl = true
-    WetterprognoseAktualisieren();
+    await WetterprognoseAktualisieren();
     bStoppTriggerEinstellungAnwahl = false
 });  
 
@@ -2261,7 +2263,7 @@ on({id: sID_PrognoseAnwahl, change: "ne"},async function(obj) {
         if(LogAusgabe && PrognoseAnwahl == 5){log("-==== Solcast 90 angewählt ====-")};
         if(LogAusgabe && PrognoseAnwahl == 6){log("-==== Solcast 90 u. Solcast angewählt, Berechnung nach Ø Wert ====-")};
         bStoppTriggerEinstellungAnwahl = true
-        WetterprognoseAktualisieren();
+        await WetterprognoseAktualisieren();
         bStoppTriggerEinstellungAnwahl = false
     }else{
         log(`${Logparser1} -==== Falscher Wert State PrognoseAnwahl ====- ${Logparser2}`,'warn');
@@ -2293,7 +2295,7 @@ on({ id: sID_EinstellungAnwahl, change: "ne", valGt: 0 }, async function (obj) {
         if (val !== 0) {
             log(`${Logparser1} -==== Automatische Änderung der Einstellung nach Prognose. Einstellung ${EinstellungAnwahl} aktiv ====- ${Logparser2}`,'warn');
             if (bStoppTriggerEinstellungAnwahl){return}
-            WetterprognoseAktualisieren();
+            await WetterprognoseAktualisieren();
         }
     } else {
     bStoppTriggerParameter = true;
@@ -2363,7 +2365,7 @@ if (existsState(sID_PVErtragLM1)){
 
 schedule('*/3 * * * * *', async function() {
     // Vor Regelung Skript Startdurchlauf erst abwarten  
-    if(!bStart && bAutomatikRegelung && !bManuelleLadungBatt){Ladesteuerung();}
+    if(!bStart && bAutomatikRegelung && !bManuelleLadungBatt){await Ladesteuerung();}
 });
 
 // jeden Monat am 1 History Daten Tag aktuelles Monat Löschen
@@ -2380,7 +2382,7 @@ schedule("0 0 1 * *", async function() {
         setStateAsync(sID_PrognoseSolcast_kWh,arrayPrognoseSolcast_kWh),
         setStateAsync(sID_arrayPV_LeistungTag_kWh,arrayPV_LeistungTag_kWh)
     ]);
-    writelog();
+    await writelog();
 });
 
 // jeden Tag um 12:00 aktualisieren.
@@ -2407,7 +2409,7 @@ schedule({hour: 2, minute: 0}, async function () {
             bLadenAufNotstromSOC=true
             await setStateAsync(sID_POWER_LIMITS_USED,true);
             log(`${Logparser1} -==== Batterie wird bis NotstromSOC aus dem Netz geladen ====- ${Logparser2}`,'warn')
-            LadeNotstromSOC();
+            await LadeNotstromSOC();
         }
     }
 });
