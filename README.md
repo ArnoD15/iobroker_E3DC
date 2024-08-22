@@ -77,6 +77,10 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.5.3
+* Kleinere Optimierungen und Fehler behoben für das Tibber Skript
+* Neues Objekt `0_userdata.0.Charge_Control.Allgemein.EigenverbrauchDurchschnitt` erstellt, für die Anzeige vom Durchnittsverbrauch Tag / Nacht in VIS.
+
 ### Version: 1.5.2
 * Fehler behoben, dass eingestellter Notstrom SOC ignoriert wurde. (Danke an @psrelax für den Hinweis)
 

@@ -11,13 +11,13 @@ const PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUN
 const sID_LeistungHeizstab_W = ``;                                                                      // Pfad zu den Leistungswerte Heizstab eintragen ansonsten leer lassen
 const sID_WallboxLadeLeistung_1_W = ``;                                                                 // Pfad zu den Leistungswerte Wallbox1 die nicht vom E3DC gesteuert wird eintragen ansonsten leer lassen
 const sID_WallboxLadeLeistung_2_W = ``;                                                                 // Pfad zu den Leistungswerte Wallbox2 die nicht vom E3DC gesteuert wirdeintragen ansonsten leer lassen
-const sID_LeistungLW_Pumpe_W = '';                   													// Pfad zu den Leistungswerte Wärmepumpe eintragen ansonsten leer lassen
+const sID_LeistungLW_Pumpe_W = 'modbus.2.holdingRegisters.41013_WP_Aufnahmeleistung';                   // Pfad zu den Leistungswerte Wärmepumpe eintragen ansonsten leer lassen
 const BUFFER_SIZE= 5;                                                                                   // Größe des Buffers für gleitenden Durchschnitt
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
 //------------------------------------------------------------------------------------------------------
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.5.2 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.5.3 ====- ${Logparser2}`);
 
 //******************************************************************************************************
 //****************************************** Objekt ID anlegen *****************************************
@@ -60,6 +60,7 @@ const sID_EinstellungAnwahl =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Einstell
 const sID_PVErtragLM0 =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.IstPvErtragLM0_kWh`;                                                  // Leistungszähler PV-Leistung
 const sID_PVErtragLM1 =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.IstPvErtragLM1_kWh`;                                                  // Leistungszähler zusätzlicher WR (extern)
 const sID_PrognoseAnwahl =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.PrognoseAnwahl`;                                                   // Aktuelle Einstellung welche Prognose für Berechnung verwendet wird
+const sID_EigenverbrauchDurchschnitt =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.EigenverbrauchDurchschnitt`;                           // Anzeige in VIS:Durchschnittlicher Eigenverbrauch Tag / Nacht
 const sID_EigenverbrauchTag_kWh =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.EigenverbrauchTag`;                                         // Einstellung täglicher Eigenverbrauch in VIS oder über anderes Script
 const sID_HausverbrauchBereinigt_W = `${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Hausverbrauch`;                                         // Reiner Hausverbrauch ohne WB, LW-Pumpe oder Heizstab
 const sID_arrayHausverbrauchDurchschnitt = `${instanz}.${PfadEbene1}.${PfadEbene2[1]}.arrayHausverbrauchDurchschnitt`;                  // Array zum speichern vom durchschnittlicher Hausverbrauch ohne WB, LW-Pumpe oder Heizstab
@@ -230,6 +231,7 @@ async function CreateState(){
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Saved_PowerLM2_kWh`, {'def':0, 'name':'kWh Leistungsmesser 2' , 'type':'number', 'role':'value', 'unit':'kWh'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.IstPvErtragLM0_kWh`, {'def':0, 'name':'kWh Leistungsmesser 0 ' , 'type':'number', 'role':'value', 'unit':'kWh'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.IstPvErtragLM1_kWh`, {'def':0, 'name':'kWh Leistungsmesser 1 ' , 'type':'number', 'role':'value', 'unit':'kWh'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.EigenverbrauchDurchschnitt`, {'def':'', 'name':'Eigenverbrauch Durchschnitt Tag/Nacht ' , 'type':'string'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.PrognoseAnwahl`, {'def':0, 'name':'Beide Berechnung nach min. Wert = 0 nur Proplanta=1 nur Solcast=2 Beide Berechnung nach max. Wert=3 Beide Berechnung nach Ø Wert=4 nur Solcast90=5' , 'type':'number', 'role':'value'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.FirmwareDate`, {'def':formatDate(new Date(), "DD.MM.YYYY hh:mm:ss"), 'name':'Datum Firmware Update' , 'type':'string', 'role':'value'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.LastFirmwareVersion`, {'def':"", 'name':'Alte Frimware Version' , 'type':'string', 'role':'value'});
@@ -301,7 +303,7 @@ async function CreateState(){
 // Alle User Eingaben prüfen ob Werte eingetragen wurden und Werte zuweisen
 async function CheckState() {
     const idUSER_ANPASSUNGEN = `${instanz}.${PfadEbene1}.${PfadEbene2[4]}`;
-    const idTibber = `${instanz}.Tibber`;
+    const idTibber = `${instanz}.TibberSkript`;
     const e3dc_rscp_Adapter = getObject(`system.adapter.${instanzE3DC_RSCP}`);
     if(e3dc_rscp_Adapter.native.setpower_interval != 0){
         log(`!! Bei den Instanzeinstellungen vom Adapter e3dc-rscp wurde das SET_POWER Wiederholintervall nicht auf 0 eingestellt. Bitte ändern !!`,'error')
@@ -370,8 +372,8 @@ async function CheckState() {
                 }
             }
         }
-        
-        TibberSubscribeID = on({id: /\0_userdata.0.Tibber/, change: "ne"}, async function (obj){	
+        const regexPattern = new RegExp(`${idTibber}`);
+        TibberSubscribeID = on({id: regexPattern, change: "ne"}, async function (obj){	
             log(`-==== Tibber output signal ${obj.id.split('.')[4]} wurde in ${obj.state.val} geändert ====-`,'warn')
             if (obj.id.split('.')[4] == 'BatterieEntladesperre' ){bTibberEntladesperre = obj.state.val}
             if (obj.id.split('.')[4] == 'BatterieLaden' ){bTibberLaden = obj.state.val}
@@ -839,9 +841,12 @@ async function Notstromreserve()
     if ((await getStateAsync(sID_PARAM_EP_RESERVE_W)).val == 0){
         // @ts-ignore
         let tm_yday = Math.round(Math.abs(dAkt - dStart) / (1000 * 60 * 60 * 24 ));
-        let Notstrom_sockel_Proz = (await getStateAsync(sID_Notstrom_sockel_Proz)).val           // Parameter Charge-Control Notstrom Sockel
-        let Notstrom_min_Proz = (await getStateAsync(sID_Notstrom_min_Proz)).val                 // Parameter Charge-Control Notstrom min
-        Notstrom_SOC_Proz = Math.round(Notstrom_sockel_Proz + (Notstrom_min_Proz - Notstrom_sockel_Proz) * Math.cos((tm_yday+9)*2*3.14/365))
+        const [Notstrom_sockel_Proz,Notstrom_min_Proz] = await Promise.all([
+            getStateAsync(sID_Notstrom_sockel_Proz),                    // Parameter Charge-Control Notstrom Sockel
+            getStateAsync(sID_Notstrom_min_Proz)                        // Parameter Charge-Control Notstrom min
+        ]).then(states => states.map(state => state.val));
+        
+        Notstrom_SOC_Proz = Math.max(0,Math.round(Notstrom_sockel_Proz + (Notstrom_min_Proz - Notstrom_sockel_Proz) * Math.cos((tm_yday+9)*2*3.14/365)))
         await setStateAsync(sID_Notstrom_akt,Notstrom_SOC_Proz)
     }else{
         log(`${Logparser1} -==== Notstromreserve wurde beim Hauskraftwerk eingestellt und wird nicht von Charge-Control gesteuert ====- ${Logparser2}`,'warn')    
@@ -1774,7 +1779,7 @@ async function Wh_Leistungsmesser2(){
 } 
 
 async function BatterieLaden(){
-    const Akk_max_Charge_Power_W = (await getStateAsync(sID_Max_Charge_Power_W)).val;                     // Aktuell eingestellte Ladeleistung 
+    const Akk_max_Charge_Power_W = (await getStateAsync(sID_Max_Charge_Power_W)).val;                       // Aktuell eingestellte Ladeleistung 
     const LadeleistungBat = Akk_max_Charge_Power_W /2;
     await Promise.all([
             setStateAsync(sID_SET_POWER_MODE, 3), // Charge
@@ -1784,8 +1789,8 @@ async function BatterieLaden(){
 
 // Batterie bis auf Notstrom SOC laden
 async function LadeNotstromSOC(){
-    const nbr_Notstrom_SOC_Proz = (await getStateAsync(sID_Notstrom_akt)).val                             // Berechneter Notstrom SOC
-    Batterie_SOC_Proz = (await getStateAsync(sID_Batterie_SOC)).val;                                    // Aktueller Batterie SOC E3DC 
+    const nbr_Notstrom_SOC_Proz = (await getStateAsync(sID_Notstrom_akt)).val                               // Berechneter Notstrom SOC
+    Batterie_SOC_Proz = (await getStateAsync(sID_Batterie_SOC)).val;                                        // Aktueller Batterie SOC E3DC 
     while (!(Batterie_SOC_Proz >= nbr_Notstrom_SOC_Proz)) {
         await BatterieLaden();
         await new Promise(resolve => setTimeout(resolve, 4000)); // alle 5 Sekunde wiederholen sonst übernimmt E3DC die Regelung
@@ -1843,6 +1848,8 @@ async function berechneReinenHausverbrauch(powerHome) {
                     homeAverage[day][interval] = values.length ? round(totalConsumption / values.length,0) : 0;
                 }
             }
+            // Anzeige für VIS
+            await setStateAsync(sID_EigenverbrauchDurchschnitt,`${homeAverage[currentDay]['day']} W / ${homeAverage[currentDay]['night']} W`)
             await Promise.all([
                 setStateAsync(sID_arrayHausverbrauchDurchschnitt, JSON.stringify(homeAverage)),
                 setStateAsync(sID_arrayHausverbrauch, JSON.stringify(homeConsumption)),
