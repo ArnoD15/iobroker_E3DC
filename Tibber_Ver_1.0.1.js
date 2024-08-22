@@ -5,7 +5,7 @@ const instanz = '0_userdata.0';                                                 
 const PfadEbene1 = 'TibberSkript';                                                                     	        // Pfad innerhalb der Instanz
 const tibberDP = `${instanz}.${PfadEbene1}.`;
 const PfadEbene2 = ['Anzeige_VIS','OutputSignal','History','USER_ANPASSUNGEN']                		            // Pfad innerhalb PfadEbene1
-const tibberLinkId = ''																							// Persönliche ID Adapter Tibber Link
+const tibberLinkId = '9c846e80-68d6-4548-bf3b-d220296216c2'
 const DebugAusgabeDetail = true;
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
 //------------------------------------------------------------------------------------------------------
@@ -529,49 +529,6 @@ async function DebugLog()
     if (DebugAusgabeDetail){log(`schneeBedeckt = ${schneeBedeckt}`)}
     log(`ProgrammAblauf = ${LogProgrammablauf} `,'warn')
     
-}
-
-// Leistungsmesser1: Energie in kWh berechnen und Ladeverluste kalkulieren
-async function Wh_Leistungsmesser1(){
-    let AufDieMinute =  '* * * * *';
-    Timer1 = schedule(AufDieMinute, async () => {   
-        let Pmin = Summe1 / count1;
-
-        if(count1 > 0 && Summe1 > 0) {
-            // SOC der Batterie abrufen
-            let soc_start = (await getStateAsync(sID_Batterie_SOC)).val;
-
-            // Berechnete Energie in kWh
-            let energie_kWh = Pmin / 60 / 1000;
-
-            // Neuen SOC nach der Ladevorgang berechnen
-            let soc_end = soc_start + (energie_kWh / batterieKapazitaet_kWh) * 100;
-
-            // Energie, die effektiv nach Ladeverlusten verfügbar ist
-            let effektiv_geladene_energie_kWh = batterieKapazitaet_kWh * (soc_end - soc_start) / 100;
-
-            // Ladeverluste
-            let ladeverluste_kWh = energie_kWh - effektiv_geladene_energie_kWh;
-
-            // Aktuellen Preis pro kWh abrufen
-            let currentPrice = (await getStateAsync(sID_CurrentPrice)).val;
-
-            // Preis pro kWh unter Berücksichtigung der Ladeverluste
-            let preis = effektiv_geladene_energie_kWh * currentPrice;
-
-            // Setze den Wert im System (Hier Beispiel für 'Energie aus Netz Batterie')
-            await setStateAsync(sID_EnergieAusNetzBatterie_kWh, (await getStateAsync(sID_EnergieAusNetzBatterie_kWh)).val + energie_kWh, true);
-
-            // Ladeverluste speichern
-            // await setStateAsync('ladeverluste_kWh', ladeverluste_kWh, true);
-            
-            // Zähler und Summe zurücksetzen
-            count1 = Summe1 = 0;
-        } else if (count1 === 0 && Summe1 === 0) {
-            clearSchedule(Timer1);
-            Timer1 = null;
-        }
-    });
 }
 
 //***************************************************************************************************
