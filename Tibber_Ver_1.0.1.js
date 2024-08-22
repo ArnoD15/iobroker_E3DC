@@ -5,7 +5,7 @@ const instanz = '0_userdata.0';                                                 
 const PfadEbene1 = 'TibberSkript';                                                                     	        // Pfad innerhalb der Instanz
 const tibberDP = `${instanz}.${PfadEbene1}.`;
 const PfadEbene2 = ['Anzeige_VIS','OutputSignal','History','USER_ANPASSUNGEN']                		            // Pfad innerhalb PfadEbene1
-const tibberLinkId = '9c846e80-68d6-4548-bf3b-d220296216c2'
+const tibberLinkId = 'xxxxxxxx-xxxx-xxxx-xxxxxxxxxxxx'                                                     		// Persönliche ID Adapter TibberLink
 const DebugAusgabeDetail = true;
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
 //------------------------------------------------------------------------------------------------------

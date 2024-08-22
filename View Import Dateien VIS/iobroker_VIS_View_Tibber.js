@@ -84,7 +84,7 @@
         "e00002": {
             "tpl": "tplVis-materialdesign-Chart-JSON",
             "data": {
-                "oid": "0_userdata.0.Tibber.History.JSON_Chart",
+                "oid": "0_userdata.0.TibberSkript.History.JSON_Chart",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -376,7 +376,7 @@
         "e00005": {
             "tpl": "tplTimeValue",
             "data": {
-                "oid": "tibberlink.0.Homes.9c846e80-68d6-4548-bf3b-d220296216c2.PricesToday.lastUpdate",
+                "oid": "tibberlink.0.Homes.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.PricesToday.lastUpdate",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -1650,7 +1650,7 @@
         "e00021": {
             "tpl": "tplVis-materialdesign-Vuetify-Slider",
             "data": {
-                "oid": "0_userdata.0.Tibber.USER_ANPASSUNGEN.maxSOC_Batterie",
+                "oid": "0_userdata.0.TibberSkript.USER_ANPASSUNGEN.maxSOC_Batterie",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -1832,7 +1832,7 @@
         "e00023": {
             "tpl": "tplVis-materialdesign-Vuetify-Slider",
             "data": {
-                "oid": "0_userdata.0.Tibber.USER_ANPASSUNGEN.maxLadeleistung",
+                "oid": "0_userdata.0.TibberSkript.USER_ANPASSUNGEN.maxLadeleistung",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -2069,7 +2069,7 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "html_prepend": "min. Strompreis ab dem geladen wird",
+                "html_prepend": "max. Strompreis für Freigabe laden",
                 "html_append": "",
                 "visibility-oid": "",
                 "class": "",
@@ -2093,7 +2093,7 @@
         "e00026": {
             "tpl": "tplVis-materialdesign-Vuetify-Slider",
             "data": {
-                "oid": "0_userdata.0.Tibber.USER_ANPASSUNGEN.minStrompreis",
+                "oid": "0_userdata.0.TibberSkript.USER_ANPASSUNGEN.maxStrompreis",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": false,
@@ -2196,7 +2196,7 @@
         "e00027": {
             "tpl": "tplVis-materialdesign-Button-Toggle",
             "data": {
-                "oid": "0_userdata.0.Tibber.USER_ANPASSUNGEN.pvSchneebedeckt",
+                "oid": "0_userdata.0.TibberSkript.USER_ANPASSUNGEN.pvSchneebedeckt",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -2366,7 +2366,7 @@
         "e00029": {
             "tpl": "tplValueFloat",
             "data": {
-                "oid": "0_userdata.0.Tibber.Anzeige_VIS.ladezeitBatterie",
+                "oid": "0_userdata.0.TibberSkript.Anzeige_VIS.ladezeitBatterie",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -2447,7 +2447,7 @@
         "e00030": {
             "tpl": "tplValueString",
             "data": {
-                "oid": "0_userdata.0.Tibber.Anzeige_VIS.aktuellerEigenverbrauch",
+                "oid": "0_userdata.0.TibberSkript.Anzeige_VIS.aktuellerEigenverbrauch",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -2670,7 +2670,7 @@
         "e00033": {
             "tpl": "tplValueString",
             "data": {
-                "oid": "0_userdata.0.Tibber.Anzeige_VIS.besteLadezeit",
+                "oid": "0_userdata.0.TibberSkript.Anzeige_VIS.besteLadezeit",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -2745,7 +2745,7 @@
         "e00034": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "0_userdata.0.Tibber.Anzeige_VIS.timerAktiv",
+                "oid": "0_userdata.0.TibberSkript.Anzeige_VIS.timerAktiv",
                 "g_fixed": false,
                 "g_visibility": true,
                 "g_css_font_text": true,
@@ -2936,7 +2936,7 @@
         "e00036": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "0_userdata.0.Tibber.OutputSignal.BatterieEntladesperre",
+                "oid": "0_userdata.0.TibberSkript.OutputSignal.BatterieEntladesperre",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -3018,7 +3018,7 @@
         "e00037": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "0_userdata.0.Tibber.OutputSignal.BatterieLaden",
+                "oid": "0_userdata.0.TibberSkript.OutputSignal.BatterieLaden",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -3100,7 +3100,7 @@
         "e00038": {
             "tpl": "tplValueListHtml8",
             "data": {
-                "oid": "0_userdata.0.Tibber.OutputSignal.eAutoLaden",
+                "oid": "0_userdata.0.TibberSkript.OutputSignal.eAutoLaden",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
