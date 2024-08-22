@@ -79,7 +79,7 @@ verbunden sein.
 
 ### Version: 1.5.3
 * Kleinere Optimierungen und Fehler behoben für das Tibber Skript
-* Neues Objekt `0_userdata.0.Charge_Control.Allgemein.EigenverbrauchDurchschnitt` erstellt, für die Anzeige vom Durchnittsverbrauch Tag / Nacht in VIS.
+* Neues Objekt `0_userdata.0.Charge_Control.Allgemein.EigenverbrauchDurchschnitt` erstellt, für die Anzeige vom Durchschnittsverbrauch Tag / Nacht in VIS.
 * Fehler behoben, dass die Berechnung Notstromreserve <0 sein konnte. (Danke an @MaLei für den Hinweis)
 
 ### Version: 1.5.2
