@@ -617,7 +617,7 @@ on({id: regexPatternTibber, change: "ne"}, async function (obj){
     log(`-==== User Parameter ${obj.id.split('.')[4]} wurde in ${obj.state.val} geändert ====-`,'warn')
     if (obj.id.split('.')[4] == 'maxSOC_Batterie' ){maxBatterieSoC = obj.state.val}
     if (obj.id.split('.')[4] == 'maxLadeleistung' ){maxLadeleistungUser_W = obj.state.val}
-    if (obj.id.split('.')[4] == 'maxStrompreisUser' ){maxStrompreisUser = obj.state.val}
+    if (obj.id.split('.')[4] == 'maxStrompreis' ){maxStrompreisUser = obj.state.val}
     if (obj.id.split('.')[4] == 'pvSchneebedeckt' ){schneeBedeckt = obj.state.val}
     if (obj.id.split('.')[4] == 'Systemwirkungsgrad' ){systemwirkungsgrad = obj.state.val}
     await tibberSteuerungHauskraftwerk(); 
