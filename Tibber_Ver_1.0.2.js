@@ -1,3 +1,4 @@
+
 'use strict';
 //------------------------------------------------------------------------------------------------------
 //++++++++++++++++++++++++++++++++++++++++++  USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++++
@@ -5,15 +6,17 @@ const instanz = '0_userdata.0';                                                 
 const PfadEbene1 = 'TibberSkript';                                                                     	        // Pfad innerhalb der Instanz
 const tibberDP = `${instanz}.${PfadEbene1}.`;
 const PfadEbene2 = ['Anzeige_VIS','OutputSignal','History','USER_ANPASSUNGEN']                		            // Pfad innerhalb PfadEbene1
-const tibberLinkId = 'xxxxxxxx-xxxx-xxxx-xxxxxxxxxxxx'                                                     		// Persönliche ID Adapter TibberLink
+const tibberLinkId = '9c846e80-68d6-4548-bf3b-d220296216c2'                                                     // Persönliche ID Adapter TibberLink
 const DebugAusgabeDetail = true;
+const stromgestehungskosten = 0.1057                                                                            // alle Kosten, die innerhalb der vorgesehenen Laufzeit (20 Jahre) entstehen addiert, dividiert durch den Ertrag an Solarstrom
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
 //------------------------------------------------------------------------------------------------------
 
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-log('-==== Tibber Skript Version 1.0.1 ====-');
+const scriptVersion = 'Version 1.0.2'
+log(`-==== Tibber Skript ${scriptVersion} ====-`);
 
 // IDs Script Charge_Control
 const sIDPrognoseAuto_kWh =`0_userdata.0.Charge_Control.History.PrognoseAuto_kWh_`;
@@ -52,14 +55,15 @@ const sID_ladezeitBatterie = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.ladezeit
 const sID_timerAktiv = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.timerAktiv`;
 const sID_EnergieAusNetzBatterie_kWh =`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.energieAusNetzBatterie`
 const sID_Systemwirkungsgrad = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Systemwirkungsgrad`
+const sID_BatterieLadedaten = `${instanz}.${PfadEbene1}.${PfadEbene2[2]}.BatterieLadedaten`
 
 let pvPrognoseHeute, pvPrognoseMorgen,job, maxBatterieSoC, aktuelleBatterieSoC_Pro, maxLadeleistungUser_W, maxStrompreisUser = 0, schneeBedeckt;
 let batterieKapazitaet_kWh, blockpreisTimer = 0,billigsterEinzelpreisBlock = 0, minStrompreis_48h = 0, LogProgrammablauf = "";
-let count1 = 0, Summe1 = 0, Timer1 = null;
+let count1 = 0, Summe1 = 0, Timer1 = null, batterieSOC_alt = 0, aktuellerPreis = 0, preis_alt = 0;
 
 let bLock = false;                                                                 
 
-let timerIds = [], timerTarget = [];
+let timerIds = [], timerTarget = [], batterieLadedaten = [];
 
 //***************************************************************************************************
 //**************************************** Function Bereich *****************************************
@@ -81,6 +85,7 @@ async function createState(){
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.pvSchneebedeckt`, {'def':false, 'name':'Kann in VIS manuell auf true gesetzt werden,wenn Schnee auf den PV Modulen liegt' ,'type':'boolean'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.maxSOC_Batterie`, {'def':80, 'name':'max SOC in % der Batterie bis zu dem aus dem Netz geladen werden soll' ,'type':'number', 'unit':'%'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Systemwirkungsgrad`, {'def':88, 'name':'max Wirkungsgrad inkl. Batterie' ,'type':'number', 'unit':'%'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.BatterieLadedaten`, {'def':[], 'name':'Batterie Start SOC mit Strompreis' ,'type':'string'});
 }
 
 // Wird nur beim Start vom Script aufgerufen
@@ -92,13 +97,16 @@ async function ScriptStart()
     // Erstelle das Tibber Diagramm
     await createDiagramm();
     // User Anpassungen parallel abrufen
-    [schneeBedeckt,aktuelleBatterieSoC_Pro,maxBatterieSoC, maxLadeleistungUser_W,maxStrompreisUser] = await Promise.all([
+    [aktuellerPreis, batterieLadedaten, schneeBedeckt,aktuelleBatterieSoC_Pro,maxBatterieSoC, maxLadeleistungUser_W,maxStrompreisUser] = await Promise.all([
+        getStateAsync(sID_CurrentPrice),
+        getStateAsync(sID_BatterieLadedaten),
         getStateAsync(sID_Schneebedeckt),
         getStateAsync(sID_Batterie_SOC),
         getStateAsync(sID_maxSoC),
         getStateAsync(sID_maxLadeleistungUser_W),
         getStateAsync(sID_maxStrompreis)
     ]).then(states => states.map(state => state.val));
+    batterieLadedaten = JSON.parse(batterieLadedaten)
     // PV-Prognose und Batteriekapazität parallel abrufen
     const [batteryCapacity0 , entladetiefe_Pro, aSOC_Bat_Pro] = await Promise.all([
         getStateAsync(sID_SPECIFIED_Battery_Capacity_0).then(state => state.val),
@@ -323,7 +331,7 @@ async function findeGuenstigsteLadezeitInnerhalbReichweite(rangeHours, areaHours
         getStateAsync(sID_PricesTodayJSON),
         getStateAsync(sID_PricesTomorrowJSON)
     ]).then(states => states.map(state => JSON.parse(state.val)));
-    const aktuellerPreis = (await getStateAsync(sID_CurrentPrice)).val
+    
     
     if (!Array.isArray(datenHeute) || !Array.isArray(datenMorgen) || rangeHours <= 0 || areaHours <= 0) {
         throw new Error("Invalid input");
@@ -519,13 +527,13 @@ async function clearAllTimeouts() {
 
 async function DebugLog()
 {
-    log(`*******************  Debug LOG Tibber Skript  *******************`)
+    log(`*******************  Debug LOG Tibber Skript ${scriptVersion} *******************`)
     if (DebugAusgabeDetail){log(`timerIds1 = ${timerIds[0]} timerIds2 = ${timerIds[1]}`)}
     if (DebugAusgabeDetail){log(`timerTarget1 = ${timerTarget[0]} timerTarget2 = ${timerTarget[1]}`)}
     if (DebugAusgabeDetail){log(`blockpreisTimer = ${blockpreisTimer}`)}
     if (DebugAusgabeDetail){log(`billigsterEinzelpreisBlock = ${billigsterEinzelpreisBlock}`)}
     if (DebugAusgabeDetail){log(`minStrompreis_48h = ${minStrompreis_48h}`)}
-    if (DebugAusgabeDetail){log(`minStrompreisUser = ${maxStrompreisUser}`)}
+    if (DebugAusgabeDetail){log(`maxStrompreisUser = ${maxStrompreisUser}`)}
     if (DebugAusgabeDetail){log(`schneeBedeckt = ${schneeBedeckt}`)}
     log(`ProgrammAblauf = ${LogProgrammablauf} `,'warn')
     
@@ -535,29 +543,45 @@ async function DebugLog()
 //********************************** Schedules und Trigger Bereich **********************************
 //***************************************************************************************************
 
-// Zähler: Ladeleistung Batterie aus Netz erfassen
+// Zähler: Laden Batterie aus Netz erfassen
 on({id: sID_Power_Bat_W, change: "ne",valGt: 0}, async function(obj) {
-    let leistungBatterie = Math.abs((await getStateAsync(obj.id)).val);
-    let BatterieLaden = (await getStateAsync(sID_BatterieLaden)).val;
-    let Power_Grid = (await getStateAsync(sID_Power_Grid)).val;
-    if(Power_Grid > 0 && BatterieLaden && leistungBatterie > 0){
-        let leistungNetz = (Power_Grid >= leistungBatterie) ? leistungBatterie : Power_Grid
-            
-        // Preis für Ladung plus Ladeverluste und start SOC in array speichern
-        // Kehrwert der Effizienz (1 / (Systemwirkungsgrad/100))    
+    let [leistungBatterie,BatterieLaden,Power_Grid] = await Promise.all([
+        getStateAsync(obj.id),
+        getStateAsync(sID_BatterieLaden),
+        getStateAsync(sID_Power_Grid)
+    ]).then(states => states.map(state => state.val));
+    leistungBatterie = Math.abs(leistungBatterie);
+    
+    if(Power_Grid >= leistungBatterie && BatterieLaden && leistungBatterie > 0){
+       if(aktuelleBatterieSoC_Pro > batterieSOC_alt && aktuellerPreis != preis_alt){
+            batterieSOC_alt = aktuelleBatterieSoC_Pro
+            preis_alt = aktuellerPreis
+            batterieLadedaten.push({ soc: aktuelleBatterieSoC_Pro, price: aktuellerPreis });
+            await setStateAsync(sID_BatterieLadedaten,JSON.stringify(batterieLadedaten));
+       }
+    }else{
+        if(aktuelleBatterieSoC_Pro > batterieSOC_alt&& aktuellerPreis != preis_alt){
+            batterieSOC_alt = aktuelleBatterieSoC_Pro
+            preis_alt = aktuellerPreis
+            batterieLadedaten.push({ soc: aktuelleBatterieSoC_Pro, price: stromgestehungskosten });
+            await setStateAsync(sID_BatterieLadedaten,JSON.stringify(batterieLadedaten));
+       }
+
     }
+
+
 });
 
-
 // Wird aufgerufen wenn sich an den States Tibber.User_Anpassungen was ändert
-on({id: /\Tibber.USER_ANPASSUNGEN/, change: "ne"}, async function (obj){	
+const regexPatternTibber = new RegExp(`${PfadEbene1}.${PfadEbene2[3]}`);
+on({id: regexPatternTibber, change: "ne"}, async function (obj){	
     if (bLock) return;
     bLock = true;
     setTimeout(() => bLock = false, 100);
     log(`-==== User Parameter ${obj.id.split('.')[4]} wurde in ${obj.state.val} geändert ====-`,'warn')
     if (obj.id.split('.')[4] == 'maxSOC_Batterie' ){maxBatterieSoC = obj.state.val}
     if (obj.id.split('.')[4] == 'maxLadeleistung' ){maxLadeleistungUser_W = obj.state.val}
-    if (obj.id.split('.')[4] == 'minStrompreis' ){maxStrompreisUser = obj.state.val}
+    if (obj.id.split('.')[4] == 'maxStrompreisUser' ){maxStrompreisUser = obj.state.val}
     if (obj.id.split('.')[4] == 'pvSchneebedeckt' ){schneeBedeckt = obj.state.val}
     await tibberSteuerungHauskraftwerk(); 
     await createDiagramm();
@@ -565,11 +589,20 @@ on({id: /\Tibber.USER_ANPASSUNGEN/, change: "ne"}, async function (obj){
 
 on({id: sID_Batterie_SOC, change: "ne"}, async function (obj){	
     aktuelleBatterieSoC_Pro = obj.state.val
+    // Alle Werte im Array löschen mit höherem SOC als aktueller SOC
+    batterieLadedaten = batterieLadedaten.filter(data => data.soc <= aktuelleBatterieSoC_Pro);
+    await setStateAsync(sID_BatterieLadedaten,JSON.stringify(batterieLadedaten));
     if(aktuelleBatterieSoC_Pro >= maxBatterieSoC){
         await clearAllTimeouts();
         await setStateAsync(sID_BatterieLaden,false);
     }
 });
+
+on({id: sID_CurrentPrice, change: "ne"}, async function (obj){	
+    aktuellerPreis = obj.state.val
+});
+
+
 
 // Tibber Steuerung jede Stunde aufrufen.
 schedule("0 * * * *", async function() {
