@@ -3,7 +3,6 @@
 //++++++++++++++++++++++++++++++++++++++++++  USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++++
 const instanz = '0_userdata.0';                                                                        	        // Instanz Script
 const PfadEbene1 = 'TibberSkript';                                                                     	        // Pfad innerhalb der Instanz
-const tibberDP = `${instanz}.${PfadEbene1}.`;
 const PfadEbene2 = ['Anzeige_VIS','OutputSignal','History','USER_ANPASSUNGEN']                		            // Pfad innerhalb PfadEbene1
 const tibberLinkId = '9c846e80-68d6-4548-bf3b-d220296216c2'                                                     // Persönliche ID Adapter TibberLink
 const DebugAusgabeDetail = true;
@@ -14,7 +13,7 @@ const stromgestehungskosten = 0.1057                                            
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.0.2'
+const scriptVersion = 'Version 1.0.3'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 
 // IDs Script Charge_Control
@@ -57,8 +56,8 @@ const sID_Systemwirkungsgrad = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.System
 const sID_BatterieLadedaten = `${instanz}.${PfadEbene1}.${PfadEbene2[2]}.BatterieLadedaten`
 const sID_StrompreisBatterie = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.strompreisBatterie`
 
-let pvPrognoseHeute, pvPrognoseMorgen,job, maxBatterieSoC, aktuelleBatterieSoC_Pro, maxLadeleistungUser_W, maxStrompreisUser = 0, schneeBedeckt;
-let batterieKapazitaet_kWh, blockpreisTimer = 0,billigsterEinzelpreisBlock = 0, minStrompreis_48h = 0, LogProgrammablauf = "";
+let maxBatterieSoC, aktuelleBatterieSoC_Pro, maxLadeleistungUser_W, maxStrompreisUser = 0, schneeBedeckt;
+let batterieKapazitaet_kWh, blockpreisTimer = 0,billigsterEinzelpreisBlock = 0, billigsterBlockPreis = 0, minStrompreis_48h = 0, LogProgrammablauf = "";
 let batterieSOC_alt = 0, aktuellerPreisTibber = 0, preis_alt = 0,strompreisBatterie,bruttoPreisBatterie,systemwirkungsgrad ;
 
 let bLock = false, bEntladenSperren = false;                                                                 
@@ -99,10 +98,10 @@ async function ScriptStart()
     // Erstelle das Tibber Diagramm
     await createDiagramm();
     // User Anpassungen parallel abrufen
-    [systemwirkungsgrad,aktuellerPreisTibber, batterieLadedaten, schneeBedeckt,aktuelleBatterieSoC_Pro,maxBatterieSoC, maxLadeleistungUser_W,maxStrompreisUser] = await Promise.all([
+    [batterieLadedaten,systemwirkungsgrad,aktuellerPreisTibber, schneeBedeckt,aktuelleBatterieSoC_Pro,maxBatterieSoC, maxLadeleistungUser_W,maxStrompreisUser] = await Promise.all([
+        getStateAsync(sID_BatterieLadedaten),
         getStateAsync(sID_Systemwirkungsgrad),
         getStateAsync(sID_CurrentPrice),
-        getStateAsync(sID_BatterieLadedaten),
         getStateAsync(sID_Schneebedeckt),
         getStateAsync(sID_Batterie_SOC),
         getStateAsync(sID_maxSoC),
@@ -110,6 +109,7 @@ async function ScriptStart()
         getStateAsync(sID_maxStrompreis)
     ]).then(states => states.map(state => state.val));
     batterieLadedaten = JSON.parse(batterieLadedaten)
+    //log(`batterieLadedaten = ${batterieLadedaten}`,'warn')
     // PV-Prognose und Batteriekapazität parallel abrufen
     const [batteryCapacity0 , entladetiefe_Pro, aSOC_Bat_Pro] = await Promise.all([
         getStateAsync(sID_SPECIFIED_Battery_Capacity_0).then(state => state.val),
@@ -126,17 +126,15 @@ async function ScriptStart()
     batterieKapazitaet_kWh = batterieKapazitaet_kWh * (entladetiefe_Pro/100);
     batterieKapazitaet_kWh = round(((batterieKapazitaet_kWh/100)*aSOC_Bat_Pro),0);
     // Entladesperre Batterie prüfen
+     LogProgrammablauf += '0,';
     await checkAndUpdateEntladenSperren(aktuellerPreisTibber);        
     // Tibber-Steuerung starten
-    LogProgrammablauf += '0,';
-    tibberSteuerungHauskraftwerk()
+   await tibberSteuerungHauskraftwerk()
     
 } 
 
 async function tibberSteuerungHauskraftwerk(){
     try {    
-        LogProgrammablauf = '';
-        
         const [reichweiteBatterie] = await Promise.all([
             getStateAsync(sID_Autonomiezeit).then(state => state.val)      // Reichweite der Batterie in h und min.
         ]);
@@ -147,34 +145,27 @@ async function tibberSteuerungHauskraftwerk(){
         // Prüfen ob die prognostizierte PV Leistung zum laden der Batterie innerhalb der Reichweite ausreicht und Batterie SOC unter max SOC
         if(!pvLeistungAusreichend && aktuelleBatterieSoC_Pro < maxBatterieSoC){
             LogProgrammablauf += '4,';
-            // Günstigsten Preis innerhalb der Reichweite ermitteln
-            const dateBesterPreis = await findeGuenstigsteLadezeitInnerhalbReichweite(48,1)
             // Prognose Batterie-SOC am Ende der Reichweite
             const prognoseBattSOC = await prognoseBatterieSOC(reichweiteStunden)
             // benötigte Ladezeit um Batterie wieder auf max. SOC zu laden.
             const LadedauerMaxSOC_h = await berechneLadezeit(prognoseBattSOC)
             // Günstigsten zusammenhängenden Stundenblock finden, der die Ladezeit abdecken kann
-            const dateStartLadezeit = await findeGuenstigsteLadezeitInnerhalbReichweite(reichweiteStunden,LadedauerMaxSOC_h)
+            const dateStartLadezeit = await bestLoadTime(reichweiteStunden,LadedauerMaxSOC_h)
             // Prüfen ob durchschnitt zusammenhängede Ladezeit Preis und bester 48h Preis unter min. Preis ist
             if(blockpreisTimer > maxStrompreisUser && minStrompreis_48h > maxStrompreisUser){
                 await clearAllTimeouts();
                 LogProgrammablauf += '6,';
-                DebugLog();
+                await DebugLog();
+                LogProgrammablauf = '';
                 return;
             }
-            // Prüfen ob durchschnitt zusammenhängede Ladezeit Preis unter min. Preis ist sonst Startzeit bester 48h Preis für Timer verwenden.
-            const besteLadezeit = blockpreisTimer < maxStrompreisUser ? dateStartLadezeit : dateBesterPreis;
             // Prüfen ob die Startzeit vor der Ablaufzeit Timer ist, dann Timer weiterlaufen lassen
-            if (timerTarget[1] <= besteLadezeit || timerTarget[1] == null){
+            if (timerTarget[1] <= dateStartLadezeit || timerTarget[1] == null){
                 // Alle Timer beenden und neue Zeit setzen
                 await clearAllTimeouts();            
-                await setStateAtSpecificTime(besteLadezeit,sID_BatterieLaden,true)
-                let dateEndLadezeit = new Date(besteLadezeit);
-                if(besteLadezeit == dateBesterPreis){
-                    dateEndLadezeit.setHours(dateEndLadezeit.getHours() + 1, 0, 0, 0);
-                }else{
-                    dateEndLadezeit.setHours(dateEndLadezeit.getHours() + LadedauerMaxSOC_h, 0, 0, 0);
-                }
+                await setStateAtSpecificTime(dateStartLadezeit,sID_BatterieLaden,true)
+                let dateEndLadezeit = new Date(dateStartLadezeit);
+                dateEndLadezeit.setHours(dateEndLadezeit.getHours() + LadedauerMaxSOC_h, 0, 0, 0);
                 await setStateAtSpecificTime(dateEndLadezeit, sID_BatterieLaden, false);
             }
             
@@ -191,11 +182,11 @@ async function tibberSteuerungHauskraftwerk(){
 
         // Funktion schreiben die Prüft ob der aktuelle Preis günstiger ist als der errechnete Batterie Preis mit WR Verlusten (Laden / Entladen der Batterie regeln)
 
-        DebugLog();
-    
+        await DebugLog();
+        LogProgrammablauf = '';
     
     } catch (error) {
-        log(`Fehler in Funktion tibberSteuerungHauskraftwerk: ${error.message}`, 'error');
+        //log(`Fehler in Funktion tibberSteuerungHauskraftwerk: ${error.message}`, 'error');
     }
     
 }
@@ -302,23 +293,27 @@ async function berechneLadezeit(startSOC) {
 }
 
 
-async function setStateAtSpecificTime(targetTime, stateID, wert) {
+async function setStateAtSpecificTime(targetTime, stateID, state) {
     const currentTime = new Date(); // Aktuelle Zeit abrufen
-
-    // Überprüfen, ob die Zielzeit bereits vergangen ist und es eine Startzeit ist; wenn ja, sofort Laden
-    if (wert && targetTime <= currentTime) {
-        await setStateAsync(stateID, true);
-        log(`State ${stateID} wurde um ${targetTime.toLocaleTimeString()} auf ${wert} gesetzt.`, 'warn');
+    if (!(targetTime instanceof Date) || isNaN(targetTime.getTime())) {
+        LogProgrammablauf += '7,';
         return;
     }
-
+    LogProgrammablauf += '8,';
+    // Überprüfen, ob die Zielzeit bereits vergangen ist und es eine Startzeit ist; wenn ja, sofort Laden
+    if (state && targetTime <= currentTime) {
+        await setStateAsync(stateID, true);
+        log(`State ${stateID} wurde um ${targetTime.toLocaleTimeString()} auf ${state} gesetzt.`, 'warn');
+        return;
+    }
+    
     // @ts-ignore Zeitdifferenz berechnen 
     let timeDiff = targetTime - currentTime;
 
     // Timeout setzen, um den State nach der Zeitdifferenz zu ändern
     let id = setTimeout(() => {
-        setStateAsync(stateID, wert);
-        log(`State ${stateID} wurde um ${targetTime.toLocaleTimeString()} auf ${wert} gesetzt.`, 'warn');
+        setStateAsync(stateID, state);
+        log(`State ${stateID} wurde um ${targetTime.toLocaleTimeString()} auf ${state} gesetzt.`, 'warn');
     }, timeDiff);
 
     await setStateAsync(sID_timerAktiv, true);
@@ -326,31 +321,34 @@ async function setStateAtSpecificTime(targetTime, stateID, wert) {
     timerTarget.push(targetTime);
 }
 
-
-
-// Funktion sucht den günstigsten Preis innerhalb der Reichweite "rangeHours" und für eine zusammenhängende Zeitblock "areaHours"
-async function findeGuenstigsteLadezeitInnerhalbReichweite(rangeHours, areaHours) {
+// Funktion sucht die günstigste Start Zeit zum laden innerhalb der Reichweite
+async function bestLoadTime(reichweite_h,ladezeit_h) {
     LogProgrammablauf += '3,';
+    const now = new Date(); // Aktuelle Zeit
     const [datenHeute, datenMorgen] = await Promise.all([
         getStateAsync(sID_PricesTodayJSON),
         getStateAsync(sID_PricesTomorrowJSON)
     ]).then(states => states.map(state => JSON.parse(state.val)));
-    
-    
-    if (!Array.isArray(datenHeute) || !Array.isArray(datenMorgen) || rangeHours <= 0 || areaHours <= 0) {
-        throw new Error("Invalid input");
-    }
-
     const preiseTibberArray = [...datenHeute, ...datenMorgen];
-    const now = new Date(); // Aktuelle Zeit
 
+    // Prüft, ob die Variablen datenHeute und datenMorgen Arrays sind.
+    if (!Array.isArray(datenHeute) || !Array.isArray(datenMorgen) ) {
+        throw new Error("Invalid Array in function findeGuenstigsteLadezeitInnerhalbReichweite");
+    }
+    // Wenn die Ladezeit 0 ist soll die beste Zeit für 1 h laden gesucht werden
+    if (ladezeit_h < 0) {ladezeit_h = 1;}
+    // Wenn die Reichweite 0 ist,  sofort laden wenn der Preis unter UserPreis ist
+    if (reichweite_h <= 0 && aktuellerPreisTibber < maxStrompreisUser) {
+        await setStateAsync(sID_besteLadezeit, `Jetzt`);
+        return now; // Rückgabe der aktuellen Zeit
+    }
     // Variable zur Speicherung des günstigsten Preises und der entsprechenden Zeit
-    let billigsterBlockPreis = Infinity;
-    let billigsterEinzelpreisBlock = Infinity;
+    billigsterBlockPreis = Infinity;
+    billigsterEinzelpreisBlock = Infinity;
     let billigsteZeit = null;
 
     // Iteriere durch die Daten und finde den günstigsten zusammenhängenden Stundenblock innerhalb der Reichweite
-    for (let i = 0; i < preiseTibberArray.length - areaHours + 1; i++) {
+    for (let i = 0; i < preiseTibberArray.length - ladezeit_h + 1; i++) {
         const startEntry = preiseTibberArray[i];
         const startTime = new Date(startEntry.startsAt);
 
@@ -358,10 +356,10 @@ async function findeGuenstigsteLadezeitInnerhalbReichweite(rangeHours, areaHours
         const timeDifference = Math.floor((startTime - now) / (1000 * 60 * 60));
 
         // Prüfe, ob der Startzeitpunkt innerhalb der Reichweite liegt
-        if (timeDifference >= 0 && timeDifference < rangeHours) {
+        if (timeDifference >= 0 && timeDifference < reichweite_h) {
             // Berechne die Gesamtkosten für den aktuellen Stundenblock
             let blockPreis = 0;
-            for (let j = 0; j < areaHours; j++) {
+            for (let j = 0; j < ladezeit_h; j++) {
                 const entry = preiseTibberArray[i + j];
                 if (entry.total < billigsterEinzelpreisBlock) {
                     billigsterEinzelpreisBlock = entry.total;
@@ -376,25 +374,26 @@ async function findeGuenstigsteLadezeitInnerhalbReichweite(rangeHours, areaHours
             }
         }
     }
-
-    // Prüfe, ob der aktuelle Preis günstiger ist
-    if(areaHours ==1 && rangeHours == 48){minStrompreis_48h = billigsterBlockPreis}else{blockpreisTimer = billigsterBlockPreis / areaHours;}
     
-    if (aktuellerPreisTibber < blockpreisTimer && areaHours !=1) {
+    // bei jedem Durchlauf die globalen Preis Variablen aktualisieren
+    minStrompreis_48h = preiseTibberArray.reduce((min, current) => current.total < min ? current.total : min, preiseTibberArray[0].total);
+    billigsterBlockPreis = billigsterBlockPreis / ladezeit_h
+    
+    if (aktuellerPreisTibber < billigsterBlockPreis && aktuellerPreisTibber < maxStrompreisUser) {
         // Speichere die aktuelle Zeit als Startzeit
         await setStateAsync(sID_besteLadezeit, `Jetzt`);
         return now; // Rückgabe der aktuellen Zeit
     }
-    
+
     // Formatiere die günstigste Zeit in Stunden für VIS Anzeige
     if (billigsteZeit) {
         const tag = billigsteZeit.toLocaleDateString('de-DE', {day:'2-digit',month: '2-digit'});
         const stunden = billigsteZeit.getHours();
-        const stundenBis = (stunden + areaHours)%24;
+        const stundenBis = (stunden + ladezeit_h)%24;
         await setStateAsync(sID_besteLadezeit,`${tag} / ${stunden}:00 - ${stundenBis}:00 Uhr `)
         return billigsteZeit;
     } else {
-        return null; // Kein Eintrag innerhalb der Reichweite gefunden
+        return Infinity; // Kein Eintrag innerhalb der Reichweite gefunden
     }
 }
 
@@ -499,10 +498,16 @@ async function createDiagramm(){
 
 // Funktion zur Überprüfung und Aktualisierung der Entladesperre
 async function checkAndUpdateEntladenSperren(aktuellerPreis) {
+    batterieLadedaten = JSON.parse((await getStateAsync(sID_BatterieLadedaten)).val)
+    log(`batterieLadedaten = ${JSON.stringify(batterieLadedaten)}`,'warn')
     // Wenn es gespeicherte Ladedaten gibt, prüfe den letzten Preis
     if (batterieLadedaten.length > 0) {
-        strompreisBatterie = batterieLadedaten[batterieLadedaten.length - 1].price;
-
+        LogProgrammablauf += '9,';
+        //strompreisBatterie = batterieLadedaten[batterieLadedaten.length - 1].price;
+        //Durchschnittspreis berechnen
+        const gesamt = batterieLadedaten.reduce((summe, eintrag) => summe + eintrag.price, 0);
+        strompreisBatterie = round(gesamt / batterieLadedaten.length,4);
+        
         // Überprüfe, ob der aktuelle Preis niedriger ist als der Batterie Preis inkl. Ladeverluste
         // alle Kosten, die innerhalb der vorgesehenen Laufzeit (20 Jahre) entstehen addiert, dividiert durch den Ertrag an Solarstrom
         bruttoPreisBatterie = strompreisBatterie != stromgestehungskosten ? round(strompreisBatterie * (1 / (systemwirkungsgrad / 100)),4) : stromgestehungskosten;
@@ -516,6 +521,7 @@ async function checkAndUpdateEntladenSperren(aktuellerPreis) {
     } else {
         // Wenn keine Daten gespeichert sind, Entladen nicht sperren
         bEntladenSperren = false;
+        await setStateAsync(sID_StrompreisBatterie, 0);
     }
     await setStateAsync(sID_BatterieEntladesperre, bEntladenSperren);
 }
@@ -542,8 +548,11 @@ function nextDayDate(days) {
 
 // Hilfsfunktion zum Löschen aller Timer
 async function clearAllTimeouts() {
-    await setStateAsync(sID_timerAktiv,false)
-    await setStateAsync(sID_BatterieLaden,false);
+    await Promise.all([
+        setStateAsync(sID_timerAktiv,false),
+        setStateAsync(sID_BatterieLaden,false),
+        setStateAsync(sID_besteLadezeit, ``)
+    ]);
     billigsterEinzelpreisBlock = 0 
     log(`Timer gelöscht`,'warn')
     timerIds.forEach(id => clearTimeout(id));
@@ -558,6 +567,7 @@ async function DebugLog()
     if (DebugAusgabeDetail){log(`timerTarget1 = ${timerTarget[0]} timerTarget2 = ${timerTarget[1]}`)}
     if (DebugAusgabeDetail){log(`blockpreisTimer = ${blockpreisTimer}`)}
     if (DebugAusgabeDetail){log(`billigsterEinzelpreisBlock = ${billigsterEinzelpreisBlock}`)}
+    if (DebugAusgabeDetail){log(`billigsterBlockPreis = ${billigsterBlockPreis}`)}
     if (DebugAusgabeDetail){log(`minStrompreis_48h = ${minStrompreis_48h}`)}
     if (DebugAusgabeDetail){log(`maxStrompreisUser = ${maxStrompreisUser}`)}
     if (DebugAusgabeDetail){log(`schneeBedeckt = ${schneeBedeckt}`)}
@@ -565,6 +575,8 @@ async function DebugLog()
     if (DebugAusgabeDetail){log(`bruttoPreisBatterie = ${bruttoPreisBatterie}`)}
     if (DebugAusgabeDetail){log(`aktuellerPreisTibber = ${aktuellerPreisTibber}`)}
     if (DebugAusgabeDetail){log(`bEntladenSperren = ${bEntladenSperren}`)}
+    if (DebugAusgabeDetail){log(`BatterieLaden = ${(await getStateAsync(sID_BatterieLaden)).val}`)}
+    if (DebugAusgabeDetail){log(`eAutoLaden = ${(await getStateAsync(sID_eAutoLaden)).val}`)}
     log(`ProgrammAblauf = ${LogProgrammablauf} `,'warn')
     
 }
@@ -583,16 +595,16 @@ on({id: sID_Power_Bat_W, change: "ne",valGt: 0}, async function(obj) {
     leistungBatterie = Math.abs(leistungBatterie);
     
     if(Power_Grid >= leistungBatterie && BatterieLaden && leistungBatterie > 0){
-       if(aktuelleBatterieSoC_Pro > batterieSOC_alt && aktuellerPreisTibber != preis_alt){
+       if(aktuelleBatterieSoC_Pro > batterieSOC_alt){
             batterieSOC_alt = aktuelleBatterieSoC_Pro
-            preis_alt = aktuellerPreisTibber
+            //preis_alt = aktuellerPreisTibber
             batterieLadedaten.push({ soc: aktuelleBatterieSoC_Pro, price: aktuellerPreisTibber });
             await setStateAsync(sID_BatterieLadedaten,JSON.stringify(batterieLadedaten));
        }
     }else{
-        if(aktuelleBatterieSoC_Pro > batterieSOC_alt&& stromgestehungskosten != preis_alt){
+        if(aktuelleBatterieSoC_Pro > batterieSOC_alt){
             batterieSOC_alt = aktuelleBatterieSoC_Pro
-            preis_alt = stromgestehungskosten
+            //preis_alt = stromgestehungskosten
             batterieLadedaten.push({ soc: aktuelleBatterieSoC_Pro, price: stromgestehungskosten });
             await setStateAsync(sID_BatterieLadedaten,JSON.stringify(batterieLadedaten));
        }
