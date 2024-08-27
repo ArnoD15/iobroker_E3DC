@@ -76,6 +76,8 @@ verbunden sein.
 <a name="log"></a>
 
 <h3>Changelog Charge-Control</h3>
+### Version: 1.5.4
+* Fehler behoben, dass bei aktiver Entladesperre TibberSkript auch nicht mehr geladen wurde.
 
 ### Version: 1.5.3
 * Kleinere Optimierungen und Fehler behoben für das Tibber Skript

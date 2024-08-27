@@ -7,6 +7,7 @@ const instanzE3DC_RSCP = 'e3dc-rscp.0'                                          
 const instanz = '0_userdata.0';                                                                        	// Instanz Script Charge-Control
 const PfadEbene1 = 'Charge_Control';                                                                    // Pfad innerhalb der Instanz
 const PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUNGEN']                	// Pfad innerhalb PfadEbene1
+const idTibber = `${instanz}.TibberSkript`;                                                             // ObjektID Tibber Skript
 
 const sID_LeistungHeizstab_W = ``;                                                                      // Pfad zu den Leistungswerte Heizstab eintragen ansonsten leer lassen
 const sID_WallboxLadeLeistung_1_W = ``;                                                                 // Pfad zu den Leistungswerte Wallbox1 die nicht vom E3DC gesteuert wird eintragen ansonsten leer lassen
@@ -17,7 +18,7 @@ const BUFFER_SIZE= 5;                                                           
 //------------------------------------------------------------------------------------------------------
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.5.3 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.5.4 ====- ${Logparser2}`);
 
 //******************************************************************************************************
 //****************************************** Objekt ID anlegen *****************************************
@@ -237,11 +238,11 @@ async function CreateState(){
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.LastFirmwareVersion`, {'def':"", 'name':'Alte Frimware Version' , 'type':'string', 'role':'value'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Akt_Berechnete_Ladeleistung_W`, {'def':0, 'name':'Aktuell eingestellte ist Ladeleistung in W' , 'type':'number', 'role':'value', 'unit':'W'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.HistoryJSON`, {'def':'[]', 'name':'JSON für materialdesign json chart' ,'type':'string'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.istPV_LeistungTag_kWh`, {'def':'[null,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Summe PV Leistung Tag in kWh' ,'type':'array'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseProp_kWh`, {'def':'[null,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Prognose Proplanta PV Leistung Tag in kWh' ,'type':'array'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseAuto_kWh`, {'def':'[null,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für verwendete Prognose im Automatikmodus' ,'type':'array'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast90_kWh`, {'def':'[null,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Prognose Solcast PV-Leistung in Kilowatt (kW) 90. Perzentil (hohes Szenario)' ,'type':'array'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast_kWh`, {'def':'[null,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Prognose Solcast PV-Leistung in Kilowatt (kW)' ,'type':'array'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.istPV_LeistungTag_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Summe PV Leistung Tag in kWh' ,'type':'array'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseProp_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Prognose Proplanta PV Leistung Tag in kWh' ,'type':'array'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseAuto_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für verwendete Prognose im Automatikmodus' ,'type':'array'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast90_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Prognose Solcast PV-Leistung in Kilowatt (kW) 90. Perzentil (hohes Szenario)' ,'type':'array'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Prognose Solcast PV-Leistung in Kilowatt (kW)' ,'type':'array'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.HistorySelect`, {'def':1, 'name':'Select Menü für materialdesign json chart' ,'type':'number'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.NaesteAktualisierung`, {'def':'0', 'name':'Aktualisierung Proplanta' ,'type':'string'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Bewoelkungsgrad_12`, {'def':NaN, 'name':'Bewölkungsgrad 12 Uhr Proplanta' ,'type':'number'});
@@ -303,7 +304,6 @@ async function CreateState(){
 // Alle User Eingaben prüfen ob Werte eingetragen wurden und Werte zuweisen
 async function CheckState() {
     const idUSER_ANPASSUNGEN = `${instanz}.${PfadEbene1}.${PfadEbene2[4]}`;
-    const idTibber = `${instanz}.TibberSkript`;
     const e3dc_rscp_Adapter = getObject(`system.adapter.${instanzE3DC_RSCP}`);
     if(e3dc_rscp_Adapter.native.setpower_interval != 0){
         log(`!! Bei den Instanzeinstellungen vom Adapter e3dc-rscp wurde das SET_POWER Wiederholintervall nicht auf 0 eingestellt. Bitte ändern !!`,'error')
@@ -374,10 +374,10 @@ async function CheckState() {
         }
         const regexPattern = new RegExp(`${idTibber}`);
         TibberSubscribeID = on({id: regexPattern, change: "ne"}, async function (obj){	
-            log(`-==== Tibber output signal ${obj.id.split('.')[4]} wurde in ${obj.state.val} geändert ====-`,'warn')
-            if (obj.id.split('.')[4] == 'BatterieEntladesperre' ){bTibberEntladesperre = obj.state.val}
-            if (obj.id.split('.')[4] == 'BatterieLaden' ){bTibberLaden = obj.state.val}
-            if (obj.id.split('.')[4] == 'maxLadeleistung' ){tibberMaxLadeleistung_W = obj.state.val}
+            const logTxT = `-==== Tibber output signal ${obj.id.split('.')[4]} wurde in ${obj.state.val} geändert ====-`
+            if (obj.id.split('.')[4] == 'BatterieEntladesperre' ){bTibberEntladesperre = obj.state.val;log(logTxT,'warn')}
+            if (obj.id.split('.')[4] == 'BatterieLaden' ){bTibberLaden = obj.state.val;log(logTxT,'warn')}
+            if (obj.id.split('.')[4] == 'maxLadeleistung' ){tibberMaxLadeleistung_W = obj.state.val;log(logTxT,'warn')}
         });
         
     }else{
@@ -487,7 +487,7 @@ async function Ladesteuerung()
         LogProgrammablauf += '6,';
         bStatus_Notstrom_SOC = await Notstrom_SOC_erreicht();
         // Wenn Notstrom SOC nicht erreicht ist oder Notstrom SOC erreicht wurde und mehr PV-Leistung als benötigt vorhanden ist (Überschuss) regelung starten
-        if(((bStatus_Notstrom_SOC && (PV_Leistung_Summe_W - Power_Home_W) > UntererLadekorridor_W ) || !bStatus_Notstrom_SOC) && !bTibberEntladesperre){
+        if((PV_Leistung_Summe_W - Power_Home_W) > UntererLadekorridor_W && (bStatus_Notstrom_SOC || bTibberEntladesperre) || (!bStatus_Notstrom_SOC && !bTibberEntladesperre)){
             LogProgrammablauf += '7,';
             let Ladeschwelle_Proz = (await getStateAsync(sID_Ladeschwelle_Proz[EinstellungAnwahl])).val                 // Parameter Ladeschwelle
             
@@ -663,7 +663,7 @@ async function Ladesteuerung()
             }
         }else{
             if(bTibberEntladesperre){LogProgrammablauf += '37,';}else{LogProgrammablauf += '8,';}
-            // Notstrom SOC erreicht und nicht ausreichend PV-Leistung vorhanden oder Tibber Entladesperre aktiv
+            // Notstrom SOC erreicht oder Tibber Entladesperre aktiv und nicht ausreichend PV-Leistung vorhanden 
             // Entladen der Batterie stoppen
             bLadenEntladenStoppen = true
        }
@@ -2158,6 +2158,11 @@ on(sID_Power_Home_W,async function(obj) {
     if(!bStart){
         await berechneReinenHausverbrauch(Math.abs(obj.state.val));
     }
+});
+
+// Triggern wenn sich Einstellung Notstrom E3DC ändert
+on(sID_PARAM_EP_RESERVE_W,async function(obj) {
+    await Notstromreserve();
 });
 
 // Triggern wenn State bNotstromAusNetz in VIS geändert wird
