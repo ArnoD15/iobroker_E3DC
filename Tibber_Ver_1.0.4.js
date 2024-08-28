@@ -13,11 +13,10 @@ const stromgestehungskosten = 0.1057                                            
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.0.3'
+const scriptVersion = 'Version 1.0.4'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 
 // IDs Script Charge_Control
-const sIDPrognoseAuto_kWh =`0_userdata.0.Charge_Control.History.PrognoseAuto_kWh_`;
 const sID_Autonomiezeit =`0_userdata.0.Charge_Control.Allgemein.Autonomiezeit`;
 const sID_arrayHausverbrauch =`0_userdata.0.Charge_Control.Allgemein.arrayHausverbrauchDurchschnitt`;
 const sID_maxEntladetiefeBatterie =`0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_maxEntladetiefeBatterie`
@@ -57,7 +56,7 @@ const sID_BatterieLadedaten = `${instanz}.${PfadEbene1}.${PfadEbene2[2]}.Batteri
 const sID_StrompreisBatterie = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.strompreisBatterie`
 
 let maxBatterieSoC, aktuelleBatterieSoC_Pro, maxLadeleistungUser_W, maxStrompreisUser = 0, schneeBedeckt;
-let batterieKapazitaet_kWh, blockpreisTimer = 0,billigsterEinzelpreisBlock = 0, billigsterBlockPreis = 0, minStrompreis_48h = 0, LogProgrammablauf = "";
+let batterieKapazitaet_kWh, billigsterEinzelpreisBlock = 0, billigsterBlockPreis = 0, minStrompreis_48h = 0, LogProgrammablauf = "";
 let batterieSOC_alt = 0, aktuellerPreisTibber = 0, preis_alt = 0,strompreisBatterie,bruttoPreisBatterie,systemwirkungsgrad ;
 
 let bLock = false, bEntladenSperren = false;                                                                 
@@ -109,7 +108,7 @@ async function ScriptStart()
         getStateAsync(sID_maxStrompreis)
     ]).then(states => states.map(state => state.val));
     batterieLadedaten = JSON.parse(batterieLadedaten)
-    //log(`batterieLadedaten = ${batterieLadedaten}`,'warn')
+    
     // PV-Prognose und Batteriekapazität parallel abrufen
     const [batteryCapacity0 , entladetiefe_Pro, aSOC_Bat_Pro] = await Promise.all([
         getStateAsync(sID_SPECIFIED_Battery_Capacity_0).then(state => state.val),
@@ -152,7 +151,7 @@ async function tibberSteuerungHauskraftwerk(){
             // Günstigsten zusammenhängenden Stundenblock finden, der die Ladezeit abdecken kann
             const dateStartLadezeit = await bestLoadTime(reichweiteStunden,LadedauerMaxSOC_h)
             // Prüfen ob durchschnitt zusammenhängede Ladezeit Preis und bester 48h Preis unter min. Preis ist
-            if(blockpreisTimer > maxStrompreisUser && minStrompreis_48h > maxStrompreisUser){
+            if(billigsterBlockPreis > maxStrompreisUser && minStrompreis_48h > maxStrompreisUser){
                 await clearAllTimeouts();
                 LogProgrammablauf += '6,';
                 await DebugLog();
@@ -499,7 +498,6 @@ async function createDiagramm(){
 // Funktion zur Überprüfung und Aktualisierung der Entladesperre
 async function checkAndUpdateEntladenSperren(aktuellerPreis) {
     batterieLadedaten = JSON.parse((await getStateAsync(sID_BatterieLadedaten)).val)
-    log(`batterieLadedaten = ${JSON.stringify(batterieLadedaten)}`,'warn')
     // Wenn es gespeicherte Ladedaten gibt, prüfe den letzten Preis
     if (batterieLadedaten.length > 0) {
         LogProgrammablauf += '9,';
@@ -562,21 +560,39 @@ async function clearAllTimeouts() {
 
 async function DebugLog()
 {
+    const [besteLadezeit,PrognoseBerechnung_kWh_heute,Batterie_SOC,reichweiteBatterie,BatterieLaden,Power_Bat_W,Power_Grid,eAutoLaden] = await Promise.all([
+        getStateAsync(sID_besteLadezeit),
+        getStateAsync(sID_PrognoseBerechnung_kWh_heute),
+        getStateAsync(sID_Batterie_SOC),
+        getStateAsync(sID_Autonomiezeit),
+        getStateAsync(sID_BatterieLaden),
+        getStateAsync(sID_Power_Bat_W),
+        getStateAsync(sID_Power_Grid),
+        getStateAsync(sID_eAutoLaden)
+    ]).then(states => states.map(state => state.val));
+    
+    
     log(`*******************  Debug LOG Tibber Skript ${scriptVersion} *******************`)
     if (DebugAusgabeDetail){log(`timerIds1 = ${timerIds[0]} timerIds2 = ${timerIds[1]}`)}
     if (DebugAusgabeDetail){log(`timerTarget1 = ${timerTarget[0]} timerTarget2 = ${timerTarget[1]}`)}
-    if (DebugAusgabeDetail){log(`blockpreisTimer = ${blockpreisTimer}`)}
+    if (DebugAusgabeDetail){log(`besteLadezeit = ${besteLadezeit}`)}
     if (DebugAusgabeDetail){log(`billigsterEinzelpreisBlock = ${billigsterEinzelpreisBlock}`)}
     if (DebugAusgabeDetail){log(`billigsterBlockPreis = ${billigsterBlockPreis}`)}
     if (DebugAusgabeDetail){log(`minStrompreis_48h = ${minStrompreis_48h}`)}
     if (DebugAusgabeDetail){log(`maxStrompreisUser = ${maxStrompreisUser}`)}
     if (DebugAusgabeDetail){log(`schneeBedeckt = ${schneeBedeckt}`)}
+    if (DebugAusgabeDetail){log(`PrognoseBerechnung_kWh_heute = ${PrognoseBerechnung_kWh_heute}`)}
+    if (DebugAusgabeDetail){log(`batterieKapazitaet_kWh = ${batterieKapazitaet_kWh}`)}
+    if (DebugAusgabeDetail){log(`Batterie_SOC = ${Batterie_SOC}`)}
+    if (DebugAusgabeDetail){log(`reichweiteBatterie = ${reichweiteBatterie}`)}
     if (DebugAusgabeDetail){log(`strompreisBatterie = ${strompreisBatterie}`)}
     if (DebugAusgabeDetail){log(`bruttoPreisBatterie = ${bruttoPreisBatterie}`)}
     if (DebugAusgabeDetail){log(`aktuellerPreisTibber = ${aktuellerPreisTibber}`)}
     if (DebugAusgabeDetail){log(`bEntladenSperren = ${bEntladenSperren}`)}
-    if (DebugAusgabeDetail){log(`BatterieLaden = ${(await getStateAsync(sID_BatterieLaden)).val}`)}
-    if (DebugAusgabeDetail){log(`eAutoLaden = ${(await getStateAsync(sID_eAutoLaden)).val}`)}
+    if (DebugAusgabeDetail){log(`BatterieLaden = ${BatterieLaden}`)}
+    if (DebugAusgabeDetail){log(`Power_Bat_W = ${Power_Bat_W}`)}
+    if (DebugAusgabeDetail){log(`Power_Grid = ${Power_Grid}`)}
+    if (DebugAusgabeDetail){log(`eAutoLaden = ${eAutoLaden}`)}
     log(`ProgrammAblauf = ${LogProgrammablauf} `,'warn')
     
 }
