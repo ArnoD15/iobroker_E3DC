@@ -13,7 +13,7 @@ const stromgestehungskosten = 0.1057                                            
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.0.4'
+const scriptVersion = 'Version 1.0.5'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 
 // IDs Script Charge_Control
@@ -38,26 +38,31 @@ const sID_LastUpdateJSON = `tibberlink.0.Homes.${tibberLinkId}.PricesToday.lastU
 const sID_CurrentPrice = `tibberlink.0.Homes.${tibberLinkId}.CurrentPrice.total`           //aktueller Strompreis
 
 // IDs des Script Tibber
-const sID_BatterieLaden =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.BatterieLaden`; 
-const sID_eAutoLaden = `${instanz}.${PfadEbene1}.${PfadEbene2[1]}.eAutoLaden`;
-const sID_BatterieEntladesperre =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.BatterieEntladesperre`; 
-const sID_DiagramJosonChart =`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.JSON_Chart`;                            // JSON für Diagramm Tibber Preise in VIS
-const sID_maxSoC =`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.maxSOC_Batterie`; 
-const sID_maxLadeleistungUser_W =`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.maxLadeleistung`; 
-const sID_maxStrompreis = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.maxStrompreis`;
-const sID_Schneebedeckt = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.pvSchneebedeckt`;
 const sID_aktuellerEigenverbrauch = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.aktuellerEigenverbrauch`;
 const sID_besteLadezeit = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.besteLadezeit`;
 const sID_ladezeitBatterie = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.ladezeitBatterie`;
 const sID_timerAktiv = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.timerAktiv`;
 const sID_EnergieAusNetzBatterie_kWh =`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.energieAusNetzBatterie`
-const sID_Systemwirkungsgrad = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Systemwirkungsgrad`
-const sID_BatterieLadedaten = `${instanz}.${PfadEbene1}.${PfadEbene2[2]}.BatterieLadedaten`
 const sID_StrompreisBatterie = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.strompreisBatterie`
+
+const sID_BatterieLaden =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.BatterieLaden`; 
+const sID_eAutoLaden = `${instanz}.${PfadEbene1}.${PfadEbene2[1]}.eAutoLaden`;
+const sID_BatterieEntladesperre =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.BatterieEntladesperre`; 
+
+const sID_DiagramJosonChart =`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.JSON_Chart`;                            // JSON für Diagramm Tibber Preise in VIS
+const sID_BatterieLadedaten = `${instanz}.${PfadEbene1}.${PfadEbene2[2]}.BatterieLadedaten`
+
+const sID_maxSoC =`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.maxSOC_Batterie`; 
+const sID_maxLadeleistungUser_W =`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.maxLadeleistung`; 
+const sID_maxStrompreis = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.maxStrompreis`;
+const sID_Schneebedeckt = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.pvSchneebedeckt`;
+const sID_Systemwirkungsgrad = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Systemwirkungsgrad`
+const sID_BatteriepreisAktiv = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.BatteriepreisAktiv`
+
 
 let maxBatterieSoC, aktuelleBatterieSoC_Pro, maxLadeleistungUser_W, maxStrompreisUser = 0, schneeBedeckt;
 let batterieKapazitaet_kWh, billigsterEinzelpreisBlock = 0, billigsterBlockPreis = 0, minStrompreis_48h = 0, LogProgrammablauf = "";
-let batterieSOC_alt = 0, aktuellerPreisTibber = 0, preis_alt = 0,strompreisBatterie,bruttoPreisBatterie,systemwirkungsgrad ;
+let batterieSOC_alt = 0, aktuellerPreisTibber = 0, preis_alt = 0,strompreisBatterie,bruttoPreisBatterie,systemwirkungsgrad, batteriepreisAktiv ;
 
 let bLock = false, bEntladenSperren = false;                                                                 
 
@@ -74,18 +79,18 @@ async function createState(){
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.timerAktiv`, {'def':false, 'name':'Anzeige in VIS Status Timer um Batterie zu laden' ,'type':'boolean'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.energieAusNetzBatterie`, {'def': 0, 'name':'Anzeige in VIS Prognose energie aus Netzt Batterie' ,'type':'number', 'unit':'kWh'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.strompreisBatterie`, {'def': 0, 'name':'Anzeige in VIS aktueller Strompreis Batterie' ,'type':'number', 'unit':'kWh'});
-    
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.BatterieLaden`, {'def':false, 'name':'Schnittstelle zu Charge-Control laden' ,'type':'boolean'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.eAutoLaden`, {'def':false, 'name':'Schnittstelle zu E3DC_Wallbox Script Auto laden' ,'type':'boolean'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.BatterieEntladesperre`, {'def':false, 'name':'Schnittstelle zu Charge-Control Entladesperre' ,'type':'boolean'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.JSON_Chart`, {'def':'[]', 'name':'JSON für materialdesign json chart' ,'type':'string'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.BatterieLadedaten`, {'def':[], 'name':'Batterie Start SOC mit Strompreis' ,'type':'string'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.maxLadeleistung`, {'def':0, 'name':'max Ladeleistung mit der die Batterie geladen wird' ,'type':'number', 'unit':'W'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.maxStrompreis`, {'def':0.24, 'name':'min Strompreis ab der die Batterie geladen wird' ,'type':'number', 'unit':'€'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.maxSOC_Batterie`, {'def':80, 'name':'max SOC in % der Batterie bis zu dem aus dem Netz geladen werden soll' ,'type':'number', 'unit':'%'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.pvSchneebedeckt`, {'def':false, 'name':'Kann in VIS manuell auf true gesetzt werden,wenn Schnee auf den PV Modulen liegt' ,'type':'boolean'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.maxSOC_Batterie`, {'def':80, 'name':'max SOC in % der Batterie bis zu dem aus dem Netz geladen werden soll' ,'type':'number', 'unit':'%'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Systemwirkungsgrad`, {'def':88, 'name':'max Wirkungsgrad inkl. Batterie' ,'type':'number', 'unit':'%'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.BatterieLadedaten`, {'def':[], 'name':'Batterie Start SOC mit Strompreis' ,'type':'string'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.BatteriepreisAktiv`, {'def':false, 'name':'Anwahl in VIS ob Batteriepreis berücksichtigt wird' ,'type':'boolean'});
 }
 
 // Wird nur beim Start vom Script aufgerufen
@@ -97,7 +102,9 @@ async function ScriptStart()
     // Erstelle das Tibber Diagramm
     await createDiagramm();
     // User Anpassungen parallel abrufen
-    [batterieLadedaten,systemwirkungsgrad,aktuellerPreisTibber, schneeBedeckt,aktuelleBatterieSoC_Pro,maxBatterieSoC, maxLadeleistungUser_W,maxStrompreisUser] = await Promise.all([
+    [batteriepreisAktiv,batterieLadedaten,systemwirkungsgrad,aktuellerPreisTibber, schneeBedeckt,aktuelleBatterieSoC_Pro,
+    maxBatterieSoC, maxLadeleistungUser_W,maxStrompreisUser] = await Promise.all([
+        getStateAsync(sID_BatteriepreisAktiv),
         getStateAsync(sID_BatterieLadedaten),
         getStateAsync(sID_Systemwirkungsgrad),
         getStateAsync(sID_CurrentPrice),
@@ -128,7 +135,7 @@ async function ScriptStart()
      LogProgrammablauf += '0,';
     await checkAndUpdateEntladenSperren(aktuellerPreisTibber);        
     // Tibber-Steuerung starten
-   await tibberSteuerungHauskraftwerk()
+    await tibberSteuerungHauskraftwerk()
     
 } 
 
@@ -153,6 +160,7 @@ async function tibberSteuerungHauskraftwerk(){
             // Prüfen ob durchschnitt zusammenhängede Ladezeit Preis und bester 48h Preis unter min. Preis ist
             if(billigsterBlockPreis > maxStrompreisUser && minStrompreis_48h > maxStrompreisUser){
                 await clearAllTimeouts();
+                setStateAsync(sID_besteLadezeit, `über max. Preis`)
                 LogProgrammablauf += '6,';
                 await DebugLog();
                 LogProgrammablauf = '';
@@ -172,6 +180,7 @@ async function tibberSteuerungHauskraftwerk(){
 
         }else{
             LogProgrammablauf += '5,';
+            setStateAsync(sID_besteLadezeit, `max SOC erreicht`)
             await clearAllTimeouts();
         }
     
@@ -283,7 +292,6 @@ async function berechneLadezeit(startSOC) {
         // Berechnung der Ladezeit in Stunden
         const ladezeitStunden = zuLadendeKapazitaet_kWh / (maxLadeleistung / 1000);
         // Ladezeit in Stunden und Minuten formatieren
-        sID_ladezeitBatterie
         await setStateAsync(sID_ladezeitBatterie,Math.ceil(ladezeitStunden));
         return Math.ceil(ladezeitStunden);
     } catch (error) {
@@ -298,14 +306,17 @@ async function setStateAtSpecificTime(targetTime, stateID, state) {
         LogProgrammablauf += '7,';
         return;
     }
-    LogProgrammablauf += '8,';
+    
     // Überprüfen, ob die Zielzeit bereits vergangen ist und es eine Startzeit ist; wenn ja, sofort Laden
     if (state && targetTime <= currentTime) {
+        LogProgrammablauf += '8,';
         await setStateAsync(stateID, true);
         log(`State ${stateID} wurde um ${targetTime.toLocaleTimeString()} auf ${state} gesetzt.`, 'warn');
+        timerIds.push(0);
+        timerTarget.push(targetTime);
         return;
     }
-    
+    LogProgrammablauf += '10,';
     // @ts-ignore Zeitdifferenz berechnen 
     let timeDiff = targetTime - currentTime;
 
@@ -379,6 +390,7 @@ async function bestLoadTime(reichweite_h,ladezeit_h) {
     billigsterBlockPreis = billigsterBlockPreis / ladezeit_h
     
     if (aktuellerPreisTibber < billigsterBlockPreis && aktuellerPreisTibber < maxStrompreisUser) {
+        LogProgrammablauf += '11,';
         // Speichere die aktuelle Zeit als Startzeit
         await setStateAsync(sID_besteLadezeit, `Jetzt`);
         return now; // Rückgabe der aktuellen Zeit
@@ -386,12 +398,14 @@ async function bestLoadTime(reichweite_h,ladezeit_h) {
 
     // Formatiere die günstigste Zeit in Stunden für VIS Anzeige
     if (billigsteZeit) {
+        LogProgrammablauf += '12,';
         const tag = billigsteZeit.toLocaleDateString('de-DE', {day:'2-digit',month: '2-digit'});
         const stunden = billigsteZeit.getHours();
         const stundenBis = (stunden + ladezeit_h)%24;
         await setStateAsync(sID_besteLadezeit,`${tag} / ${stunden}:00 - ${stundenBis}:00 Uhr `)
         return billigsteZeit;
     } else {
+        LogProgrammablauf += '13,';
         return Infinity; // Kein Eintrag innerhalb der Reichweite gefunden
     }
 }
@@ -499,7 +513,7 @@ async function createDiagramm(){
 async function checkAndUpdateEntladenSperren(aktuellerPreis) {
     batterieLadedaten = JSON.parse((await getStateAsync(sID_BatterieLadedaten)).val)
     // Wenn es gespeicherte Ladedaten gibt, prüfe den letzten Preis
-    if (batterieLadedaten.length > 0) {
+    if (batterieLadedaten.length > 0 && batteriepreisAktiv) {
         LogProgrammablauf += '9,';
         //strompreisBatterie = batterieLadedaten[batterieLadedaten.length - 1].price;
         //Durchschnittspreis berechnen
@@ -548,8 +562,7 @@ function nextDayDate(days) {
 async function clearAllTimeouts() {
     await Promise.all([
         setStateAsync(sID_timerAktiv,false),
-        setStateAsync(sID_BatterieLaden,false),
-        setStateAsync(sID_besteLadezeit, ``)
+        setStateAsync(sID_BatterieLaden,false)
     ]);
     billigsterEinzelpreisBlock = 0 
     log(`Timer gelöscht`,'warn')
@@ -560,7 +573,8 @@ async function clearAllTimeouts() {
 
 async function DebugLog()
 {
-    const [besteLadezeit,PrognoseBerechnung_kWh_heute,Batterie_SOC,reichweiteBatterie,BatterieLaden,Power_Bat_W,Power_Grid,eAutoLaden] = await Promise.all([
+    const [prognoseLadezeitBatterie,besteLadezeit,PrognoseBerechnung_kWh_heute,Batterie_SOC,reichweiteBatterie,BatterieLaden,Power_Bat_W,Power_Grid,eAutoLaden] = await Promise.all([
+        getStateAsync(sID_ladezeitBatterie),
         getStateAsync(sID_besteLadezeit),
         getStateAsync(sID_PrognoseBerechnung_kWh_heute),
         getStateAsync(sID_Batterie_SOC),
@@ -573,8 +587,10 @@ async function DebugLog()
     
     
     log(`*******************  Debug LOG Tibber Skript ${scriptVersion} *******************`)
-    if (DebugAusgabeDetail){log(`timerIds1 = ${timerIds[0]} timerIds2 = ${timerIds[1]}`)}
-    if (DebugAusgabeDetail){log(`timerTarget1 = ${timerTarget[0]} timerTarget2 = ${timerTarget[1]}`)}
+    if (DebugAusgabeDetail){log(`timerIds1 = ${timerIds[0]}`)}
+    if (DebugAusgabeDetail){log(`timerIds2 = ${timerIds[1]}`)}
+    if (DebugAusgabeDetail){log(`timerTarget1 = ${timerTarget[0]}`)}
+    if (DebugAusgabeDetail){log(`timerTarget2 = ${timerTarget[1]}`)}
     if (DebugAusgabeDetail){log(`besteLadezeit = ${besteLadezeit}`)}
     if (DebugAusgabeDetail){log(`billigsterEinzelpreisBlock = ${billigsterEinzelpreisBlock}`)}
     if (DebugAusgabeDetail){log(`billigsterBlockPreis = ${billigsterBlockPreis}`)}
@@ -584,7 +600,9 @@ async function DebugLog()
     if (DebugAusgabeDetail){log(`PrognoseBerechnung_kWh_heute = ${PrognoseBerechnung_kWh_heute}`)}
     if (DebugAusgabeDetail){log(`batterieKapazitaet_kWh = ${batterieKapazitaet_kWh}`)}
     if (DebugAusgabeDetail){log(`Batterie_SOC = ${Batterie_SOC}`)}
+    if (DebugAusgabeDetail){log(`prognoseLadezeitBatterie = ${prognoseLadezeitBatterie}`)}
     if (DebugAusgabeDetail){log(`reichweiteBatterie = ${reichweiteBatterie}`)}
+    if (DebugAusgabeDetail){log(`batteriepreisAktiv = ${batteriepreisAktiv}`)}
     if (DebugAusgabeDetail){log(`strompreisBatterie = ${strompreisBatterie}`)}
     if (DebugAusgabeDetail){log(`bruttoPreisBatterie = ${bruttoPreisBatterie}`)}
     if (DebugAusgabeDetail){log(`aktuellerPreisTibber = ${aktuellerPreisTibber}`)}
@@ -648,6 +666,7 @@ on({id: regexPatternTibber, change: "ne"}, async function (obj){
     if (obj.id.split('.')[4] == 'maxStrompreis' ){maxStrompreisUser = obj.state.val}
     if (obj.id.split('.')[4] == 'pvSchneebedeckt' ){schneeBedeckt = obj.state.val}
     if (obj.id.split('.')[4] == 'Systemwirkungsgrad' ){systemwirkungsgrad = obj.state.val}
+    if (obj.id.split('.')[4] == 'BatteriepreisAktiv' ){batteriepreisAktiv = obj.state.val}
     await tibberSteuerungHauskraftwerk(); 
     await createDiagramm();
 });
@@ -678,6 +697,7 @@ schedule("0 * * * *", async function() {
 //Bei Scriptende alle Timer löschen
 onStop(function () { 
     clearAllTimeouts()
+    setState(sID_besteLadezeit, ``)
     log(`-==== Alle Timer beendet ====-`)
 }, 100);
 

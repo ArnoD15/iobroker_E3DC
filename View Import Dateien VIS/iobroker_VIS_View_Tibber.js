@@ -1668,7 +1668,7 @@
             },
             "style": {
                 "left": "498px",
-                "top": "250px",
+                "top": "263px",
                 "z-index": "20",
                 "width": "520px",
                 "height": "27px"
@@ -1741,8 +1741,8 @@
                 "name": "txtTitle"
             },
             "style": {
-                "left": "499px",
-                "top": "290px",
+                "left": "498px",
+                "top": "297px",
                 "z-index": "9",
                 "color": "#fff",
                 "font-family": "Jura-DemiBold",
@@ -1849,8 +1849,8 @@
                 "useLabelRules": false
             },
             "style": {
-                "left": "498px",
-                "top": "314px",
+                "left": "497px",
+                "top": "321px",
                 "z-index": "20",
                 "width": "520px",
                 "height": "27px"
@@ -1924,7 +1924,7 @@
             },
             "style": {
                 "left": "499px",
-                "top": "226px",
+                "top": "239px",
                 "z-index": "9",
                 "color": "#fff",
                 "font-family": "Jura-DemiBold",
@@ -2002,7 +2002,7 @@
                 "name": "txtTitle"
             },
             "style": {
-                "left": "499px",
+                "left": "498px",
                 "top": "355px",
                 "z-index": "9",
                 "color": "#fff",
@@ -2110,7 +2110,7 @@
                 "useLabelRules": false
             },
             "style": {
-                "left": "498px",
+                "left": "497px",
                 "top": "379px",
                 "z-index": "20",
                 "width": "520px",
@@ -2275,7 +2275,7 @@
                 "html": "&#x2300; Hausverbrauch Tag / Nacht"
             },
             "style": {
-                "left": "499px",
+                "left": "498px",
                 "top": "88px",
                 "color": "#ffffff",
                 "font-size": "16px",
@@ -2354,7 +2354,7 @@
                 "digits": "0"
             },
             "style": {
-                "left": "819px",
+                "left": "818px",
                 "top": "121px",
                 "z-index": "10",
                 "color": "#000000",
@@ -2505,7 +2505,7 @@
                 "html": "Prognose Ladezeit Batterie"
             },
             "style": {
-                "left": "499px",
+                "left": "498px",
                 "top": "121px",
                 "color": "#ffffff",
                 "font-size": "16px",
@@ -2580,7 +2580,7 @@
             },
             "style": {
                 "left": "499px",
-                "top": "153px",
+                "top": "188px",
                 "color": "#ffffff",
                 "font-size": "16px",
                 "z-index": "10",
@@ -2653,11 +2653,11 @@
                 "html_prepend": ""
             },
             "style": {
-                "left": "819px",
-                "top": "153px",
+                "left": "818px",
+                "top": "188px",
                 "color": "#000000",
                 "z-index": "10",
-                "width": "130px",
+                "width": "210px",
                 "height": "25px",
                 "background-color": "#ffffff",
                 "border-radius": "2px",
@@ -2742,12 +2742,12 @@
                 "visibility-oid": "0_userdata.0.Tibber.Anzeige_VIS.timerAktiv"
             },
             "style": {
-                "left": "814px",
-                "top": "148px",
+                "left": "813px",
+                "top": "183px",
                 "z-index": "1",
                 "background-color": "",
                 "background": "",
-                "width": "140px",
+                "width": "220px",
                 "height": "34px",
                 "border-width": "1px",
                 "border-style": "double",
@@ -3451,8 +3451,8 @@
                 "html": "Akt. Strompreis Batterie mit Ladeverluste"
             },
             "style": {
-                "left": "499px",
-                "top": "187px",
+                "left": "498px",
+                "top": "155px",
                 "color": "#ffffff",
                 "font-size": "16px",
                 "z-index": "10",
@@ -3530,8 +3530,8 @@
                 "digits": "4"
             },
             "style": {
-                "left": "819px",
-                "top": "186px",
+                "left": "817px",
+                "top": "155px",
                 "z-index": "10",
                 "color": "#000000",
                 "background-color": "#ffffff",
@@ -3544,6 +3544,102 @@
                 "font-weight": ""
             },
             "widgetSet": "basic"
+        },
+        "e00044": {
+            "tpl": "tplVis-materialdesign-Button-Toggle",
+            "data": {
+                "oid": "0_userdata.0.TibberSkript.USER_ANPASSUNGEN.BatteriepreisAktiv",
+                "g_fixed": false,
+                "g_visibility": false,
+                "g_css_font_text": true,
+                "g_css_background": false,
+                "g_css_shadow_padding": false,
+                "g_css_border": false,
+                "g_gestures": false,
+                "g_signals": false,
+                "g_last_change": false,
+                "visibility-cond": "==",
+                "visibility-val": 1,
+                "visibility-groups-action": "hide",
+                "buttonStyle": "raised",
+                "toggleType": "boolean",
+                "stateIfNotTrueValue": "on",
+                "vibrateOnMobilDevices": "50",
+                "buttontext": "&nbsp;&nbsp;Strompreis Batterie ignorieren",
+                "textFontFamily": "#mdwTheme:vis-materialdesign.0.fonts.button.default.text",
+                "textFontSize": "17",
+                "mdwButtonPrimaryColor": "#595959",
+                "mdwButtonSecondaryColor": "",
+                "image": "checkbox-blank-outline",
+                "iconPosition": "left",
+                "autoLockAfter": "10",
+                "lockIconColor": "#mdwTheme:vis-materialdesign.0.colors.button.lock_icon",
+                "lockFilterGrayscale": "30",
+                "signals-cond-0": "==",
+                "signals-val-0": true,
+                "signals-icon-0": "/vis/signals/lowbattery.png",
+                "signals-icon-size-0": 0,
+                "signals-blink-0": false,
+                "signals-horz-0": 0,
+                "signals-vert-0": 0,
+                "signals-hide-edit-0": false,
+                "signals-cond-1": "==",
+                "signals-val-1": true,
+                "signals-icon-1": "/vis/signals/lowbattery.png",
+                "signals-icon-size-1": 0,
+                "signals-blink-1": false,
+                "signals-horz-1": 0,
+                "signals-vert-1": 0,
+                "signals-hide-edit-1": false,
+                "signals-cond-2": "==",
+                "signals-val-2": true,
+                "signals-icon-2": "/vis/signals/lowbattery.png",
+                "signals-icon-size-2": 0,
+                "signals-blink-2": false,
+                "signals-horz-2": 0,
+                "signals-vert-2": 0,
+                "signals-hide-edit-2": false,
+                "lc-type": "last-change",
+                "lc-is-interval": true,
+                "lc-is-moment": false,
+                "lc-format": "",
+                "lc-position-vert": "top",
+                "lc-position-horz": "right",
+                "lc-offset-vert": 0,
+                "lc-offset-horz": 0,
+                "lc-font-size": "12px",
+                "lc-font-family": "",
+                "lc-font-style": "",
+                "lc-bkg-color": "",
+                "lc-color": "",
+                "lc-border-width": "0",
+                "lc-border-style": "",
+                "lc-border-color": "",
+                "lc-border-radius": 10,
+                "lc-zindex": 0,
+                "labelColorTrue": "#69e449",
+                "labelColorFalse": "#ec0e3c",
+                "iconHeight": "28",
+                "labelTrue": "&nbsp;&nbsp;Strompreis Batterie berücksichtigen",
+                "labelWidth": "100",
+                "colorBgFalse": "",
+                "colorBgTrue": "",
+                "mdwButtonColorPress": "",
+                "valueOff": "false",
+                "valueOn": "true",
+                "imageColor": "#ec0e3c",
+                "imageTrue": "checkbox-marked-outline",
+                "imageTrueColor": "#69e449"
+            },
+            "style": {
+                "left": "5px",
+                "top": "358px",
+                "width": "310px",
+                "height": "30px",
+                "z-index": "50",
+                "text-shadow": "rgba(0, 0, 0, 0.9) 3px 3px 4px"
+            },
+            "widgetSet": "materialdesign"
         }
     },
     "name": "28_E3DC_Tibber",
