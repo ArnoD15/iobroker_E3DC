@@ -76,6 +76,7 @@ verbunden sein.
 <a name="log"></a>
 
 <h3>Changelog Charge-Control</h3>
+
 ### Version: 1.5.5
 * Diagramm PV Prognosen und PV-Leistung wurde nicht mehr angezeit wenn der Tag vom Datum einstellig war.
 
