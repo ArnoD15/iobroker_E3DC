@@ -76,6 +76,9 @@ verbunden sein.
 <a name="log"></a>
 
 <h3>Changelog Charge-Control</h3>
+### Version: 1.5.5
+* Diagramm PV Prognosen und PV-Leistung wurde nicht mehr angezeit wenn der Tag vom Datum einstellig war.
+
 ### Version: 1.5.4
 * Fehler behoben, dass bei aktiver Entladesperre TibberSkript auch nicht mehr geladen wurde.
 

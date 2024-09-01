@@ -18,7 +18,7 @@ const BUFFER_SIZE= 5;                                                           
 //------------------------------------------------------------------------------------------------------
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.5.4 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.5.5 ====- ${Logparser2}`);
 
 //******************************************************************************************************
 //****************************************** Objekt ID anlegen *****************************************
@@ -938,11 +938,12 @@ async function Prognosen_Berechnen()
 {
     let Tag =[], PrognoseProplanta_kWh_Tag =[],PrognoseSolcast_kWh_Tag=[],PrognoseSolcast90_kWh_Tag=[],Prognose_kWh_Tag =[];
 	let DatumAk = new Date();
-	let TagHeute = DatumAk.getDate().toString().padStart(2,"0");
+	//let TagHeute = DatumAk.getDate().toString().padStart(2,"0");
+    let TagHeute = DatumAk.getDate();
     let IstSummePvLeistung_kWh = arrayPV_LeistungTag_kWh[TagHeute]
     // Array Tag Datum von heute bis + 5 Tag eintragen
     for (let i = 0; i < 7 ; i++){
-        Tag[i] = nextDayDate(i).slice(8,10);
+        Tag[i] = nextDay(i);
     }
     // Array die Aktuellen kWh von Heute + 5 Tage vorraus zuweisen
     for (let i = 0; i < 7 ; i++){
@@ -1261,6 +1262,7 @@ function round(digit, digits) {
     return digit;
 }
 
+
 // Addiert zum Datum x Tage und liefert das Datum im Format yyyy-mm-dd
 function nextDayDate(days) {
     const date = new Date();
@@ -1268,11 +1270,23 @@ function nextDayDate(days) {
     return date.toISOString().split('T')[0];
 }
 
+
+// Addiert zum Datum x Tage und liefert den Tag
+function nextDay(days) {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    const day = date.getDate();
+
+    return `${day}`;
+}
+
+
 // Summe PV Leistung berechnen Leistungszähler 0 und Leistungszähler 1
 async function SummePvLeistung(){   
     let DatumAk = new Date();
-	let TagHeute = DatumAk.getDate().toString().padStart(2,"0");
-	let IstPvLeistung0_kWh = 0;
+	//let TagHeute = DatumAk.getDate().toString().padStart(2,"0");
+	let TagHeute = DatumAk.getDate();
+    let IstPvLeistung0_kWh = 0;
 	let IstPvLeistung1_kWh = 0;
 	let IstPvLeistung_kWh = 0;
 	
@@ -1375,7 +1389,7 @@ async function SheduleProplanta() {
             if(LogAusgabe){log(`${Logparser1} Näste Aktualisierung Wetterdaten =${uhrzeit} Uhr ${Logparser2}`)}
 
         }else{
-            let Tag0 = nextDayDate(0).slice(8,10), Tag1 = nextDayDate(1).slice(8,10),Tag2 = nextDayDate(2).slice(8,10), Tag3 =nextDayDate(3).slice(8,10);
+            let Tag0 = nextDay(0), Tag1 = nextDay(1),Tag2 = nextDay(2), Tag3 =nextDay(3);
             // Prüfen ob Werte in eine Zahl umgewandelt werden können,wenn nicht 0 zuweisen     
             for (let i=0; i < ArrayBereinig.length; i++) {
                 //if (LogAusgabe){log(`i =${i} Wert ab Tag 0=${ArrayBereinig[i]}`);}
@@ -1418,11 +1432,11 @@ async function SheduleProplanta() {
             let PrognoseProplanta_kWh_Tag2 = (GlobalstrahlungTag2 * nModulFlaeche) * (nWirkungsgradModule/100);
             let PrognoseProplanta_kWh_Tag3 = (GlobalstrahlungTag3 * nModulFlaeche) * (nWirkungsgradModule/100);
             arrayPrognoseProp_kWh[Tag0] = PrognoseProplanta_kWh_Tag0
-            if (Tag1!= '01'){
+            if (Tag1!= '1'){
                 arrayPrognoseProp_kWh[Tag1] = PrognoseProplanta_kWh_Tag1
-                if (Tag2!= '01'){
+                if (Tag2!= '1'){
                     arrayPrognoseProp_kWh[Tag2] = PrognoseProplanta_kWh_Tag2
-                    if (Tag3!= '01'){
+                    if (Tag3!= '1'){
                         arrayPrognoseProp_kWh[Tag3] = PrognoseProplanta_kWh_Tag3
                     }
                 }
@@ -1469,7 +1483,7 @@ async function SheduleProplanta() {
             }
         }
             
-        let Tag0 = nextDayDate(4).slice(8,10), Tag1 = nextDayDate(5).slice(8,10),Tag2 = nextDayDate(6).slice(8,10);
+        let Tag0 = nextDay(4), Tag1 = nextDay(5),Tag2 = nextDay(6);
         // Prüfen ob Werte in eine Zahl umgewandelt werden können,wenn nicht 0 zuweisen     
                
         // Proplanta Globalstrahlung in kWh umrechnen und in History speichern *********************************************************  
@@ -1477,11 +1491,11 @@ async function SheduleProplanta() {
         let PrognoseProplanta_kWh_Tag4 = (GlobalstrahlungTag4 * nModulFlaeche) * (nWirkungsgradModule/100);
         let PrognoseProplanta_kWh_Tag5 = (GlobalstrahlungTag5 * nModulFlaeche) * (nWirkungsgradModule/100);
         let PrognoseProplanta_kWh_Tag6 = (GlobalstrahlungTag6 * nModulFlaeche) * (nWirkungsgradModule/100);
-        if (Tag0!= '01'){
+        if (Tag0!= '1'){
             arrayPrognoseProp_kWh[Tag0] = PrognoseProplanta_kWh_Tag4
-            if (Tag1!= '01'){
+            if (Tag1!= '1'){
                 arrayPrognoseProp_kWh[Tag1] = PrognoseProplanta_kWh_Tag5
-                if (Tag2!= '01'){
+                if (Tag2!= '1'){
                     arrayPrognoseProp_kWh[Tag2] = PrognoseProplanta_kWh_Tag6
                 }
             }
@@ -1600,8 +1614,8 @@ async function SheduleSolcast(DachFl) {
                 log(`${Logparser1} Summe PV Leistung Tag ${Datum} pv_estimate= ${Prognose} pv_estimate90= ${Prognose90}${Logparser2}`);
                 
                 if (Datum.slice(5, 7) === Monat && (hours <= 4 || d !== 0)) {
-                    arrayPrognoseSolcast_kWh[Datum.slice(8, 10)] = Prognose
-                    arrayPrognoseSolcast90_kWh[Datum.slice(8, 10)] = Prognose90
+                    arrayPrognoseSolcast_kWh[nextDay(d)] = Prognose
+                    arrayPrognoseSolcast90_kWh[nextDay(d)] = Prognose90
                     await setStateAsync(sID_PrognoseSolcast_kWh,arrayPrognoseSolcast_kWh)
                     await setStateAsync(sID_PrognoseSolcast90_kWh,arrayPrognoseSolcast90_kWh)
                 }
@@ -1704,7 +1718,7 @@ async function CheckPrognose(){
         if (sunriseEndTimeHeute_ms < heute.getTime()){
             // Nach Sonnenaufgang
             //if (DebugAusgabe){log(`CheckPrognose: Nach Sonnenaufgang`)}
-            let Tag = nextDayDate(1).slice(8,10);
+            let Tag = nextDay(1);
             let PrognoseMorgen_kWh = arrayPrognoseAuto_kWh[Tag]
             //if (DebugAusgabe){log(`CheckPrognose: Reichweite ms =${ReichweiteTime_ms} Reichweite Stunden =${round((ReichweiteTime_ms-heute.getTime())/3600000,2)} sunriseEndTimeMorgen_ms = ${sunriseEndTimeMorgen_ms} sunriseEndTimeMorgen Stunden =${round((sunriseEndTimeMorgen_ms-heute.getTime())/3600000,2)} PrognoseMorgen_kWh =${PrognoseMorgen_kWh} minWertPrognose_kWh =${minWertPrognose_kWh}`)}
             // Prüfen ob die Reichweite Batterie SOC größer ist als Sonnenaufgang + offset
@@ -1716,7 +1730,7 @@ async function CheckPrognose(){
         }else{
             // Vor Sonnenaufgang
             //if (DebugAusgabe){log(`CheckPrognose: Vor Sonnenaufgang`)}
-            let Tag = nextDayDate(0).slice(8,10);
+            let Tag = nextDay(0);
             let PrognoseMorgen_kWh = arrayPrognoseAuto_kWh[Tag]
             //if (DebugAusgabe){log(`CheckPrognose: Reichweite ms =${ReichweiteTime_ms} Reichweite Stunden =${round((ReichweiteTime_ms-heute.getTime())/3600000,2)} sunriseEndTimeHeute_ms = ${sunriseEndTimeHeute_ms} sunriseEndTimeHeute Stunden =${round((sunriseEndTimeHeute_ms-heute.getTime())/3600000,2)} PrognoseMorgen_kWh =${PrognoseMorgen_kWh} minWertPrognose_kWh =${minWertPrognose_kWh}`)}
             // Prüfen ob die Reichweite Batterie SOC größer ist als Sonnenaufgang + offset
