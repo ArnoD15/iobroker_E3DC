@@ -18,7 +18,7 @@ const BUFFER_SIZE= 5;                                                           
 //------------------------------------------------------------------------------------------------------
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.5.5 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.5.6 ====- ${Logparser2}`);
 
 //******************************************************************************************************
 //****************************************** Objekt ID anlegen *****************************************
@@ -442,7 +442,14 @@ async function Ladesteuerung()
         getStateAsync(sID_PvLeistung_ADD_W),
         getStateAsync(sID_Power_Wallbox_W),
         getStateAsync(sID_UntererLadekorridor_W[EinstellungAnwahl])
-    ]).then(states => states.map(state => state.val));
+    ]).then(states => [
+        // Wenn SET_POWER_MODE null oder undefined ist, 0 eintragen
+        states[0]?.val ?? 0, 
+        states[1]?.val, 
+        states[2]?.val, 
+        states[3]?.val, 
+        states[4]?.val 
+    ]);
     
     const Power_Home_W =(await getStateAsync(sID_Power_Home_W)).val + WallboxPower;                                 // Aktueller Hausverbrauch + Ladeleistung Wallbox E3DC 
     const PV_Leistung_Summe_W = PV_Leistung_E3DC_W + Math.abs(PV_Leistung_ADD_W);                                   // Summe PV-Leistung  
@@ -934,93 +941,84 @@ async function Einstellung(UeberschussPrognoseProzent)
 }
 
 // Die Funktion ändert die Prognosewerte für das Diagramm und berechnet die Prognose in kWh je nach Auswahl 
-async function Prognosen_Berechnen()
-{
-    let Tag =[], PrognoseProplanta_kWh_Tag =[],PrognoseSolcast_kWh_Tag=[],PrognoseSolcast90_kWh_Tag=[],Prognose_kWh_Tag =[];
-	let DatumAk = new Date();
-	//let TagHeute = DatumAk.getDate().toString().padStart(2,"0");
+async function Prognosen_Berechnen() {
+    let Tag = [], PrognoseProplanta_kWh_Tag = [], PrognoseSolcast_kWh_Tag = [], PrognoseSolcast90_kWh_Tag = [], Prognose_kWh_Tag = [];
+    let DatumAk = new Date();
     let TagHeute = DatumAk.getDate();
-    let IstSummePvLeistung_kWh = arrayPV_LeistungTag_kWh[TagHeute]
-    // Array Tag Datum von heute bis + 5 Tag eintragen
-    for (let i = 0; i < 7 ; i++){
-        Tag[i] = nextDay(i);
-    }
-    // Array die Aktuellen kWh von Heute + 5 Tage vorraus zuweisen
-    for (let i = 0; i < 7 ; i++){
-        PrognoseProplanta_kWh_Tag[i] = arrayPrognoseProp_kWh[Tag[i]];  
-        PrognoseSolcast_kWh_Tag[i] = arrayPrognoseSolcast_kWh[Tag[i]];  
-        PrognoseSolcast90_kWh_Tag[i] = arrayPrognoseSolcast90_kWh[Tag[i]];
-    }
-    
-    if (LogAusgabe){log(`${Logparser1} Prognose Solcast in kWh = ${PrognoseSolcast_kWh_Tag[0]}${Logparser2}`);}
-    if (LogAusgabe){log(`${Logparser1} Prognose Solcast 90 Perzentil in kWh = ${PrognoseSolcast90_kWh_Tag[0]}${Logparser2}`);}
-    if (LogAusgabe){log(`${Logparser1} Prognose Proplanta in kWh = ${PrognoseProplanta_kWh_Tag[0]}${Logparser2}`);}
+    let IstSummePvLeistung_kWh = arrayPV_LeistungTag_kWh[TagHeute];
 
-    // Berechnung der Prognose nach Einstellung PrognoseAnwahl
-    for (let i = 0; i < 7 ; i++){
-        if (PrognoseSolcast_kWh_Tag[i] == 0 && PrognoseSolcast90_kWh_Tag[i] == 0 && PrognoseProplanta_kWh_Tag[i] == 0){
-            if (LogAusgabe){log(`${Logparser1} -==== Prognose für Tag${i} konnte nicht abgerufen werden ====- ${Logparser2}`)};
+    // Lokale Kopien der Array-Werte für schnelleren Zugriff
+    let arrayProp = arrayPrognoseProp_kWh;
+    let arraySolcast = arrayPrognoseSolcast_kWh;
+    let arraySolcast90 = arrayPrognoseSolcast90_kWh;
+
+    // Initialisierung der Tag- und Prognose-Daten
+    for (let i = 0; i < 7; i++) {
+        let nextTag = nextDay(i);
+        Tag[i] = nextTag;
+        PrognoseProplanta_kWh_Tag[i] = arrayProp[nextTag] || 0;
+        PrognoseSolcast_kWh_Tag[i] = arraySolcast[nextTag] || 0;
+        PrognoseSolcast90_kWh_Tag[i] = arraySolcast90[nextTag] || 0;
+    }
+
+    // Schleife zur Berechnung der Prognose
+    for (let i = 0; i < 7; i++) {
+        let prop = PrognoseProplanta_kWh_Tag[i];
+        let solcast = PrognoseSolcast_kWh_Tag[i];
+        let solcast90 = PrognoseSolcast90_kWh_Tag[i];
+
+        // Frühzeitiges Abbrechen der Berechnung, wenn keine Prognosedaten vorliegen
+        if (prop === 0 && solcast === 0 && solcast90 === 0) {
             Prognose_kWh_Tag[i] = 0;
-        }else{
-            if ((PrognoseSolcast_kWh_Tag[i] == 0 && PrognoseSolcast90_kWh_Tag[i] == 0) || PrognoseAnwahl == 1){Prognose_kWh_Tag[i] = PrognoseProplanta_kWh_Tag[i];}
-            if ((PrognoseProplanta_kWh_Tag[i] == 0 && PrognoseSolcast90_kWh_Tag[i] == 0) || PrognoseAnwahl == 2){Prognose_kWh_Tag[i] = PrognoseSolcast_kWh_Tag[i];}
-            if ((PrognoseProplanta_kWh_Tag[i] == 0 && PrognoseSolcast_kWh_Tag[i] == 0) || PrognoseAnwahl == 5){Prognose_kWh_Tag[i] = PrognoseSolcast90_kWh_Tag[i];}
-            
-            if (PrognoseSolcast_kWh_Tag[i] != 0 && PrognoseProplanta_kWh_Tag[i] != 0 && PrognoseAnwahl == 0) {
-                if (PrognoseSolcast_kWh_Tag[i] > PrognoseProplanta_kWh_Tag[i]) {
-                    Prognose_kWh_Tag[i] = PrognoseProplanta_kWh_Tag[i];
-                }
-                if (PrognoseProplanta_kWh_Tag[i] >PrognoseSolcast_kWh_Tag[i]){
-                    Prognose_kWh_Tag[i] = PrognoseSolcast_kWh_Tag[i];
-                }
-            }
-            if (PrognoseSolcast_kWh_Tag[i] != 0 && PrognoseProplanta_kWh_Tag[i] != 0 && PrognoseAnwahl == 3) {
-                if (PrognoseSolcast_kWh_Tag[i] < PrognoseProplanta_kWh_Tag[i]) {
-                    Prognose_kWh_Tag[i] = PrognoseProplanta_kWh_Tag[i];
-                }
-                if (PrognoseProplanta_kWh_Tag[i] < PrognoseSolcast_kWh_Tag[i]){
-                    Prognose_kWh_Tag[i] = PrognoseSolcast_kWh_Tag[i];
-                }
-            }
-            if (PrognoseSolcast_kWh_Tag[i] != 0 && PrognoseProplanta_kWh_Tag[i] != 0 && PrognoseAnwahl == 4) {
-                Prognose_kWh_Tag[i] = (PrognoseProplanta_kWh_Tag[i]+PrognoseSolcast_kWh_Tag[i])/2;
-            }
-            if (PrognoseSolcast_kWh_Tag[i] != 0 && PrognoseSolcast90_kWh_Tag[i] != 0 && PrognoseAnwahl == 6) {
-                Prognose_kWh_Tag[i] = (PrognoseSolcast90_kWh_Tag[i]+PrognoseSolcast_kWh_Tag[i])/2;
-            }
-            // nKorrFaktor abziehen
-            Prognose_kWh_Tag[i] = (Prognose_kWh_Tag[i]/100)*(100-nKorrFaktor)
-            // nMaxPvLeistungTag_kWh verwenden wenn die Prognose höher ist
-            if (Prognose_kWh_Tag[i] > nMaxPvLeistungTag_kWh) {Prognose_kWh_Tag[i] = nMaxPvLeistungTag_kWh;}
-            // nMinPvLeistungTag_kWh verwenden wenn die Prognose niedriger ist
-            if (Prognose_kWh_Tag[i] != 0) {
-                if (Prognose_kWh_Tag[i] < nMinPvLeistungTag_kWh) {Prognose_kWh_Tag[i] = nMinPvLeistungTag_kWh;}
-            }
+            continue;
         }
-    }
-    if (LogAusgabe){log(`${Logparser1} Prognose_kWh nach Abzug Korrekturfaktor  = ${Prognose_kWh_Tag[0]}${Logparser2}`);}
-       
-    // Bereits produzierte PV-Leistung muss von der Tagesprognose abgezogen werden 
-    // wenn die produzierte PV-Leistung < als Prognose ist.
-    if (Prognose_kWh_Tag[0] > IstSummePvLeistung_kWh) {
-        Prognose_kWh_Tag[0] = Prognose_kWh_Tag[0]-IstSummePvLeistung_kWh;
-        arrayPrognoseAuto_kWh[Tag[0]] = Prognose_kWh_Tag[0]+IstSummePvLeistung_kWh;
-    }else{
-        arrayPrognoseAuto_kWh[Tag[0]] = Prognose_kWh_Tag[0]
-    }
-    if (LogAusgabe){log(`${Logparser1} Bereits produzierte PV-Leistung  = ${IstSummePvLeistung_kWh}${Logparser2}`);}
-    await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.PrognoseBerechnung_kWh_heute`, Prognose_kWh_Tag[0]);
-    // Nur bis ende vom aktuellen Monat werte eintragen, sonst werden die ersten Tage vom aktuellen Monat mit den Werten vom nächsten Monat überschrieben. 
-    for (let i = 1; i < 7 ; i++){
-        if (Tag[i] == '01'){break;}
-        arrayPrognoseAuto_kWh[Tag[i]] = Prognose_kWh_Tag[i]
-    }
-    await setStateAsync(sID_PrognoseAuto_kWh,arrayPrognoseAuto_kWh)
-    
-    if (LogAusgabe){log(`${Logparser1} Prognose_kWh_heute für Berechnung = ${Prognose_kWh_Tag[0]}${Logparser2}`);}
-    
-}; 
 
+        // Auswahl der Prognose basierend auf PrognoseAnwahl, mit zwischengespeicherten Werten
+        switch (PrognoseAnwahl) {
+            case 1:
+                Prognose_kWh_Tag[i] = prop; // Proplanta
+                break;
+            case 2:
+                Prognose_kWh_Tag[i] = solcast; // Solcast
+                break;
+            case 3:
+                Prognose_kWh_Tag[i] = Math.max(prop, solcast); // Maximalwert
+                break;
+            case 4:
+                Prognose_kWh_Tag[i] = (prop + solcast) / 2; // Durchschnitt
+                break;
+            case 5:
+                Prognose_kWh_Tag[i] = solcast90; // Solcast 90
+                break;
+            case 6:
+                Prognose_kWh_Tag[i] = (solcast + solcast90) / 2; // Durchschnitt Solcast und Solcast90
+                break;
+            default:
+                Prognose_kWh_Tag[i] = Math.min(prop, solcast); // Minimalwert
+        }
+
+        // Anwenden des Korrekturfaktors und Begrenzungen
+        Prognose_kWh_Tag[i] = Math.max(Math.min((Prognose_kWh_Tag[i] / 100) * (100 - nKorrFaktor), nMaxPvLeistungTag_kWh), nMinPvLeistungTag_kWh);
+    }
+
+    // Korrigieren der Prognose mit der tatsächlichen PV-Leistung
+    if (Prognose_kWh_Tag[0] > IstSummePvLeistung_kWh) {
+        Prognose_kWh_Tag[0] -= IstSummePvLeistung_kWh;
+        arrayPrognoseAuto_kWh[Tag[0]] = Prognose_kWh_Tag[0] + IstSummePvLeistung_kWh;
+    } else {
+        arrayPrognoseAuto_kWh[Tag[0]] = Prognose_kWh_Tag[0];
+    }
+
+    // Werte setzen für die folgenden Tage
+    await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.PrognoseBerechnung_kWh_heute`, Prognose_kWh_Tag[0]);
+
+    for (let i = 1; i < 7; i++) {
+        if (Tag[i] === '1') break;
+        arrayPrognoseAuto_kWh[Tag[i]] = Prognose_kWh_Tag[i];
+    }
+
+    await setStateAsync(sID_PrognoseAuto_kWh, arrayPrognoseAuto_kWh);
+}
 
 // Die Funktion berechnet den Überschuss anhand der PrognoseBerechnung_kWh_heute 
 // nach Abzug von Eigenverbrauch und Ladekapazität des Batteriespeicher.
@@ -1271,7 +1269,7 @@ function nextDayDate(days) {
 }
 
 
-// Addiert zum Datum x Tage und liefert den Tag
+// Addiert zum Tag x Tage und liefert den Tag
 function nextDay(days) {
     const date = new Date();
     date.setDate(date.getDate() + days);
@@ -1596,7 +1594,6 @@ async function SheduleSolcast(DachFl) {
     const dAkt = new Date();
     const hours = dAkt.getHours();
     const Monat = nextDayDate(0).slice(5, 7); // Monat vom ersten Tag merken
-
     const processResult = async (result, z) => {
         const ArrayTageswerte = result['forecasts'];
         for (let d = 0; d < 7; d++) {

@@ -76,6 +76,10 @@ verbunden sein.
 <a name="log"></a>
 
 <h3>Changelog Charge-Control</h3>
+### Version: 1.5.6
+* Wenn SET_POWER_MODE = null ist, wird jetzt 0 eingetragen und nicht mehr mit einem Fehler beendet.
+* Fehler bei der Erstellung Diagramm PrognoseAuto_kWh korrigiert.
+* Script aufgeräumt und optimiert 
 
 ### Version: 1.5.5
 * Diagramm PV Prognosen und PV-Leistung wurde nicht mehr angezeit wenn der Tag vom Datum einstellig war.
