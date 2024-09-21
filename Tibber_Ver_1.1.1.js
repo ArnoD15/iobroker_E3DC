@@ -9,10 +9,11 @@ const DebugAusgabeDetail = true;
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
 //------------------------------------------------------------------------------------------------------
 
+
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.1.0'
+const scriptVersion = 'Version 1.1.1'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 
 // IDs Script Charge_Control
@@ -29,11 +30,8 @@ const sID_SPECIFIED_Battery_Capacity_1 =`e3dc-rscp.0.BAT.BAT_1.SPECIFIED_CAPACIT
 const sID_BAT0_Alterungszustand =`e3dc-rscp.0.BAT.BAT_0.ASOC`;                                                  // Batterie ASOC e3dc-rscp
 const sID_Power_Bat_W = `e3dc-rscp.0.EMS.POWER_BAT`;                                                            // aktuelle Batterie_Leistung'
 const sID_Power_Grid = `e3dc-rscp.0.EMS.POWER_GRID`                                                             // Leistung aus Netz
-
-// IDs des Adapters TibberLink, Zuweisung in Funktion ScriptStart() wegen persönlicher ID
-let sID_PricesTodayJSON
-let sID_PricesTomorrowJSON
-
+const sID_Notrom_Status =`e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS`;                                              // 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
+    
 // IDs des Script Tibber
 const sID_aktuellerEigenverbrauch = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.aktuellerEigenverbrauch`;        // Anzeige in VIS durchschnittlicher Eigenverbrauch
 const sID_besteLadezeit = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.besteLadezeit`;                            // Anzeige in VIS bester Zeitraum um Batterie zu laden und Status
@@ -56,18 +54,23 @@ const sID_niedrigerSchwellwertStrompreis = `${instanz}.${PfadEbene1}.${PfadEbene
 const sID_Schneebedeckt = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.pvSchneebedeckt`;
 const sID_Systemwirkungsgrad = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Systemwirkungsgrad`
 const sID_BatteriepreisAktiv = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.BatteriepreisAktiv`
-const sID_TibberLink_ID = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.tibberLinkId`
 const sID_Stromgestehungskosten = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.stromgestehungskosten`
+const sID_TibberLinkID = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.tibberLinkId`
 
-let maxBatterieSoC, aktuelleBatterieSoC_Pro, maxLadeleistungUser_W, tibberLinkId, stromgestehungskosten;
+// IDs des Adapters TibberLink, Zuweisung in Funktion ScriptStart() wegen persönlicher ID
+let tibberLinkId = getState(sID_TibberLinkID).val                                                               // TibberLink ID auslesen
+const sID_PricesTodayJSON = `tibberlink.0.Homes.${tibberLinkId}.PricesToday.json`                               // Strompreise für aktuellen Tag
+const sID_PricesTomorrowJSON = `tibberlink.0.Homes.${tibberLinkId}.PricesTomorrow.json`                         // Strompreise für nächsten Tag
+const arrayID_TibberPrices =[sID_PricesTodayJSON,sID_PricesTomorrowJSON];    
+
+let maxBatterieSoC, aktuelleBatterieSoC_Pro, maxLadeleistungUser_W, stromgestehungskosten;
 let batterieKapazitaet_kWh, billigsterEinzelpreisBlock = 0, billigsterBlockPreis = 0, minStrompreis_48h = null, LogProgrammablauf = "";
-let batterieSOC_alt = null, aktuellerPreisTibber = null, preis_alt = null,strompreisBatterie,bruttoPreisBatterie,systemwirkungsgrad, batteriepreisAktiv ;
+let batterieSOC_alt = null, aktuellerPreisTibber = null, strompreisBatterie,bruttoPreisBatterie,systemwirkungsgrad, batteriepreisAktiv ;
 let hoherSchwellwert, niedrigerSchwellwert;
 
-let bLock = false, bEntladenSperren = false, schneeBedeckt = false;                                                                 
+let bLock = false, bEntladenSperren = false, schneeBedeckt = false, notstromAktiv = false;                                                                 
 
-let timerIds = [], timerTarget = [], timerObjektID = [],timerState =[], batterieLadedaten = [], datenHeute = [], datenMorgen = [];
-let preisPhasen = { highPhases: [], lowPhases: [] }, spitzenPhasen = { highPhases: [], lowPhases: [] }; 
+let timerIds = [], timerTarget = [], timerObjektID = [],timerState =[], batterieLadedaten = [],datenHeute =[], datenMorgen = [], datenTibberLink48h = [];
 
 //***************************************************************************************************
 //**************************************** Function Bereich *****************************************
@@ -103,10 +106,7 @@ async function ScriptStart()
     log('-==== alle Objekt ID\'s angelegt ====-');
     
     // User Anpassungen parallel abrufen
-    [stromgestehungskosten,tibberLinkId, batteriepreisAktiv,batterieLadedaten,systemwirkungsgrad, schneeBedeckt,aktuelleBatterieSoC_Pro,
-    maxBatterieSoC, maxLadeleistungUser_W,hoherSchwellwert,niedrigerSchwellwert] = await Promise.all([
-        getStateAsync(sID_Stromgestehungskosten),
-        getStateAsync(sID_TibberLink_ID),
+    const results = await Promise.all([
         getStateAsync(sID_BatteriepreisAktiv),
         getStateAsync(sID_BatterieLadedaten),
         getStateAsync(sID_Systemwirkungsgrad),
@@ -115,15 +115,20 @@ async function ScriptStart()
         getStateAsync(sID_maxSoC),
         getStateAsync(sID_maxLadeleistungUser_W),
         getStateAsync(sID_hoherSchwellwertStrompreis),
-        getStateAsync(sID_niedrigerSchwellwertStrompreis)
+        getStateAsync(sID_niedrigerSchwellwertStrompreis),
+        getStateAsync(sID_Stromgestehungskosten),
+        getStateAsync(sID_SPECIFIED_Battery_Capacity_0),
+        getStateAsync(sID_maxEntladetiefeBatterie),
+        getStateAsync(sID_BAT0_Alterungszustand)
     ]).then(states => states.map(state => state.val));
-        
-    // PV-Prognose und Batteriekapazität parallel abrufen
-    const [batteryCapacity0 , entladetiefe_Pro, aSOC_Bat_Pro] = await Promise.all([
-        getStateAsync(sID_SPECIFIED_Battery_Capacity_0).then(state => state.val),
-        getStateAsync(sID_maxEntladetiefeBatterie).then(state => state.val),
-        getStateAsync(sID_BAT0_Alterungszustand).then(state => state.val)
-    ]);
+    [
+        batteriepreisAktiv, batterieLadedaten, systemwirkungsgrad, schneeBedeckt, 
+        aktuelleBatterieSoC_Pro, maxBatterieSoC, maxLadeleistungUser_W, 
+        hoherSchwellwert, niedrigerSchwellwert, stromgestehungskosten
+    ] = results; 
+    const batteryCapacity0 = results[10];
+    const entladetiefe_Pro = results[11];
+    const aSOC_Bat_Pro = results[12];
     
     if (existsState(sID_SPECIFIED_Battery_Capacity_1)){
         const batteryCapacity1 = (await getStateAsync(sID_SPECIFIED_Battery_Capacity_1)).val
@@ -132,19 +137,23 @@ async function ScriptStart()
         batterieKapazitaet_kWh = batteryCapacity0 / 1000;
     }
     
-    // IDs des Adapters TibberLink
-    sID_PricesTodayJSON = `tibberlink.0.Homes.${tibberLinkId}.PricesToday.json`          //Strompreise für aktuellen Tag
-    sID_PricesTomorrowJSON = `tibberlink.0.Homes.${tibberLinkId}.PricesTomorrow.json`    //Strompreise für nächsten Tag
+    let[datenHeute1, datenMorgen2] = await Promise.all([
+        getStateAsync(sID_PricesTodayJSON),
+        getStateAsync(sID_PricesTomorrowJSON)
+    ]).then(states => states.map(state => JSON.parse(state.val)));
     
+    datenHeute = datenHeute1
+    datenMorgen = datenMorgen2
+    datenTibberLink48h = [...datenHeute, ...datenMorgen];
     batterieLadedaten = JSON.parse(batterieLadedaten)
     batterieKapazitaet_kWh = batterieKapazitaet_kWh * (entladetiefe_Pro/100);
     batterieKapazitaet_kWh = round(((batterieKapazitaet_kWh/100)*aSOC_Bat_Pro),0);
     LogProgrammablauf += '0,';
-    
+    aktuellerPreisTibber = await getCurrentPrice()
     // Erstelle das Tibber Diagramm
     await createDiagramm();
-    // Entladesperre Batterie prüfen
-    await checkAndUpdateEntladenSperren();        
+    // Strompreis Batterie berechnen
+    await berechneBattPrice();        
     // Tibber-Steuerung starten
     await tibberSteuerungHauskraftwerk()
 } 
@@ -155,194 +164,197 @@ async function tibberSteuerungHauskraftwerk() {
         const datejetzt = new Date();
         const [reichweite_h, minuten] = (await getStateAsync(sID_Autonomiezeit)).val.split(' / ')[1].split(' ')[0].split(':').map(Number);
         const endZeitBatterie = new Date(datejetzt.getTime() + reichweite_h * 3600000 + minuten * 60000);
-
         const pvLeistungAusreichend = await pruefePVLeistung(reichweite_h);
-
+        const preisPhasen = await findePreisPhasen(datenTibberLink48h, hoherSchwellwert, niedrigerSchwellwert);
+        let spitzenSchwellwert = 0, merkerNiedrigpreisphase = false
+        aktuellerPreisTibber = await getCurrentPrice();
+        //log(`preisPhasen.highPhases= ${JSON.stringify(preisPhasen.highPhases)}`,'warn')
+        const naechsteNiedrigphase = findeAktuelleOderNaechstePhase(preisPhasen.lowPhases);
+        const naechsteHochphase = findeAktuelleOderNaechstePhase(preisPhasen.highPhases);
+        //log(`naechsteHochphase= ${JSON.stringify(naechsteHochphase)}`,'warn')
+        
+        // Prüfen ob Freigabe zum laden vom E-Auto gesetzt werden kann
+        await handleEAutoLaden(naechsteNiedrigphase,datejetzt);
+        
+        // ist Prognose PV-Leistung ausreichend um Batterie zu laden oder maxBatterieSoC erreicht
         if (!pvLeistungAusreichend && aktuelleBatterieSoC_Pro < maxBatterieSoC) {
             LogProgrammablauf += '3,';
-            const daten48h = datenHeute.concat(datenMorgen);
-            const preisPhasen = await findePreisPhasen(daten48h, hoherSchwellwert, niedrigerSchwellwert);
-
-            const naechsteNiedrigphase = findeAktuelleOderNaechstePhase(preisPhasen.lowPhases);
-            const naechsteHochphase = findeAktuelleOderNaechstePhase(preisPhasen.highPhases);
-
-            // Niedrigpreisphase prüfen und Timer setzen
-            await handleNiedrigphase(naechsteNiedrigphase, endZeitBatterie);
-
-            // Hochpreisphase prüfen und Timer setzen
-            await handleHochphase(naechsteHochphase, naechsteNiedrigphase, endZeitBatterie, reichweite_h);
-
-            // Spitzenpreisphase prüfen und Timer setzen
-            await handleSpitzenphase(naechsteHochphase, reichweite_h, datejetzt, daten48h, hoherSchwellwert);
+            // Niedrigpreisphase innerhalb Reichweite Batterie, dann Timmer setzen
+            //log(`naechsteNiedrigphase= ${JSON.stringify(naechsteNiedrigphase)} endZeitBatterie = ${endZeitBatterie}`,'warn')
+            if (naechsteNiedrigphase.Startzeit && naechsteNiedrigphase.Startzeit.getTime() < endZeitBatterie.getTime()) {
+                LogProgrammablauf += '15,';
+                const formatTime = date => `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+                await setStateAsync(sID_besteLadezeit, `${formatTime(naechsteNiedrigphase.Startzeit)} Uhr bis ${formatTime(naechsteNiedrigphase.Endzeit)} Uhr`);
+                await setStateAtSpecificTime(naechsteNiedrigphase.Startzeit, sID_BatterieLaden, true);
+                await setStateAtSpecificTime(naechsteNiedrigphase.Endzeit, sID_BatterieLaden, false);
+                merkerNiedrigpreisphase = true
+            }
             
-            // Preis zwischen hoch und niedrig Phase und keine PV-Leistung
-            if (aktuellerPreisTibber < hoherSchwellwert && aktuellerPreisTibber > niedrigerSchwellwert) {
-                log(`naechsteNiedrigphase.Startzeit = ${naechsteNiedrigphase.Startzeit}`,'warn')
-                LogProgrammablauf += '6,';
-                if (!(await getStateAsync(sID_timerAktiv)).val) {
+            
+            // Ist aktuell eine Hochpreisphase
+            //log(`naechsteHochphase= ${JSON.stringify(naechsteHochphase)} endZeitBatterie = ${endZeitBatterie}`,'warn')
+            if(naechsteHochphase.Startzeit.getTime() <= datejetzt.getTime() && naechsteHochphase.Endzeit.getTime() > datejetzt.getTime()){
                     
-                    if(naechsteNiedrigphase.Startzeit){
-                        LogProgrammablauf += '21,';
-                        // @ts-ignore Zeitraum bis zum Ende der Niedrigpreisphase ermitteln
+                // Reicht die Batterieladung um diese zu überbrücken
+                if(naechsteHochphase.Endzeit.getTime() > endZeitBatterie.getTime()){
+                    LogProgrammablauf += '17,';
+                    spitzenSchwellwert = round(hoherSchwellwert * (1 / (systemwirkungsgrad / 100)), 4);
+                    const spitzenPhasen = await findePreisPhasen(datenTibberLink48h, spitzenSchwellwert, spitzenSchwellwert);
+                    const naechsteSpitzenphase = findeAktuelleOderNaechstePhase(spitzenPhasen.highPhases);
                         
-                        const minSchwellwert = (minStrompreis_48h + parseFloat(niedrigerSchwellwert))/2
-                        const niedrigPhasen = await findePreisPhasen(daten48h, niedrigerSchwellwert ,minSchwellwert );
-                        const naechsteTiefPhasen = findeAktuelleOderNaechstePhase(niedrigPhasen.lowPhases)
-                        // @ts-ignore
-                        let zeitraum_h = round((naechsteTiefPhasen.Endzeit - datejetzt) / (1000 * 60 * 60),0)
-                        
-                        // Prüfen ob bereits naechsteTiefPhasen.Startzeit begonnen hat. 
-                        if(zeitraum_h < 0){zeitraum_h = 0}
-                        const startSOC_pro = await prognoseBatterieSOC(zeitraum_h)
-                        
-                        // Berechne Ladezeit bis auf Eingestellten max SOC
-                        const ladedauer_h = await berechneLadezeit(startSOC_pro)
-                        const dateStartLadezeit = new Date(await bestLoadTime(zeitraum_h,ladedauer_h))
-                        const dateEndeLadezeit = new Date(dateStartLadezeit.getTime() + ladedauer_h * 60 * 60 * 1000);
-                        log(`naechsteNiedrigphase.Startzeit = ${naechsteNiedrigphase.Startzeit} naechsteTiefPhasen.Endzeit = ${naechsteTiefPhasen.Endzeit} zeitraum_h = ${zeitraum_h} dateStartLadezeit = ${dateStartLadezeit} dateEndeLadezeit = ${dateEndeLadezeit}`,'warn')
-                        await setStateAtSpecificTime(dateStartLadezeit,sID_BatterieLaden,true)
-                        await setStateAtSpecificTime(dateEndeLadezeit,sID_BatterieLaden,false);
-                        
-                    }else{
-                        // Timer für eine Stunde Laden setzen
-                        const dateEnde = new Date(datejetzt.getTime() + 60 * 60 * 1000);
-                        await setStateAtSpecificTime(datejetzt,sID_BatterieLaden,true)
-                        await setStateAtSpecificTime(dateEnde,sID_BatterieLaden,false);
+                    // Prüfen ob eine Spitzenpreisphase (> hoher Schwellwert + Ladeverluste) kommt wo es sich rechnet trotz Hochpreisphase zu laden
+                    //log(`naechsteSpitzenphase = ${JSON.stringify(naechsteSpitzenphase)} `,'warn')
+                    if (naechsteSpitzenphase.Startzeit) {
+                        // Prüfen wie lange diese dauert und wie lange die Batterie geladen werden muss um diese zu überbrücken
+                        const dauerSpitzenphase_h = (naechsteSpitzenphase.Endzeit.getTime() - naechsteSpitzenphase.Startzeit.getTime()) / 3600000;
+                        const ladedauerBatt = await berechneLadezeitBatterie(dauerSpitzenphase_h);
+                        const differenzStunden = Math.max(0, Math.floor((naechsteSpitzenphase.Startzeit.getTime() - datejetzt.getTime()) / 3600000));
+                        const dateStartLadezeit = new Date(await bestLoadTime(differenzStunden, ladedauerBatt));
+                        const dateEndeLadezeit = new Date(dateStartLadezeit.getTime() + ladedauerBatt * 3600000);
+                            
+                        // Wenn die berechnete Ladezeit zu lange ist dann ende Ladezeit auf Startzeit Spitzenphase setzen
+                        LogProgrammablauf += '18,';
+                        if (dateEndeLadezeit.getTime() < naechsteSpitzenphase.Startzeit.getTime()) {
+                            await setStateAtSpecificTime(dateEndeLadezeit, sID_BatterieEntladesperre, true);
+                            await setStateAtSpecificTime(naechsteSpitzenphase.Startzeit, sID_BatterieEntladesperre, false);
+                        }else{
+                            // Timer Ladefreigabe setzen für berechnete dauer
+                            const formatTime = date => `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+                            await setStateAsync(sID_besteLadezeit, `${formatTime(dateStartLadezeit)} Uhr bis ${formatTime(dateEndeLadezeit)} Uhr`);
+                            await setStateAtSpecificTime(dateStartLadezeit, sID_BatterieLaden, true);
+                            await setStateAtSpecificTime(dateEndeLadezeit, sID_BatterieLaden, false);
+                        }
+                    }else{   
+                        // aktuell in einer Hochpreisphase,keine Spitzenphase gefunden, Batterieladung reicht nicht aus zum überbrücken
+                        await setStateAsync(sID_besteLadezeit, `Hochpreisphase`);
+                        // Entladesperre Batterie ausschalten
+                        await setStateAsync(sID_BatterieEntladesperre, false);
                     }
-                    
-
+                }else{
+                    // aktuell in einer Hochpreisphase, Batterieladung reicht um diese zu überbrücken
+                    await setStateAsync(sID_besteLadezeit, `Hochpreisphase`);
+                    // Entladesperre Batterie ausschalten
+                    await setStateAsync(sID_BatterieEntladesperre, false);
                 }
             }
-
-            // E-Auto Laden prüfen
-            await handleEAutoLaden();
-
+            
+            // Niedrigpreisphase innerhalb Reichweite Batterie
+            if(!merkerNiedrigpreisphase){
+                // Preis zwischen hoch und niedrig Phase und keine PV-Leistung
+                if (aktuellerPreisTibber < hoherSchwellwert && aktuellerPreisTibber > niedrigerSchwellwert) {
+                    //log(`naechsteNiedrigphase.Startzeit = ${naechsteNiedrigphase.Startzeit}`,'warn')
+                    LogProgrammablauf += '6,';
+                    // Welche Phase kommt als nächstes
+                    if(naechsteNiedrigphase && naechsteHochphase){
+                        if(naechsteNiedrigphase.Startzeit.getTime() < naechsteHochphase.Startzeit.getTime()){
+                            // Es kommt eine Niedrigpreisphase, nicht laden. 
+                            // Entladesperre wenn Batteriepreis > Tibberpreis
+                            if(bruttoPreisBatterie > aktuellerPreisTibber){
+                                await setStateAsync(sID_BatterieEntladesperre, true)    
+                            }else{
+                                await setStateAsync(sID_BatterieEntladesperre, false)
+                            }
+                        }else{
+                            // Es kommt eine Hochpreisphase ,Batterie laden um diese zu überbrücken
+                            const formatTime = date => `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+                            await setStateAsync(sID_besteLadezeit, `${formatTime(datejetzt)} Uhr bis ${formatTime(naechsteHochphase.Startzeit)} Uhr`);
+                            await setStateAtSpecificTime(datejetzt, sID_BatterieLaden, true);
+                            await setStateAtSpecificTime(naechsteHochphase.Startzeit, sID_BatterieLaden, false);
+                            // Entladesperre einschalten
+                            await setStateAsync(sID_BatterieEntladesperre, true) 
+                            await setStateAtSpecificTime(naechsteHochphase.Startzeit, sID_BatterieEntladesperre, false);
+                        }
+                    }
+                }
+            }
+            
         } else {
-            await handlePvLadung(aktuelleBatterieSoC_Pro, maxBatterieSoC);
+            LogProgrammablauf += '14,';
+            if (aktuelleBatterieSoC_Pro > maxBatterieSoC) {
+                await setStateAsync(sID_besteLadezeit, `max SOC erreicht`);
+            } else {
+                await setStateAsync(sID_besteLadezeit, `Laden mit PV-Leistung`);
+            }
+            // Entladesperre der Batterie ausschalten
+            await setStateAsync(sID_BatterieEntladesperre, false);
         }
 
-        await DebugLog();
+        await DebugLog(preisPhasen,naechsteNiedrigphase,naechsteHochphase,spitzenSchwellwert);
         LogProgrammablauf = '';
 
     } catch (error) {
         // Fehlerbehandlung zentralisieren
-        handleError(error);
+        log(`Fehler in Funktion tibberSteuerungHauskraftwerk: ${error.message}`, 'error');
     }
 }
 
-// Helper-Funktionen für wiederkehrende Muster
-async function handleNiedrigphase(naechsteNiedrigphase, endZeitBatterie) {
-    if (naechsteNiedrigphase.Startzeit && naechsteNiedrigphase.Startzeit < endZeitBatterie) {
-        LogProgrammablauf += '15,';
-        await setStateAtSpecificTime(naechsteNiedrigphase.Startzeit, sID_BatterieLaden, true);
-        await setStateAtSpecificTime(naechsteNiedrigphase.Endzeit, sID_BatterieLaden, false);
+// Funktionen Freigabe E-Auto laden
+async function handleEAutoLaden(naechsteNiedrigphase,datejetzt) {
+    // Niedrigphase in den nächsten 5 Stunden prüfen
+    const endZeit = new Date(datejetzt.getTime() + 5 * 3600000)
+    //log(`naechsteNiedrigphase = ${JSON.stringify(naechsteNiedrigphase)} datejetzt = ${datejetzt} endZeit = ${endZeit}`,'warn')
+    if (naechsteNiedrigphase.Startzeit && naechsteNiedrigphase.Startzeit.getTime() < endZeit.getTime()) {
+        LogProgrammablauf += '21,';
+        // Innerhalb 5 h kommt eine Niedrigphase mit dem Laden E-Auto warten.
+        if(naechsteNiedrigphase.Startzeit.getTime() > datejetzt.getTime()){await setStateAsync(sID_eAutoLaden, false);}
+        await setStateAtSpecificTime(naechsteNiedrigphase.Startzeit, sID_eAutoLaden, true);
+    }else{
+        //log(`aktuellerPreisTibber = ${aktuellerPreisTibber} hoherSchwellwert = ${hoherSchwellwert}`,'warn')
+        if (aktuellerPreisTibber !== null && aktuellerPreisTibber < hoherSchwellwert) {
+            LogProgrammablauf += '22,';
+            await setStateAsync(sID_eAutoLaden, true);
+        } else {
+            LogProgrammablauf += '23,';
+            await setStateAsync(sID_eAutoLaden, false);
+        }  
     }
 }
-
-async function handleHochphase(naechsteHochphase, naechsteNiedrigphase, endZeitBatterie, reichweite_h) {
-    if (naechsteHochphase.Startzeit && naechsteHochphase.Startzeit < naechsteNiedrigphase.Startzeit) {
-        if (naechsteHochphase.Startzeit > endZeitBatterie || naechsteHochphase.Endzeit > endZeitBatterie) {
-            const dauerHochphase_h = (naechsteHochphase.Endzeit - naechsteHochphase.Startzeit) / (1000 * 60 * 60);
-            if (dauerHochphase_h > reichweite_h && aktuellerPreisTibber < hoherSchwellwert) {
-                LogProgrammablauf += '16,';
-                await setStateAtSpecificTime(new Date(), sID_BatterieEntladesperre, true);
-                await setStateAtSpecificTime(naechsteHochphase.Startzeit, sID_BatterieEntladesperre, false);
-            }
-        }
-    }
-}
-
-async function handleSpitzenphase(naechsteHochphase, reichweite_h, datejetzt, daten48h, hoherSchwellwert) {
-    if (naechsteHochphase.Startzeit <= datejetzt) {
-        const DiffStart = round((naechsteHochphase.Endzeit - datejetzt) / (1000 * 60 * 60), 0);
-        if (DiffStart > reichweite_h) {
-            LogProgrammablauf += '17,';
-            const spitzenSchwellwert = round(hoherSchwellwert * (1 / (systemwirkungsgrad / 100)), 4);
-            const spitzenPhasen = await findePreisPhasen(daten48h, spitzenSchwellwert, spitzenSchwellwert);
-            const naechsteSpitzenphase = findeAktuelleOderNaechstePhase(spitzenPhasen.highPhases);
-            if (naechsteSpitzenphase.Startzeit) {
-                // @ts-ignore
-                const dauerSpitzenphase_h = (naechsteSpitzenphase.Endzeit - naechsteSpitzenphase.Startzeit) / (1000 * 60 * 60);
-                const ladedauerUeberbrueckung = await berechneLadezeitBatterie(dauerSpitzenphase_h);
-
-                // @ts-ignore
-                const differenzStunden = Math.max(0, Math.floor((naechsteSpitzenphase.Startzeit - datejetzt) / (1000 * 60 * 60)));
-                const dateStartLadezeit = new Date(await bestLoadTime(differenzStunden, ladedauerUeberbrueckung));
-                const dateEndeLadezeit = new Date(dateStartLadezeit.getTime() + ladedauerUeberbrueckung * 60 * 60 * 1000);
-                LogProgrammablauf += '18,';
-                await setStateAtSpecificTime(dateStartLadezeit, sID_BatterieLaden, true);
-                await setStateAtSpecificTime(dateEndeLadezeit, sID_BatterieLaden, false);
-                if (dateEndeLadezeit < naechsteSpitzenphase.Startzeit) {
-                    await setStateAtSpecificTime(dateEndeLadezeit, sID_BatterieEntladesperre, true);
-                    await setStateAtSpecificTime(naechsteSpitzenphase.Startzeit, sID_BatterieEntladesperre, false);
-                }
-            }
-        }
-    }
-}
-
-async function handleEAutoLaden() {
-    const dateStartLadezeit = new Date();
-    LogProgrammablauf += '22,';
-    if (aktuellerPreisTibber < hoherSchwellwert) {
-        await setStateAtSpecificTime(dateStartLadezeit, sID_eAutoLaden, true);
-    } else {
-        await setStateAtSpecificTime(dateStartLadezeit, sID_eAutoLaden, false);
-    }
-}
-
-async function handlePvLadung(aktuelleBatterieSoC_Pro, maxBatterieSoC) {
-    LogProgrammablauf += '14,';
-    if (aktuelleBatterieSoC_Pro > maxBatterieSoC) {
-        await setStateAsync(sID_besteLadezeit, `max SOC erreicht`);
-    } else {
-        await setStateAsync(sID_besteLadezeit, `Laden mit PV-Leistung`);
-    }
-}
-
-// Zentralisierte Fehlerbehandlung
-function handleError(error) {
-    log(`Fehler in Funktion tibberSteuerungHauskraftwerk: ${error.message}`, 'error');
-}
-
 
 // Funktion sucht entweder die aktuelle Phase oder die nächste Phase mit Start- und Endzeit.
 function findeAktuelleOderNaechstePhase(arrayPhases) {
-    // Aktuelle Zeit
+    // Aktuelle Zeit in lokaler Zeitzone oder UTC (je nach Bedarf)
     const jetzt = new Date();
     // Suche nach der aktuell aktiven Phase (Startzeit in der Vergangenheit, Endzeit in der Zukunft)
     const aktuellePhase = arrayPhases
         .find(phase => new Date(phase.start) <= jetzt && new Date(phase.end) > jetzt);
+    
     if (aktuellePhase) {
+        // Rückgabe der Phase mit Standard-Format für Weiterverarbeitung
         return {
             Startzeit: new Date(aktuellePhase.start),
-            Endzeit: new Date(aktuellePhase.end)
+            Endzeit: new Date(aktuellePhase.end),
+            StartzeitLokal: new Date(aktuellePhase.start).toLocaleString(),  // toLocaleString() zur Anzeige
+            EndzeitLokal: new Date(aktuellePhase.end).toLocaleString()       // toLocaleString() zur Anzeige
         };
     }
 
     // Falls keine aktive Phase gefunden wurde, suche die nächste Phase mit Start- und Endzeit in der Zukunft
     const naechstePhase = arrayPhases
-        .filter(phase => new Date(phase.start) > jetzt) // Nur Phasen in der Zukunft @ts-ignore
-        //@ts-ignore
-        .sort((a, b) => new Date(a.start) - new Date(b.start))[0]; // Sortiere nach Startzeit und wähle die früheste
+        .filter(phase => new Date(phase.start) > jetzt)  // @ts-ignore Nur zukünftige Phasen
+        .sort((a, b) => new Date(a.start) - new Date(b.start))[0];  // Sortiere nach Startzeit
+
     if (naechstePhase) {
         return {
             Startzeit: new Date(naechstePhase.start),
-            Endzeit: new Date(naechstePhase.end)
+            Endzeit: new Date(naechstePhase.end),
+            StartzeitLokal: new Date(naechstePhase.start).toLocaleString(),
+            EndzeitLokal: new Date(naechstePhase.end).toLocaleString() 
         };
     }
 
-    //Falls keine passende Phase gefunden wird, gib null zurück
+    // Falls keine passende Phase gefunden wird, gib null zurück
     return {
         Startzeit: null,
-        Endzeit: null
+        Endzeit: null,
+        StartzeitLokal: null,
+        EndzeitLokal: null
     };
 }
 
 
 // Funktion prüft die Reichweite der Batterie bis zum Sonnenaufgang und ob die Prognose PV-Leistung dann ausreicht.
 async function pruefePVLeistung(reichweiteStunden) {
-    LogProgrammablauf += '4,';
+    LogProgrammablauf += '5,';
     
     // Wenn PV-Module Schneebedeckt sind, nicht berechnen
     if(schneeBedeckt){return false;}
@@ -560,12 +572,6 @@ async function setStateAtSpecificTime(targetTime, stateID, state) {
 async function bestLoadTime(reichweite_h,ladezeit_h) {
     LogProgrammablauf += '20,';
     const now = new Date(); // Aktuelle Zeit
-    [datenHeute, datenMorgen] = await Promise.all([
-        getStateAsync(sID_PricesTodayJSON),
-        getStateAsync(sID_PricesTomorrowJSON)
-    ]).then(states => states.map(state => JSON.parse(state.val)));
-    const preiseTibberArray = [...datenHeute, ...datenMorgen];
-
     // Prüft, ob die Variablen datenHeute und datenMorgen Arrays sind.
     if (!Array.isArray(datenHeute) || !Array.isArray(datenMorgen) ) {
         throw new Error("Invalid Array in function findeGuenstigsteLadezeitInnerhalbReichweite");
@@ -584,8 +590,8 @@ async function bestLoadTime(reichweite_h,ladezeit_h) {
     let billigsteZeit = null;
 
     // Iteriere durch die Daten und finde den günstigsten zusammenhängenden Stundenblock innerhalb der Reichweite
-    for (let i = 0; i < preiseTibberArray.length - ladezeit_h + 1; i++) {
-        const startEntry = preiseTibberArray[i];
+    for (let i = 0; i < datenTibberLink48h.length - ladezeit_h + 1; i++) {
+        const startEntry = datenTibberLink48h[i];
         const startTime = new Date(startEntry.startsAt);
 
         // @ts-ignore Berechne den Unterschied in Stunden zur aktuellen Zeit
@@ -596,7 +602,7 @@ async function bestLoadTime(reichweite_h,ladezeit_h) {
             // Berechne die Gesamtkosten für den aktuellen Stundenblock
             let blockPreis = 0;
             for (let j = 0; j < ladezeit_h; j++) {
-                const entry = preiseTibberArray[i + j];
+                const entry = datenTibberLink48h[i + j];
                 if (entry.total < billigsterEinzelpreisBlock) {
                     billigsterEinzelpreisBlock = entry.total;
                 }
@@ -612,7 +618,7 @@ async function bestLoadTime(reichweite_h,ladezeit_h) {
     }
     
     // bei jedem Durchlauf die globalen Preis Variablen aktualisieren
-    minStrompreis_48h = preiseTibberArray.reduce((min, current) => current.total < min ? current.total : min, preiseTibberArray[0].total);
+    minStrompreis_48h = datenTibberLink48h.reduce((min, current) => current.total < min ? current.total : min, datenTibberLink48h[0].total);
     billigsterBlockPreis = billigsterBlockPreis / ladezeit_h
     
     if (aktuellerPreisTibber < billigsterBlockPreis && aktuellerPreisTibber < hoherSchwellwert) {
@@ -639,16 +645,17 @@ async function bestLoadTime(reichweite_h,ladezeit_h) {
 
 async function createDiagramm(){
     // JSON-Daten parsen
-    [datenHeute, datenMorgen] = await Promise.all([
-        getStateAsync(sID_PricesTodayJSON),
-        getStateAsync(sID_PricesTomorrowJSON)
-    ]).then(states => states.map(state => JSON.parse(state.val)));
+    const [reichweite_h, minuten] = (await getStateAsync(sID_Autonomiezeit)).val.split(' / ')[1].split(' ')[0].split(':').map(Number);
     // Listen für axisLabels und data initialisieren
     const axisLabels = [];
     const dataPoints = [];
     const barDataPoints = [];
+    const barDataPoints2 = [];
     // Hole aktuelle Zeit
     const currentDateTime = new Date();
+    const battDateTime = new Date(currentDateTime.getTime() + reichweite_h * 3600000 + minuten * 60000);
+    const battcurrentDate = formatDate(battDateTime);
+    const battcurrentHour = battDateTime.getHours();
     const currentDate = formatDate(currentDateTime);
     const currentHour = currentDateTime.getHours();
 
@@ -704,10 +711,18 @@ async function createDiagramm(){
 			"yAxis_min": 0,
 			"yAxis_max": 1,
 			"datalabel_show": false
-		    }
+		    }, {
+			"data": [],
+			"type": "bar",
+			"color": "#f01a1a",
+			"yAxis_min": 0,
+			"yAxis_max": 1,
+			"datalabel_show": false,
+		    "tooltip_title": "Reichweite Batterie"
+            }
         ]
     };
-    
+    //const battcurrentDate = formatDate(battDateTime);
    // Daten extrahieren und formatieren
     const extractData = (data) => {
         data.forEach(entry => {
@@ -718,9 +733,11 @@ async function createDiagramm(){
             const entryDate = formatDate(date);
             const entryHour = date.getHours();
             barDataPoints.push(entryDate === currentDate && entryHour === currentHour ? 0.7 : 0);
+            barDataPoints2.push(entryDate === battcurrentDate && entryHour === battcurrentHour ? 0.2 : 0);
         });
     };
-
+    
+    //log(`battcurrentDate = ${battcurrentDate}`,'warn')
     // Daten heute und morgen extrahieren
     extractData(datenHeute);
     extractData(datenMorgen);
@@ -729,59 +746,45 @@ async function createDiagramm(){
     diagramJsonChart.axisLabels = axisLabels;
     diagramJsonChart.graphs[0].data = dataPoints;
     diagramJsonChart.graphs[1].data = barDataPoints;
+    diagramJsonChart.graphs[2].data = barDataPoints2;
     
     // JSON-Chart speichern
     const outputJsonStr = JSON.stringify(diagramJsonChart, null, 4);
     await setStateAsync(sID_DiagramJosonChart,outputJsonStr)
 }
 
-// Funktion zur Überprüfung und Aktualisierung der Entladesperre
-async function checkAndUpdateEntladenSperren() {
-    // aktuellen Preis Tibber prüfen
-    aktuellerPreisTibber = await getCurrentPrice();
+// Funktion berechnet den Batteriepreis
+async function berechneBattPrice() {
     batterieLadedaten = JSON.parse((await getStateAsync(sID_BatterieLadedaten)).val)
-    // Wenn es gespeicherte Ladedaten gibt, prüfe den letzten Preis
+    // Wenn es gespeicherte Ladedaten gibt, berechne den Batterie Strompreis
     if (batterieLadedaten.length > 0 ) {
-        LogProgrammablauf += '5,';
+        LogProgrammablauf += '4,';
         //Durchschnittspreis berechnen
         const gesamt = batterieLadedaten.reduce((summe, eintrag) => summe + eintrag.price, 0);
         strompreisBatterie = round(gesamt / batterieLadedaten.length,4);
-        
-        // Überprüfe, ob der aktuelle Preis niedriger ist als der Batterie Preis inkl. Ladeverluste
-        // alle Kosten, die innerhalb der vorgesehenen Laufzeit (20 Jahre) entstehen addiert, dividiert durch den Ertrag an Solarstrom
         bruttoPreisBatterie = strompreisBatterie != stromgestehungskosten ? round(strompreisBatterie * (1 / (systemwirkungsgrad / 100)),4) : stromgestehungskosten;
         await setStateAsync(sID_StrompreisBatterie, bruttoPreisBatterie);
-
-        if (aktuellerPreisTibber < bruttoPreisBatterie && batteriepreisAktiv) {
-            bEntladenSperren = true;
-        } else {
-            bEntladenSperren = false;
-        }
     } else {
-        // Wenn keine Daten gespeichert sind, Entladen nicht sperren
-        bEntladenSperren = false;
-        await setStateAsync(sID_StrompreisBatterie, 0);
+        // Wenn keine Daten gespeichert sind, dann null
+        await setStateAsync(sID_StrompreisBatterie, null);
+        strompreisBatterie = null
+        bruttoPreisBatterie = null
     }
-    await setStateAsync(sID_BatterieEntladesperre, bEntladenSperren);
-}
+ }
 
 
 // aktuellen Tibber Preis aus JSON auslesen
 async function getCurrentPrice() {
     LogProgrammablauf += '1,';
-    const [dataToday] = await Promise.all([
-        getStateAsync(sID_PricesTodayJSON)
-    ]).then(states => states.map(state => JSON.parse(state.val)));
-
     // Hole die aktuelle Uhrzeit und runde auf volle Stunden
     const currentTime = new Date();
     currentTime.setMinutes(0, 0, 0);  // Auf volle Stunde runden
     
-    let aktuellerPreisTibber = null;
+    aktuellerPreisTibber = null;
     minStrompreis_48h = null;  // Setze den niedrigsten Preis zu Beginn auf null
 
-    // Durch das Array dataToday loopen
-    for (let entry of dataToday) {
+    // Durch das Array datenHeute loopen
+    for (let entry of datenHeute) {
         // Konvertiere startsAt in ein Date-Objekt
         let startsAt = new Date(entry.startsAt);
         
@@ -814,13 +817,6 @@ function formatDate(date) {
     return `${day}.${month}`;
 }
 
-// Addiert zum Datum x Tage und liefert das Datum im Format yyyy-mm-dd
-function nextDayDate(days) {
-    const date = new Date();
-    date.setDate(date.getDate() + days);
-    return date.toISOString().split('T')[0];
-}
-
 // Hilfsfunktion zum Löschen aller Timer
 async function clearAllTimeouts() {
     await Promise.all([
@@ -837,7 +833,7 @@ async function clearAllTimeouts() {
 
 }
 
-async function DebugLog()
+async function DebugLog(preisPhasen,naechsteNiedrigphase,naechsteHochphase,spitzenSchwellwert)
 {
     const [prognoseLadezeitBatterie,besteLadezeit,PrognoseBerechnung_kWh_heute,Batterie_SOC,reichweiteBatterie,BatterieLaden,Power_Bat_W,Power_Grid,eAutoLaden] = await Promise.all([
         getStateAsync(sID_ladezeitBatterie),
@@ -861,6 +857,7 @@ async function DebugLog()
     if (DebugAusgabeDetail){log(`billigsterEinzelpreisBlock = ${billigsterEinzelpreisBlock}`)}
     if (DebugAusgabeDetail){log(`billigsterBlockPreis = ${billigsterBlockPreis}`)}
     if (DebugAusgabeDetail){log(`minStrompreis_48h = ${minStrompreis_48h}`)}
+    if (DebugAusgabeDetail){log(`Schwellwert Preisspitze = ${spitzenSchwellwert}`)}
     if (DebugAusgabeDetail){log(`Schwellwert hoher Strompreis = ${hoherSchwellwert}`)}
     if (DebugAusgabeDetail){log(`Schwellwert niedriger Strompreis = ${niedrigerSchwellwert}`)}
     if (DebugAusgabeDetail){log(`schneeBedeckt = ${schneeBedeckt}`)}
@@ -878,85 +875,101 @@ async function DebugLog()
     if (DebugAusgabeDetail){log(`Power_Bat_W = ${Power_Bat_W}`)}
     if (DebugAusgabeDetail){log(`Power_Grid = ${Power_Grid}`)}
     if (DebugAusgabeDetail){log(`eAutoLaden = ${eAutoLaden}`)}
-    if (DebugAusgabeDetail){log(`Hochpreisphasen: ${JSON.stringify(preisPhasen.highPhases)}`)}
-    if (DebugAusgabeDetail){log(`Niedrigpreisphasen: ${JSON.stringify(preisPhasen.lowPhases)}`)}
+    if (DebugAusgabeDetail){log(`naechsteNiedrigphase = ${JSON.stringify(naechsteNiedrigphase)}`)}
+    if (DebugAusgabeDetail){log(`naechsteHochphase = ${JSON.stringify(naechsteHochphase)}`)}
+    if (DebugAusgabeDetail){log(`preisPhasen = ${JSON.stringify(preisPhasen)}`)}
     log(`ProgrammAblauf = ${LogProgrammablauf} `,'warn')
     
 }
 
 // Funktion sucht im array data Preise über und unter dem Schwellwert und gibt die Startzeit und Endzeit der einzelnen Phasen als array zurück
 async function findePreisPhasen(data, highThreshold, lowThreshold) {
-    
     let highPhases = [];
     let lowPhases = [];
     let currentPhase = null;
-    if(highThreshold < lowThreshold){
-        log(`Schwellwert hoher Strompreis ist niedriger als Schwellwert niedriger Strompreis, Schwellwert hoher Strompreis wurde angepasst`,'warn')
-        highThreshold = lowThreshold + 0.1
+
+    if (highThreshold < lowThreshold) {
+        log(`Schwellwert hoher Strompreis ist niedriger als Schwellwert niedriger Strompreis, Schwellwert hoher Strompreis wurde angepasst`, 'warn');
+        highThreshold = lowThreshold + 0.1;
     }
+
     // Funktion zum Hinzufügen einer Phase in die entsprechende Liste
     function addPhase(phaseList, phase) {
         if (phase) {
+            // Die Endzeit ist eine Stunde nach dem letzten Startzeitpunkt der Phase
+            let endTime = new Date(phase.end);
+            endTime.setHours(endTime.getHours() + 1);  // Endzeit um eine Stunde erhöhen
+
+            // Speichere die Start- und Endzeit als Date-Objekte für spätere Vergleiche, aber verwende toLocaleString() nur für die Ausgabe
             phaseList.push({
-                start: phase.start,
-                end: phase.end,
-                averagePrice: phase.total / phase.hours
+                start: phase.start,  // Behalte das Date-Objekt für die interne Logik
+                end: endTime,  // Behalte das Date-Objekt
+                averagePrice: phase.total / phase.hours,
+                // Formatiere die Zeiten nur zur Ausgabe in der lokalen Zeitzone
+                startLocale: phase.start.toLocaleString(),
+                endLocale: endTime.toLocaleString()
             });
         }
     }
 
+    // Durchlaufe die Daten und verarbeite die Preise
     for (let i = 0; i < data.length; i++) {
         let hourData = data[i];
         let price = hourData.total;
-
+        let startTime = new Date(hourData.startsAt);  // Verwende weiterhin Date-Objekte
+        
+        // Wenn der Preis über dem High Threshold liegt (Hochpreisphase)
         if (price >= highThreshold) {
-            // Wenn der Preis hoch ist, füge zur Hochpreis-Phase hinzu
             if (currentPhase && currentPhase.type === 'high') {
-                currentPhase.end = hourData.startsAt;
+                // Fortführung einer Hochpreisphase
+                currentPhase.end = startTime;
                 currentPhase.total += price;
                 currentPhase.hours++;
             } else {
-                // Falls eine neue Hochpreisphase beginnt
+                // Beende die aktuelle Phase und starte eine neue Hochpreisphase
                 addPhase(currentPhase && currentPhase.type === 'low' ? lowPhases : highPhases, currentPhase);
                 currentPhase = {
                     type: 'high',
-                    start: hourData.startsAt,
-                    end: hourData.startsAt,
+                    start: startTime,
+                    end: startTime,  // Setze die Endzeit auf den Startzeitpunkt
                     total: price,
                     hours: 1
                 };
             }
-        } else if (price <= lowThreshold) {
-            // Wenn der Preis niedrig ist, füge zur Niedrigpreis-Phase hinzu
+        } 
+        // Wenn der Preis unter dem Low Threshold liegt (Niedrigpreisphase)
+        else if (price <= lowThreshold) {
             if (currentPhase && currentPhase.type === 'low') {
-                currentPhase.end = hourData.startsAt;
+                // Fortführung einer Niedrigpreisphase
+                currentPhase.end = startTime;
                 currentPhase.total += price;
                 currentPhase.hours++;
             } else {
-                // Falls eine neue Niedrigpreisphase beginnt
-                addPhase(currentPhase && currentPhase.type === 'high' ? highPhases : lowPhases, currentPhase);
+                // Beende die aktuelle Phase und starte eine neue Niedrigpreisphase
+                addPhase(currentPhase && currentPhase.type === 'high' ? lowPhases : highPhases, currentPhase);
                 currentPhase = {
                     type: 'low',
-                    start: hourData.startsAt,
-                    end: hourData.startsAt,
+                    start: startTime,
+                    end: startTime,  // Setze die Endzeit auf den Startzeitpunkt
                     total: price,
                     hours: 1
                 };
             }
-        } else {
-            // Wenn der Preis "normal" ist, Phase beenden
+        } 
+        // Wenn der Preis zwischen lowThreshold und highThreshold liegt (Normaler Preis)
+        else if (price > lowThreshold && price < highThreshold) {
+            // Beende die aktuelle Phase, falls sie existiert
             addPhase(currentPhase && currentPhase.type === 'high' ? highPhases : lowPhases, currentPhase);
-            currentPhase = null;
+            currentPhase = null;  // Setze die aktuelle Phase auf null
         }
     }
 
     // Letzte Phase hinzufügen, falls vorhanden
     addPhase(currentPhase && currentPhase.type === 'high' ? highPhases : lowPhases, currentPhase);
+
     LogProgrammablauf += '7,';
     return { highPhases, lowPhases };
 }
-
-
 
 
 
@@ -982,6 +995,32 @@ on({id: regexPatternTibber, change: "ne"}, async function (obj){
     await createDiagramm();
 });
 
+// Triggern wenn neue JSON Preise von TibberLink geladen werden
+on({id: arrayID_TibberPrices, change: "ne"}, async function (obj){
+    [datenHeute, datenMorgen] = await Promise.all([
+        getStateAsync(sID_PricesTodayJSON),
+        getStateAsync(sID_PricesTomorrowJSON)
+    ]).then(states => states.map(state => JSON.parse(state.val)));
+    datenTibberLink48h = [...datenHeute, ...datenMorgen];
+});
+
+// Triggern wenn Notstromstatus e3dc-rscp sich ändert
+on({id: sID_Notrom_Status, change: "ne"}, async function (obj){
+    if(obj.state.val == 4 || obj.state.val == 1){notstromAktiv = true}
+});
+
+// Triggern wenn Netzleistung e3dc-rscp sich ändert
+on({id: sID_Power_Grid, change: "ne"}, async function (obj){
+    // Absicherung das Netzleistung nicht 22000W (32A * 3 ) übersteigt
+    if(obj.state.val > 20000) {
+        let differenz = obj.state.val - 22000;
+        maxLadeleistungUser_W -= differenz;
+        if (maxLadeleistungUser_W < 0) {maxLadeleistungUser_W = 0;}
+        setStateAsync(sID_maxLadeleistungUser_W,maxLadeleistungUser_W)  
+    }
+});
+
+
 on({id: sID_Batterie_SOC, change: "ne"}, async function (obj){	
     const jetzt = new Date();
     
@@ -1003,8 +1042,6 @@ on({id: sID_Batterie_SOC, change: "ne"}, async function (obj){
     // Neue Werte schreiben wenn der SOC ansteigt
     if(Power_Grid >= leistungBatterie && BatterieLaden && leistungBatterie > 0){
        if(aktuelleBatterieSoC_Pro > batterieSOC_alt){
-            // Aktuellen Preis aus JSON TibberLink auslesen
-            aktuellerPreisTibber = await getCurrentPrice();
             batterieSOC_alt = aktuelleBatterieSoC_Pro
             batterieLadedaten.push({ soc: aktuelleBatterieSoC_Pro, price: aktuellerPreisTibber });
             await setStateAsync(sID_BatterieLadedaten,JSON.stringify(batterieLadedaten));
@@ -1020,12 +1057,19 @@ on({id: sID_Batterie_SOC, change: "ne"}, async function (obj){
     }
 });
 
-
 // Tibber Steuerung alle 10 min. aufrufen.
-schedule("*/10 * * * *", async function() {
-    await checkAndUpdateEntladenSperren();
-    await tibberSteuerungHauskraftwerk(); 
-    await createDiagramm();
+let scheduleTibber = schedule("*/10 * * * *", async function() {
+    if(!notstromAktiv){
+        await berechneBattPrice();
+        await tibberSteuerungHauskraftwerk(); 
+        await createDiagramm();
+    }else{
+        log(`Es wurde auf Notstrom umgeschaltet Script Tibber wurde angehalten und muss neu gestartet werden`,'error')
+        await setStateAsync(sID_BatterieLaden, false);
+        await setStateAsync(sID_BatterieEntladesperre, false);                   
+        await setStateAsync(sID_eAutoLaden, false);   
+        clearSchedule(scheduleTibber);
+    }
 });
 
 //Bei Scriptende alle Timer löschen
@@ -1034,6 +1078,5 @@ onStop(function () {
     setState(sID_besteLadezeit, ``)
     log(`-==== Alle Timer beendet ====-`)
 }, 100);
-
 
 ScriptStart();
