@@ -4,6 +4,7 @@
 const instanz = '0_userdata.0';                                                                        	        // Instanz Script
 const PfadEbene1 = 'TibberSkript';                                                                     	        // Pfad innerhalb der Instanz
 const PfadEbene2 = ['Anzeige_VIS','OutputSignal','History','USER_ANPASSUNGEN']                		            // Pfad innerhalb PfadEbene1
+const instanzE3DC_RSCP = 'e3dc-rscp.0'
 const DebugAusgabeDetail = true;
 
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
@@ -13,24 +14,24 @@ const DebugAusgabeDetail = true;
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.1.2'
+const scriptVersion = 'Version 1.1.3'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 
 // IDs Script Charge_Control
-const sID_Autonomiezeit =`0_userdata.0.Charge_Control.Allgemein.Autonomiezeit`;
-const sID_arrayHausverbrauch =`0_userdata.0.Charge_Control.Allgemein.arrayHausverbrauchDurchschnitt`;
-const sID_maxEntladetiefeBatterie =`0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_maxEntladetiefeBatterie`
-const sID_PrognoseBerechnung_kWh_heute =`0_userdata.0.Charge_Control.Allgemein.PrognoseBerechnung_kWh_heute`
+const sID_Autonomiezeit =`${instanz}.Charge_Control.Allgemein.Autonomiezeit`;
+const sID_arrayHausverbrauch =`${instanz}.Charge_Control.Allgemein.arrayHausverbrauchDurchschnitt`;
+const sID_maxEntladetiefeBatterie =`${instanz}.Charge_Control.USER_ANPASSUNGEN.10_maxEntladetiefeBatterie`
+const sID_PrognoseBerechnung_kWh_heute =`${instanz}.Charge_Control.Allgemein.PrognoseBerechnung_kWh_heute`
 
 // IDs des Adapters e3dc-rscp
-const sID_Batterie_SOC =`e3dc-rscp.0.EMS.BAT_SOC`;                                                              // aktueller Batterie_SOC
-const sID_Bat_Charge_Limit =`e3dc-rscp.0.EMS.SYS_SPECS.maxBatChargePower`;                                      // Batterie Ladelimit
-const sID_SPECIFIED_Battery_Capacity_0 =`e3dc-rscp.0.BAT.BAT_0.SPECIFIED_CAPACITY`;                             // Installierte Batterie Kapazität Batteriekreis 0
-const sID_SPECIFIED_Battery_Capacity_1 =`e3dc-rscp.0.BAT.BAT_1.SPECIFIED_CAPACITY`;                             // Installierte Batterie Kapazität Batteriekreis 1
-const sID_BAT0_Alterungszustand =`e3dc-rscp.0.BAT.BAT_0.ASOC`;                                                  // Batterie ASOC e3dc-rscp
-const sID_Power_Bat_W = `e3dc-rscp.0.EMS.POWER_BAT`;                                                            // aktuelle Batterie_Leistung'
-const sID_Power_Grid = `e3dc-rscp.0.EMS.POWER_GRID`                                                             // Leistung aus Netz
-const sID_Notrom_Status =`e3dc-rscp.0.EMS.EMERGENCY_POWER_STATUS`;                                              // 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
+const sID_Batterie_SOC =`${instanzE3DC_RSCP}.EMS.BAT_SOC`;                                                              // aktueller Batterie_SOC
+const sID_Bat_Charge_Limit =`${instanzE3DC_RSCP}.EMS.SYS_SPECS.maxBatChargePower`;                                      // Batterie Ladelimit
+const sID_SPECIFIED_Battery_Capacity_0 =`${instanzE3DC_RSCP}.BAT.BAT_0.SPECIFIED_CAPACITY`;                             // Installierte Batterie Kapazität Batteriekreis 0
+const sID_SPECIFIED_Battery_Capacity_1 =`${instanzE3DC_RSCP}.BAT.BAT_1.SPECIFIED_CAPACITY`;                             // Installierte Batterie Kapazität Batteriekreis 1
+const sID_BAT0_Alterungszustand =`${instanzE3DC_RSCP}.BAT.BAT_0.ASOC`;                                                  // Batterie ASOC e3dc-rscp
+const sID_Power_Bat_W = `${instanzE3DC_RSCP}.EMS.POWER_BAT`;                                                            // aktuelle Batterie_Leistung'
+const sID_Power_Grid = `${instanzE3DC_RSCP}.EMS.POWER_GRID`                                                             // Leistung aus Netz
+const sID_Notrom_Status =`${instanzE3DC_RSCP}.EMS.EMERGENCY_POWER_STATUS`;                                              // 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
     
 // IDs des Script Tibber
 const sID_aktuellerEigenverbrauch = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.aktuellerEigenverbrauch`;        // Anzeige in VIS durchschnittlicher Eigenverbrauch
@@ -104,7 +105,7 @@ async function ScriptStart()
     // Erstelle die Objekt IDs
     await createState();    
     log('-==== alle Objekt ID\'s angelegt ====-');
-    
+    await pruefeAdapterEinstellungen()
     // User Anpassungen parallel abrufen
     const results = await Promise.all([
         getStateAsync(sID_BatteriepreisAktiv),
@@ -159,6 +160,21 @@ async function ScriptStart()
     
 } 
 
+// Einstellungen e3dc-rscp Adapter prüfen
+async function pruefeAdapterEinstellungen() {
+    const e3dc_rscp_Adapter = getObject(`system.adapter.${instanzE3DC_RSCP}`);
+    //log(`e3dc_rscp_Adapter = ${JSON.stringify(e3dc_rscp_Adapter)}`,'warn')
+    const tag_BAT_SOC = e3dc_rscp_Adapter.native.polling_intervals.find(item => item.tag === "TAG_EMS_REQ_BAT_SOC")
+    const tag_POWER_BAT = e3dc_rscp_Adapter.native.polling_intervals.find(item => item.tag === "TAG_EMS_REQ_POWER_BAT")
+    const tag_POWER_GRID = e3dc_rscp_Adapter.native.polling_intervals.find(item => item.tag === "TAG_EMS_REQ_POWER_GRID")
+    if(tag_BAT_SOC.interval != `S` || tag_POWER_BAT.interval != `S` || tag_POWER_GRID.interval != `S`){
+        log(`Bitte die Einstellungen e3dc-rscp Adapter Abfrageintervalle bei den RSCP-TAG's "TAG_EMS_REQ_BAT_SOC" "TAG_EMS_REQ_POWER_BAT" "TAG_EMS_REQ_POWER_GRID" auf S = kurz einstellen`,'warn')
+    }
+    const pollingIntervalShort = e3dc_rscp_Adapter.native.polling_interval_short;    
+    if(pollingIntervalShort > 5){
+        log(`Bitte in den Einstellungen e3dc-rscp Adapter das Abfrageintervall S = kurz [sec] auf min. 5 sek.einstellen`,'warn')
+    }
+}
 
 async function tibberSteuerungHauskraftwerk() {
     try {    
@@ -253,14 +269,19 @@ async function tibberSteuerungHauskraftwerk() {
                             await setStateAsync(sID_BatterieEntladesperre, false)
                         }
                     }else{
-                        // Es kommt eine Hochpreisphase ,Batterie laden um diese zu überbrücken
-                        const formatTime = date => `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
-                        await setStateAsync(sID_besteLadezeit, `${formatTime(datejetzt)} Uhr bis ${formatTime(naechsteHochphase.Startzeit)} Uhr`);
-                        await setStateAtSpecificTime(datejetzt, sID_BatterieLaden, true);
-                        await setStateAtSpecificTime(naechsteHochphase.Startzeit, sID_BatterieLaden, false);
-                        // Entladesperre einschalten
-                        await setStateAsync(sID_BatterieEntladesperre, true) 
-                        await setStateAtSpecificTime(naechsteHochphase.Startzeit, sID_BatterieEntladesperre, false);
+                        // Es kommt eine Hochpreisphase
+                        // BatterieSOC prüfen ob Hochpreisphase Länger als Batteriereichweite ist
+                        if(naechsteHochphase.Endzeit.getTime() > endZeitBatterie.getTime()){
+                            // Batterie laden um diese zu überbrücken
+                            const formatTime = date => `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+                            await setStateAsync(sID_besteLadezeit, `${formatTime(datejetzt)} Uhr bis ${formatTime(naechsteHochphase.Startzeit)} Uhr`);
+                            await setStateAtSpecificTime(datejetzt, sID_BatterieLaden, true);
+                            await setStateAtSpecificTime(naechsteHochphase.Startzeit, sID_BatterieLaden, false);
+                            // Entladesperre einschalten
+                            await setStateAsync(sID_BatterieEntladesperre, true) 
+                            await setStateAtSpecificTime(naechsteHochphase.Startzeit, sID_BatterieEntladesperre, false);
+                        }
+                        LogProgrammablauf += '16,';
                     }
                     
                 }
@@ -548,7 +569,7 @@ async function setStateAtSpecificTime(targetTime, stateID, state) {
         return;
     }
     // @ts-ignore Zeitdifferenz berechnen 
-    let timeDiff = targetTime - currentTime;
+    let timeDiff = targetTime.getTime() - currentTime.getTime();
     // Wenn Startzeit in der vergangeheit, State sofort setzen
     if(timeDiff < 0){timeDiff = 1}
     // Timeout setzen, um den State nach der Zeitdifferenz zu ändern
