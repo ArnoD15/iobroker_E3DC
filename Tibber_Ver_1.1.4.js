@@ -14,7 +14,7 @@ const DebugAusgabeDetail = true;
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.1.3'
+const scriptVersion = 'Version 1.1.4'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 
 // IDs Script Charge_Control
@@ -181,6 +181,7 @@ async function tibberSteuerungHauskraftwerk() {
         const datejetzt = new Date();
         const [reichweite_h, minuten] = (await getStateAsync(sID_Autonomiezeit)).val.split(' / ')[1].split(' ')[0].split(':').map(Number);
         const endZeitBatterie = new Date(datejetzt.getTime() + reichweite_h * 3600000 + minuten * 60000);
+        log(`endZeitBatterie = ${endZeitBatterie}`,'warn')
         const pvLeistungAusreichend = await pruefePVLeistung(reichweite_h);
         const preisPhasen = await findePreisPhasen(datenTibberLink48h, hoherSchwellwert, niedrigerSchwellwert);
         let spitzenSchwellwert = 0, merkerNiedrigpreisphase = false
@@ -212,7 +213,7 @@ async function tibberSteuerungHauskraftwerk() {
             //log(`naechsteHochphase= ${JSON.stringify(naechsteHochphase)} endZeitBatterie = ${endZeitBatterie} datejetzt = ${JSON.stringify(datejetzt)}`,'warn')
             if(naechsteHochphase.Startzeit?.getTime() <= datejetzt.getTime() && naechsteHochphase.Endzeit?.getTime() > datejetzt.getTime()){
                 // Reicht die Batterieladung um diese zu überbrücken
-                if(naechsteHochphase.Endzeit.getTime() > endZeitBatterie.getTime()){
+                if(naechsteHochphase.Endzeit?.getTime() > endZeitBatterie.getTime()){
                     LogProgrammablauf += '17,';
                     spitzenSchwellwert = round(hoherSchwellwert * (1 / (systemwirkungsgrad / 100)), 4);
                     const spitzenPhasen = await findePreisPhasen(datenTibberLink48h, spitzenSchwellwert, spitzenSchwellwert);
@@ -226,8 +227,8 @@ async function tibberSteuerungHauskraftwerk() {
                         const ladedauerBatt = await berechneLadezeitBatterie(dauerSpitzenphase_h);
                         const differenzStunden = Math.max(0, Math.floor((naechsteSpitzenphase.Startzeit.getTime() - datejetzt.getTime()) / 3600000));
                         const dateStartLadezeit = new Date(await bestLoadTime(differenzStunden, ladedauerBatt));
+                       
                         const dateEndeLadezeit = new Date(dateStartLadezeit.getTime() + ladedauerBatt * 3600000);
-                            
                         // Wenn die berechnete Ladezeit zu lange ist dann ende Ladezeit auf Startzeit Spitzenphase setzen
                         LogProgrammablauf += '18,';
                         if (dateEndeLadezeit.getTime() < naechsteSpitzenphase.Startzeit.getTime()) {
@@ -271,7 +272,7 @@ async function tibberSteuerungHauskraftwerk() {
                     }else{
                         // Es kommt eine Hochpreisphase
                         // BatterieSOC prüfen ob Hochpreisphase Länger als Batteriereichweite ist
-                        if(naechsteHochphase.Endzeit.getTime() > endZeitBatterie.getTime()){
+                        if(naechsteHochphase.Endzeit?.getTime() > endZeitBatterie.getTime()){
                             // Batterie laden um diese zu überbrücken
                             const formatTime = date => `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
                             await setStateAsync(sID_besteLadezeit, `${formatTime(datejetzt)} Uhr bis ${formatTime(naechsteHochphase.Startzeit)} Uhr`);
@@ -659,7 +660,7 @@ async function bestLoadTime(reichweite_h,ladezeit_h) {
         return billigsteZeit;
     } else {
         LogProgrammablauf += '13,';
-        return Infinity; // Kein Eintrag innerhalb der Reichweite gefunden
+        log(`function bestLoadTime konnte keinen Eintrag innerhalb der Reichweite finden`,'error')
     }
 }
 
