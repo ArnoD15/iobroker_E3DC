@@ -14,7 +14,7 @@ const DebugAusgabeDetail = true;
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.1.4'
+const scriptVersion = 'Version 1.1.5'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 
 // IDs Script Charge_Control
@@ -54,7 +54,7 @@ const sID_niedrigerSchwellwertStrompreis = `${instanz}.${PfadEbene1}.${PfadEbene
 
 const sID_Schneebedeckt = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.pvSchneebedeckt`;
 const sID_Systemwirkungsgrad = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Systemwirkungsgrad`
-const sID_BatteriepreisAktiv = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.BatteriepreisAktiv`
+const sID_BatteriepreisAktiv = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.BatteriepreisAktiv`                   // Auswahl in VIS ob aktueller Strompreis Batterie brücksichtigt werden soll
 const sID_Stromgestehungskosten = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.stromgestehungskosten`
 const sID_TibberLinkID = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.tibberLinkId`
 
@@ -66,10 +66,10 @@ const arrayID_TibberPrices =[sID_PricesTodayJSON,sID_PricesTomorrowJSON];
 
 let maxBatterieSoC, aktuelleBatterieSoC_Pro, maxLadeleistungUser_W, stromgestehungskosten;
 let batterieKapazitaet_kWh, billigsterEinzelpreisBlock = 0, billigsterBlockPreis = 0, minStrompreis_48h = null, LogProgrammablauf = "";
-let batterieSOC_alt = null, aktuellerPreisTibber = null, strompreisBatterie,bruttoPreisBatterie,systemwirkungsgrad, batteriepreisAktiv ;
+let batterieSOC_alt = null, aktuellerPreisTibber = null, strompreisBatterie,bruttoPreisBatterie,systemwirkungsgrad ;
 let hoherSchwellwert, niedrigerSchwellwert;
 
-let bLock = false, bEntladenSperren = false, schneeBedeckt = false, notstromAktiv = false;                                                                 
+let bLock = false, bEntladenSperren = false, schneeBedeckt = false, notstromAktiv = false, batteriepreisAktiv = false;                                                                 
 
 let timerIds = [], timerTarget = [], timerObjektID = [],timerState =[], batterieLadedaten = [],datenHeute =[], datenMorgen = [], datenTibberLink48h = [];
 
@@ -181,7 +181,6 @@ async function tibberSteuerungHauskraftwerk() {
         const datejetzt = new Date();
         const [reichweite_h, minuten] = (await getStateAsync(sID_Autonomiezeit)).val.split(' / ')[1].split(' ')[0].split(':').map(Number);
         const endZeitBatterie = new Date(datejetzt.getTime() + reichweite_h * 3600000 + minuten * 60000);
-        log(`endZeitBatterie = ${endZeitBatterie}`,'warn')
         const pvLeistungAusreichend = await pruefePVLeistung(reichweite_h);
         const preisPhasen = await findePreisPhasen(datenTibberLink48h, hoherSchwellwert, niedrigerSchwellwert);
         let spitzenSchwellwert = 0, merkerNiedrigpreisphase = false
@@ -194,6 +193,9 @@ async function tibberSteuerungHauskraftwerk() {
         // Prüfen ob Freigabe zum laden vom E-Auto gesetzt werden kann
         await handleEAutoLaden(naechsteNiedrigphase,datejetzt);
         
+        // Prüfe ob Entladesperre der Batterie gesetzt werden muss
+        await pruefeBatterieEntladesperre(pvLeistungAusreichend,endZeitBatterie);
+
         // ist Prognose PV-Leistung ausreichend um Batterie zu laden oder maxBatterieSoC erreicht
         if (!pvLeistungAusreichend && aktuelleBatterieSoC_Pro < maxBatterieSoC) {
             
@@ -289,22 +291,24 @@ async function tibberSteuerungHauskraftwerk() {
             }
             
         } else {
-            
+            let message = '';
             LogProgrammablauf += '14,';
-            if (aktuelleBatterieSoC_Pro > maxBatterieSoC) {
-                await setStateAsync(sID_besteLadezeit, `max SOC erreicht`);
+            if (pvLeistungAusreichend) {
+                message = 'Laden mit PV-Leistung';
+                if (aktuelleBatterieSoC_Pro >= maxBatterieSoC) {
+                    message += ' und max SOC erreicht';
+                }
+            } else if (aktuelleBatterieSoC_Pro >= maxBatterieSoC) {
+                message = 'max SOC erreicht';
             } else {
-                await setStateAsync(sID_besteLadezeit, `Laden mit PV-Leistung`);
+                message = 'Laden mit PV-Leistung';
             }
-            // Entladesperre der Batterie ausschalten
-            await setStateAsync(sID_BatterieEntladesperre, false);
+            await setStateAsync(sID_besteLadezeit, message);
+            
         }
-
         await DebugLog(preisPhasen,naechsteNiedrigphase,naechsteHochphase,spitzenSchwellwert);
         LogProgrammablauf = '';
-
     } catch (error) {
-        // Fehlerbehandlung zentralisieren
         log(`Fehler in Funktion tibberSteuerungHauskraftwerk: ${error.message}`, 'error');
     }
 }
@@ -331,6 +335,33 @@ async function handleEAutoLaden(naechsteNiedrigphase,datejetzt) {
         }  
     }
 }
+
+// Funktionen Entladesperre prüfen
+async function pruefeBatterieEntladesperre(pvLeistungAusreichend,endZeitBatterie) {
+     LogProgrammablauf += '8,';
+    let pv_Leistung = false
+    let preisBatterie;
+    // Wenn Prognose PV-Leistung ausreicht um Batterie zu laden und die Batteriereichweite bis zum Sonnenaufgang reicht, dann auch bei niedrigem Tibber Preis entladen. 
+    if (pvLeistungAusreichend) {
+        // Holen der Sonnenaufgangs- und Sonnenuntergangszeiten
+        const sunriseEnd_ms = getAstroDate("sunriseEnd").getTime();  // Ende des Sonnenaufgangs
+        const sunset_ms = getAstroDate("sunset").getTime();          // Sonnenuntergang    
+        const endZeit_ms = new Date(endZeitBatterie).getTime();
+        // Prüfe, ob die Batteriezeit innerhalb der Sonnenzeiten liegt
+        if (endZeit_ms >= sunriseEnd_ms && endZeit_ms <= sunset_ms) {
+            pv_Leistung = true; // Entladung ist möglich, weil die Batteriezeit in der Sonnenzeit liegt
+        } 
+    }
+    // Prüfen ob der Bruttopreis oder der Nettopreis verwendet werden soll (Auswahl in VIS)
+    if(batteriepreisAktiv){preisBatterie = bruttoPreisBatterie }else{preisBatterie = strompreisBatterie}
+    if(preisBatterie > aktuellerPreisTibber && !pv_Leistung){
+        await setStateAsync(sID_BatterieEntladesperre, true)    
+    }else{
+        await setStateAsync(sID_BatterieEntladesperre, false)
+    }    
+}
+
+
 
 // Funktion sucht entweder die aktuelle Phase oder die nächste Phase mit Start- und Endzeit.
 function findeAktuelleOderNaechstePhase(arrayPhases) {
