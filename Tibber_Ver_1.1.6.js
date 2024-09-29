@@ -14,7 +14,7 @@ const DebugAusgabeDetail = true;
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.1.5'
+const scriptVersion = 'Version 1.1.6'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 
 // IDs Script Charge_Control
@@ -295,18 +295,18 @@ async function tibberSteuerungHauskraftwerk() {
             LogProgrammablauf += '14,';
             if (pvLeistungAusreichend) {
                 message = 'Laden mit PV-Leistung';
+                loescheAlleLadenTimer()
                 if (aktuelleBatterieSoC_Pro >= maxBatterieSoC) {
                     message += ' und max SOC erreicht';
                 }
             } else if (aktuelleBatterieSoC_Pro >= maxBatterieSoC) {
                 message = 'max SOC erreicht';
-            } else {
-                message = 'Laden mit PV-Leistung';
+                loescheAlleLadenTimer()
             }
             await setStateAsync(sID_besteLadezeit, message);
             
         }
-        await DebugLog(preisPhasen,naechsteNiedrigphase,naechsteHochphase,spitzenSchwellwert);
+        await DebugLog(preisPhasen,naechsteNiedrigphase,naechsteHochphase,spitzenSchwellwert,pvLeistungAusreichend);
         LogProgrammablauf = '';
     } catch (error) {
         log(`Fehler in Funktion tibberSteuerungHauskraftwerk: ${error.message}`, 'error');
@@ -408,7 +408,6 @@ function findeAktuelleOderNaechstePhase(arrayPhases) {
 // Funktion prüft die Reichweite der Batterie bis zum Sonnenaufgang und ob die Prognose PV-Leistung dann ausreicht.
 async function pruefePVLeistung(reichweiteStunden) {
     LogProgrammablauf += '5,';
-    
     // Wenn PV-Module Schneebedeckt sind, nicht berechnen
     if(schneeBedeckt){return false;}
     
@@ -886,7 +885,7 @@ async function clearAllTimeouts() {
 
 }
 
-async function DebugLog(preisPhasen,naechsteNiedrigphase,naechsteHochphase,spitzenSchwellwert)
+async function DebugLog(preisPhasen,naechsteNiedrigphase,naechsteHochphase,spitzenSchwellwert,pvLeistungAusreichend)
 {
     const [prognoseLadezeitBatterie,besteLadezeit,PrognoseBerechnung_kWh_heute,Batterie_SOC,reichweiteBatterie,BatterieLaden,Power_Bat_W,Power_Grid,eAutoLaden] = await Promise.all([
         getStateAsync(sID_ladezeitBatterie),
@@ -902,10 +901,10 @@ async function DebugLog(preisPhasen,naechsteNiedrigphase,naechsteHochphase,spitz
     
     
     log(`*******************  Debug LOG Tibber Skript ${scriptVersion} *******************`)
-    if (DebugAusgabeDetail){log(`timerIds1 = ${timerIds[0]}`)}
-    if (DebugAusgabeDetail){log(`timerIds2 = ${timerIds[1]}`)}
-    if (DebugAusgabeDetail){log(`timerTarget1 = ${timerTarget[0]}`)}
-    if (DebugAusgabeDetail){log(`timerTarget2 = ${timerTarget[1]}`)}
+    if (DebugAusgabeDetail){log(`timerIds = ${timerIds}`)}
+    if (DebugAusgabeDetail){log(`timerTarget = ${JSON.stringify(timerTarget)}`)}
+    if (DebugAusgabeDetail){log(`timerState = ${JSON.stringify(timerState)}`)}
+    if (DebugAusgabeDetail){log(`timerObjektID = ${JSON.stringify(timerObjektID)}`)}
     if (DebugAusgabeDetail){log(`besteLadezeit = ${besteLadezeit}`)}
     if (DebugAusgabeDetail){log(`billigsterEinzelpreisBlock = ${billigsterEinzelpreisBlock}`)}
     if (DebugAusgabeDetail){log(`billigsterBlockPreis = ${billigsterBlockPreis}`)}
@@ -918,6 +917,7 @@ async function DebugLog(preisPhasen,naechsteNiedrigphase,naechsteHochphase,spitz
     if (DebugAusgabeDetail){log(`batterieKapazitaet_kWh = ${batterieKapazitaet_kWh}`)}
     if (DebugAusgabeDetail){log(`Batterie_SOC = ${Batterie_SOC}`)}
     if (DebugAusgabeDetail){log(`prognoseLadezeitBatterie = ${prognoseLadezeitBatterie}`)}
+    if (DebugAusgabeDetail){log(`pvLeistungAusreichend = ${pvLeistungAusreichend}`)}
     if (DebugAusgabeDetail){log(`reichweiteBatterie = ${reichweiteBatterie}`)}
     if (DebugAusgabeDetail){log(`batteriepreisAktiv = ${batteriepreisAktiv}`)}
     if (DebugAusgabeDetail){log(`strompreisBatterie = ${strompreisBatterie}`)}
@@ -1024,7 +1024,25 @@ async function findePreisPhasen(data, highThreshold, lowThreshold) {
     return { highPhases, lowPhases };
 }
 
+function loescheAlleLadenTimer() {
+    // Durchlaufe das Array timerObjektID und finde alle Einträge, die 'Laden' entsprechen
+    const ladenIndices = timerObjektID
+        .map((id, index) => (id === 'Laden' ? index : -1))
+        .filter(index => index !== -1);  // Filtere die nicht passenden Indizes heraus
 
+    // Iteriere über alle gefundenen "Laden"-Timer und lösche sie
+    for (const index of ladenIndices) {
+        clearTimeout(timerIds[index]);  // Lösche den Timeout (Timer)
+        
+        // Entferne die Einträge an den gefundenen Indizes
+        timerObjektID.splice(index, 1);
+        timerIds.splice(index, 1);
+        timerTarget.splice(index, 1);
+        timerState.splice(index, 1);
+    }
+    setState(sID_timerAktiv,false)
+    LogProgrammablauf += '19,';
+}
 
 
 //***************************************************************************************************
@@ -1089,6 +1107,7 @@ on({id: sID_Batterie_SOC, change: "ne"}, async function (obj){
     batterieLadedaten = batterieLadedaten.filter(data => data.soc <= aktuelleBatterieSoC_Pro);
     await setStateAsync(sID_BatterieLadedaten,JSON.stringify(batterieLadedaten));
     if(aktuelleBatterieSoC_Pro >= maxBatterieSoC){
+        LogProgrammablauf += '9,';
         await setStateAtSpecificTime(jetzt, sID_BatterieLaden, false); 
     }
     
