@@ -77,6 +77,9 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.5.7
+* Fehler behoben, dass beim Speichern der History Daten die UTC-Zeit verwendet wurde, was beim Monatswechsel zu einer verzögerten Aktualisierung des Diagramms geführt hat.
+
 ### Version: 1.5.6
 * Wenn SET_POWER_MODE = null ist, wird jetzt 0 eingetragen und nicht mehr mit einem Fehler beendet.
 * Fehler bei der Erstellung Diagramm PrognoseAuto_kWh korrigiert.

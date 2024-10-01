@@ -18,7 +18,7 @@ const BUFFER_SIZE= 5;                                                           
 //------------------------------------------------------------------------------------------------------
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.5.6 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.5.7 ====- ${Logparser2}`);
 
 //******************************************************************************************************
 //****************************************** Objekt ID anlegen *****************************************
@@ -1010,8 +1010,15 @@ async function Prognosen_Berechnen() {
     }
 
     // Werte setzen für die folgenden Tage
-    await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.PrognoseBerechnung_kWh_heute`, Prognose_kWh_Tag[0]);
-
+    const sunsetHeute_ms = getAstroDate("sunset").getTime() - 2*3600000;
+    
+    // Nach Sonnenuntergang die Prognose für nächsten Tag setzen
+    if(DatumAk.getTime() > sunsetHeute_ms){
+        await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.PrognoseBerechnung_kWh_heute`, Prognose_kWh_Tag[1]);
+    }else{
+        await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.PrognoseBerechnung_kWh_heute`, Prognose_kWh_Tag[0]);    
+    }
+    
     for (let i = 1; i < 7; i++) {
         if (Tag[i] === '1') break;
         arrayPrognoseAuto_kWh[Tag[i]] = Prognose_kWh_Tag[i];
@@ -1265,7 +1272,7 @@ function round(digit, digits) {
 function nextDayDate(days) {
     const date = new Date();
     date.setDate(date.getDate() + days);
-    return date.toISOString().split('T')[0];
+    return date.toLocaleDateString('sv-SE');
 }
 
 
