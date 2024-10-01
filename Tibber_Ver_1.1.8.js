@@ -14,7 +14,7 @@ const DebugAusgabeDetail = true;
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.1.7'
+const scriptVersion = 'Version 1.1.8'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 
 // IDs Script Charge_Control
@@ -414,53 +414,60 @@ async function pruefePVLeistung(reichweiteStunden) {
     LogProgrammablauf += '5,';
     // Wenn PV-Module Schneebedeckt sind, nicht berechnen
     if(schneeBedeckt){return false;}
-    
+   
     const heute = new Date();
     const morgen = new Date(heute);
     morgen.setDate(heute.getDate() + 1);
+    const aktuelleZeit_ms = Date.now();
+    log(`heute = ${heute}`,'warn')
+    log(`aktuelleZeit_ms = ${aktuelleZeit_ms}`,'warn')
     
     // PV-Prognose für den heutigen Tag in kWh
     let erwartetePVLeistung_kWh = await getStateAsync(sID_PrognoseBerechnung_kWh_heute).then(state => state.val);
-
     // Prognose des Batterie SOC nach Ablauf von "reichweiteStunden" in %
     const prognoseBattSOC = await prognoseBatterieSOC(reichweiteStunden);
-
     // Berechnung der benötigten kWh, um die Batterie nach den gegebenen Stunden aufzuladen
     const benoetigteKapazitaet_kWh = (100 - prognoseBattSOC) / 100 * batterieKapazitaet_kWh;
-
     // Sonnenaufgangszeit und Sonnenuntergangszeit
     const sunriseEndTimeHeute_ms = getAstroDate("sunriseEnd").getTime();
     const sunsetHeute_ms = getAstroDate("sunset").getTime() - 2*3600000;
     const sunriseEndTimeMorgen_ms = getAstroDate("sunriseEnd", morgen).getTime();
+    // Berechne die verbleibende Zeit in Stunden bis zum Sonnenaufgang  (heute und morgen)
+    const stundenBisSunriseHeute = round((sunriseEndTimeHeute_ms - aktuelleZeit_ms) / (1000 * 60 * 60),2);
+    const stundenBisSunriseMorgen = round((sunriseEndTimeMorgen_ms - aktuelleZeit_ms) / (1000 * 60 * 60),2);
     
-    // Aktuelle Zeit in Millisekunden
-    const aktuelleZeit_ms = Date.now();
-    // Wenn es nach Sonnenaufgang ist und noch vor Sonnenuntergang
+    
+    // ist aktuelle Zeit zwischen Sonnenaufgang und Sonnenuntergang
     if (aktuelleZeit_ms >= sunriseEndTimeHeute_ms && aktuelleZeit_ms < sunsetHeute_ms) {
         // Berechne die gesamte Sonnenzeit in Stunden (Sonnenaufgang bis Sonnenuntergang)
         const gesamteSonnenstunden = (sunsetHeute_ms - sunriseEndTimeHeute_ms) / (1000 * 60 * 60);
         // Berechne die verbleibenden Sonnenstunden ab der aktuellen Zeit bis zum Sonnenuntergang
         const verbleibendeSonnenstunden = (sunsetHeute_ms - aktuelleZeit_ms) / (1000 * 60 * 60);
         // Berechne die angepasste PV-Leistung für den Rest des Tages
-        erwartetePVLeistung_kWh = (verbleibendeSonnenstunden / gesamteSonnenstunden) * erwartetePVLeistung_kWh;
+        const PVLeistung_kWh = (verbleibendeSonnenstunden / gesamteSonnenstunden) * erwartetePVLeistung_kWh;
+        if (PVLeistung_kWh >= benoetigteKapazitaet_kWh) {
+            return true; // Die PV-Leistung reicht aus
+        }
     }else{
-        // Berechne die verbleibende Zeit in Stunden bis zum Sonnenaufgang  (heute und morgen)
-        const stundenBisSunriseHeute = (sunriseEndTimeHeute_ms - aktuelleZeit_ms) / (1000 * 60 * 60);
-        const stundenBisSunriseMorgen = (sunriseEndTimeMorgen_ms - aktuelleZeit_ms) / (1000 * 60 * 60);
-
         // Prüfe, ob es vor oder nach Sonnenuntergang ist
         if (aktuelleZeit_ms < sunsetHeute_ms) {
             // Es ist vor Sonnenuntergang: Prüfe nur bis zum Sonnenaufgang heute
             if (reichweiteStunden >= stundenBisSunriseHeute) {
                 // Überprüfung: Reicht die angepasste PV-Leistung aus, um die Batterie zu laden?
-                if (erwartetePVLeistung_kWh >= benoetigteKapazitaet_kWh) {
+                const battSOC = await prognoseBatterieSOC(stundenBisSunriseHeute);
+                const benKapazitaet_kWh = (100 - battSOC) / 100 * batterieKapazitaet_kWh;
+                if (erwartetePVLeistung_kWh >= benKapazitaet_kWh) {
                     return true; // Die PV-Leistung reicht aus, und die Batterie hält bis zum Sonnenaufgang
                 }
             }
         } else {
             // Es ist nach Sonnenuntergang: Prüfe auch bis zum Sonnenaufgang morgen
             if (reichweiteStunden >= stundenBisSunriseMorgen) {
-                return true; // Die Batterie hält bis zum Sonnenaufgang + 1 Stunde morgen
+                const battSOC = await prognoseBatterieSOC(stundenBisSunriseMorgen);
+                const benKapazitaet_kWh = (100 - battSOC) / 100 * batterieKapazitaet_kWh;    
+                if (erwartetePVLeistung_kWh >= benKapazitaet_kWh) {
+                    return true; // Die Batterie hält bis zum Sonnenaufgang + 1 Stunde morgen
+                }
             }
         }
     }
