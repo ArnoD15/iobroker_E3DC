@@ -14,14 +14,14 @@ const DebugAusgabeDetail = true;
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.1.10'
+const scriptVersion = 'Version 1.1.11'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 const { DateTime } = require("luxon");
 // IDs Script Charge_Control
 const sID_Autonomiezeit =`${instanz}.Charge_Control.Allgemein.Autonomiezeit`;
 const sID_arrayHausverbrauch =`${instanz}.Charge_Control.Allgemein.arrayHausverbrauchDurchschnitt`;
 const sID_maxEntladetiefeBatterie =`${instanz}.Charge_Control.USER_ANPASSUNGEN.10_maxEntladetiefeBatterie`
-const sID_PrognoseBerechnung_kWh_heute =`${instanz}.Charge_Control.Allgemein.PrognoseBerechnung_kWh_heute`
+const sID_PrognoseAuto_kWh =`${instanz}.Charge_Control.History.PrognoseAuto_kWh`
 
 // IDs des Adapters e3dc-rscp
 const sID_Batterie_SOC =`${instanzE3DC_RSCP}.EMS.BAT_SOC`;                                                              // aktueller Batterie_SOC
@@ -66,7 +66,7 @@ const arrayID_TibberPrices =[sID_PricesTodayJSON,sID_PricesTomorrowJSON];
 
 let maxBatterieSoC, aktuelleBatterieSoC_Pro, maxLadeleistungUser_W, stromgestehungskosten;
 let batterieKapazitaet_kWh, billigsterEinzelpreisBlock = 0, billigsterBlockPreis = 0, minStrompreis_48h = null, LogProgrammablauf = "";
-let batterieSOC_alt = null, aktuellerPreisTibber = null, strompreisBatterie,bruttoPreisBatterie,systemwirkungsgrad ;
+let batterieSOC_alt = null, aktuellerPreisTibber = null, strompreisBatterie,bruttoPreisBatterie,systemwirkungsgrad = 0 ;
 let hoherSchwellwert = 0, niedrigerSchwellwert = 0;
 
 let bLock = false, bEntladenSperren = false, schneeBedeckt = false, notstromAktiv = false, batteriepreisAktiv = false;                                                                 
@@ -421,17 +421,26 @@ function findeAktuelleOderNaechstePhase(arrayPhases) {
 // Funktion prüft die Reichweite der Batterie bis zum Sonnenaufgang und ob die Prognose PV-Leistung dann ausreicht.
 async function pruefePVLeistung(reichweiteStunden) {
     LogProgrammablauf += '2,';
-    reichweiteStunden = parseFloat(reichweiteStunden)
+    reichweiteStunden = +reichweiteStunden || null;
+	
     // Wenn PV-Module Schneebedeckt sind, nicht berechnen
     if(schneeBedeckt){return false;}
    
+    const tagHeute = new Date().getDate();
+    const tagMorgen = new Date(new Date().setDate(new Date().getDate() + 1)).getDate();
     const heute = new Date();
-    const morgen = new Date(heute);
-    morgen.setDate(heute.getDate() + 1);
+    const morgen = new Date(new Date().setDate(new Date().getDate() + 1));
     const aktuelleZeit_ms = Date.now();
     
+
     // PV-Prognose für den heutigen Tag in kWh
-    let erwartetePVLeistung_kWh = await getStateAsync(sID_PrognoseBerechnung_kWh_heute).then(state => state.val);
+    log(`heute = ${heute}`,'warn')
+    log(`morgen = ${morgen}`,'warn')
+
+    sID_PrognoseAuto_kWh
+    let arrayPrognoseAuto_kWh = await getStateAsync(sID_PrognoseAuto_kWh).then(state => state.val);
+    let heuteErwartetePVLeistung_kWh = arrayPrognoseAuto_kWh[tagHeute];
+    let morgenErwartetePVLeistung_kWh = arrayPrognoseAuto_kWh[tagMorgen];
     // Prognose des Batterie SOC nach Ablauf von "reichweiteStunden" in %
     const prognoseBattSOC = await prognoseBatterieSOC(reichweiteStunden);
     // Berechnung der benötigten kWh, um die Batterie nach den gegebenen Stunden aufzuladen
@@ -452,7 +461,7 @@ async function pruefePVLeistung(reichweiteStunden) {
         // Berechne die verbleibenden Sonnenstunden ab der aktuellen Zeit bis zum Sonnenuntergang
         const verbleibendeSonnenstunden = (sunsetHeute_ms - aktuelleZeit_ms) / (1000 * 60 * 60);
         // Berechne die angepasste PV-Leistung für den Rest des Tages
-        const PVLeistung_kWh = (verbleibendeSonnenstunden / gesamteSonnenstunden) * erwartetePVLeistung_kWh;
+        const PVLeistung_kWh = (verbleibendeSonnenstunden / gesamteSonnenstunden) * heuteErwartetePVLeistung_kWh;
         if (PVLeistung_kWh >= benoetigteKapazitaet_kWh) {
             return true; // Die PV-Leistung reicht aus
         }
@@ -464,7 +473,7 @@ async function pruefePVLeistung(reichweiteStunden) {
                 // Überprüfung: Reicht die angepasste PV-Leistung aus, um die Batterie zu laden?
                 const battSOC = await prognoseBatterieSOC(stundenBisSunriseHeute);
                 const benKapazitaet_kWh = (100 - battSOC) / 100 * batterieKapazitaet_kWh;
-                if (erwartetePVLeistung_kWh >= benKapazitaet_kWh) {
+                if (heuteErwartetePVLeistung_kWh >= benKapazitaet_kWh) {
                     return true; // Die PV-Leistung reicht aus, und die Batterie hält bis zum Sonnenaufgang
                 }
             }
@@ -473,7 +482,7 @@ async function pruefePVLeistung(reichweiteStunden) {
             if (reichweiteStunden >= stundenBisSunriseMorgen) {
                 const battSOC = await prognoseBatterieSOC(stundenBisSunriseMorgen);
                 const benKapazitaet_kWh = (100 - battSOC) / 100 * batterieKapazitaet_kWh;    
-                if (erwartetePVLeistung_kWh >= benKapazitaet_kWh) {
+                if (morgenErwartetePVLeistung_kWh >= benKapazitaet_kWh) {
                     return true; // Die Batterie hält bis zum Sonnenaufgang + 1 Stunde morgen
                 }
             }
@@ -486,8 +495,8 @@ async function pruefePVLeistung(reichweiteStunden) {
 // Funktion berechnet den Batterie SOC nach einer variablen Zeit in h bei einem berechnetem Durchschnittsverbrauch.
 async function prognoseBatterieSOC(entladezeitStunden) {
     try {
-        entladezeitStunden = parseFloat(entladezeitStunden)
-        let hausverbrauch_day_kWh
+        entladezeitStunden = +entladezeitStunden || null;
+		let hausverbrauch_day_kWh
         let hausverbrauch_night_kWh
         // Leistungsdaten vom aktuellen Tag abrufen
         const hausverbrauch = JSON.parse((await getStateAsync(sID_arrayHausverbrauch)).val);
@@ -542,22 +551,20 @@ async function berechneLadezeitBatterie(dauer_h = null, startSOC = null) {
         let ladezeitInStunden = 0;
 
         // Berechnung auf Basis der Dauer in Stunden (dauer_h)
-        if (dauer_h !== null) {
+        if (dauer_h !== null ) {
             // Benötigte Energie in kWh für die gegebene Dauer
-            const benoetigteEnergie_kWh = round(durchschnittlicherVerbrauch_kWh * parseFloat(dauer_h), 2);
-            log(`benoetigteEnergie_kWh1 = ${benoetigteEnergie_kWh}`,'warn')
+            const benoetigteEnergie_kWh = round(durchschnittlicherVerbrauch_kWh * dauer_h, 2);
             // Ladezeit basierend auf der Energie und Ladeleistung berechnen
             ladezeitInStunden = benoetigteEnergie_kWh / maxLadeleistung_kW;
         }
 
         // Berechnung auf Basis des Start-Ladezustands (startSOC)
         if (startSOC !== null) {
-            const zuLadendeProzent = maxBatterieSoC - parseFloat(startSOC);
+            const zuLadendeProzent = maxBatterieSoC - startSOC;
   
             if (zuLadendeProzent > 0) {
                 // Berechnung der zu ladenden Kapazität in kWh
                 const zuLadendeKapazitaet_kWh = (batterieKapazitaet_kWh * zuLadendeProzent) / 100;
-                log(`zuLadendeKapazitaet_kWh = ${zuLadendeKapazitaet_kWh}`,'warn')
                 // Berechnung der Ladezeit in Stunden
                 ladezeitInStunden = zuLadendeKapazitaet_kWh / maxLadeleistung_kW;
             }
@@ -641,8 +648,11 @@ async function setStateAtSpecificTime(targetTime, stateID, state) {
 // Funktion sucht den günstigsten Preis über eine zusammenhängende dauer in Stunden "ladezeit_h"
 // innerhalb einer Reichweite "reichweite_h" in Stunden
 async function bestLoadTime(reichweite_h,ladezeit_h) {
-    reichweite_h = parseFloat(reichweite_h);
-    ladezeit_h = parseFloat(ladezeit_h)
+    reichweite_h = +reichweite_h || null;
+    ladezeit_h = +ladezeit_h || null;
+	if(reichweite_h === null || ladezeit_h === null){
+		log(`function bestLoadTime konnte keinen Eintrag innerhalb der Reichweite finden`,'error')
+	}
     const now = new Date(); // Aktuelle Zeit
     // Prüft, ob die Variablen datenHeute und datenMorgen Arrays sind.
     if (!Array.isArray(datenHeute) || !Array.isArray(datenMorgen) ) {
@@ -906,10 +916,10 @@ async function clearAllTimeouts() {
 
 async function DebugLog(preisPhasen,naechsteNiedrigphase,naechsteHochphase,spitzenSchwellwert,pvLeistungAusreichend)
 {
-    const [prognoseLadezeitBatterie,besteLadezeit,PrognoseBerechnung_kWh_heute,Batterie_SOC,reichweiteBatterie,BatterieLaden,Power_Bat_W,Power_Grid,eAutoLaden,bEntladenSperren] = await Promise.all([
+    const [prognoseLadezeitBatterie,besteLadezeit,arrayPrognoseAuto_kWh,Batterie_SOC,reichweiteBatterie,BatterieLaden,Power_Bat_W,Power_Grid,eAutoLaden,bEntladenSperren] = await Promise.all([
         getStateAsync(sID_ladezeitBatterie),
         getStateAsync(sID_besteLadezeit),
-        getStateAsync(sID_PrognoseBerechnung_kWh_heute),
+        getStateAsync(sID_PrognoseAuto_kWh),
         getStateAsync(sID_Batterie_SOC),
         getStateAsync(sID_Autonomiezeit),
         getStateAsync(sID_BatterieLaden),
@@ -918,7 +928,10 @@ async function DebugLog(preisPhasen,naechsteNiedrigphase,naechsteHochphase,spitz
         getStateAsync(sID_eAutoLaden),
         getStateAsync(sID_BatterieEntladesperre)
     ]).then(states => states.map(state => state.val));
-    
+    const tagHeute = new Date().getDate();
+    const tagMorgen = new Date(new Date().setDate(new Date().getDate() + 1)).getDate();
+    let heuteErwartetePVLeistung_kWh = arrayPrognoseAuto_kWh[tagHeute];
+    let morgenErwartetePVLeistung_kWh = arrayPrognoseAuto_kWh[tagMorgen];
     
     log(`*******************  Debug LOG Tibber Skript ${scriptVersion} *******************`)
     if (DebugAusgabeDetail){log(`timerIds = ${timerIds}`)}
@@ -933,7 +946,7 @@ async function DebugLog(preisPhasen,naechsteNiedrigphase,naechsteHochphase,spitz
     if (DebugAusgabeDetail){log(`Schwellwert hoher Strompreis = ${hoherSchwellwert}`)}
     if (DebugAusgabeDetail){log(`Schwellwert niedriger Strompreis = ${niedrigerSchwellwert}`)}
     if (DebugAusgabeDetail){log(`schneeBedeckt = ${schneeBedeckt}`)}
-    if (DebugAusgabeDetail){log(`PrognoseBerechnung_kWh_heute = ${PrognoseBerechnung_kWh_heute}`)}
+    if (DebugAusgabeDetail){log(`Prognose PV-Leistung heute = ${heuteErwartetePVLeistung_kWh} kWh  morgen = ${morgenErwartetePVLeistung_kWh} kWh`)}
     if (DebugAusgabeDetail){log(`batterieKapazitaet_kWh = ${batterieKapazitaet_kWh}`)}
     if (DebugAusgabeDetail){log(`Batterie_SOC = ${Batterie_SOC}`)}
     if (DebugAusgabeDetail){log(`prognoseLadezeitBatterie = ${prognoseLadezeitBatterie}`)}
@@ -961,8 +974,12 @@ async function findePreisPhasen(data, highThreshold, lowThreshold) {
     let highPhases = [];
     let lowPhases = [];
     let currentPhase = null;
-    highThreshold = parseFloat(highThreshold);
-    lowThreshold = parseFloat(lowThreshold);
+    highThreshold = +highThreshold || null;
+	lowThreshold = +lowThreshold || null;
+	if(highThreshold === null || lowThreshold === null){
+		log(`function findePreisPhasen highThreshold oder lowThreshold sind keine gültige Zahl`,'error')
+	}
+	
     
     if (highThreshold < lowThreshold) {
         log(`Schwellwert hoher Strompreis ist niedriger als Schwellwert niedriger Strompreis, Schwellwert hoher Strompreis wurde angepasst`, 'warn');
@@ -1076,6 +1093,9 @@ function berechneLadeUndSperrzeiten(datenTibberLink48h, niedrigerSchwellwert, ho
     let tibberSperrzeiten = [];
     let ladeblock = null;
     let sperrblock = null;
+	niedrigerSchwellwert = +niedrigerSchwellwert || null;
+	hoherSchwellwert = +hoherSchwellwert ||null;
+	systemwirkungsgrad = +systemwirkungsgrad || null;
 
     // Hilfsfunktion um den nächsten Preis zu bekommen
     function holeNaechstenPreis(daten, index) {
@@ -1210,8 +1230,7 @@ on({id: sID_Power_Grid, change: "ne"}, async function (obj){
 
 
 on({id: sID_Batterie_SOC, change: "ne"}, async function (obj){	
-    const jetzt = new Date();
-    
+    log(`Batterie SOC = ${obj.state.val}`,'warn')
     let [leistungBatterie,BatterieLaden,Power_Grid] = await Promise.all([
         getStateAsync(sID_Power_Bat_W),
         getStateAsync(sID_BatterieLaden),
