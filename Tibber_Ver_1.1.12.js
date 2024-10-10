@@ -14,7 +14,7 @@ const DebugAusgabeDetail = true;
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.1.11'
+const scriptVersion = 'Version 1.1.12'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 const { DateTime } = require("luxon");
 // IDs Script Charge_Control
@@ -180,7 +180,8 @@ async function tibberSteuerungHauskraftwerk() {
     try {    
         LogProgrammablauf += '1,';
         const datejetzt = new Date();
-        const [reichweite_h, minuten] = (await getStateAsync(sID_Autonomiezeit)).val.split(' / ')[1].split(' ')[0].split(':').map(Number);
+        const [stunden, minuten] = (await getStateAsync(sID_Autonomiezeit)).val.split(' / ')[1].split(' ')[0].split(':').map(Number);
+        const reichweite_h = round(stunden + (minuten /60),2)
         const endZeitBatterie = new Date(datejetzt.getTime() + reichweite_h * 3600000 + minuten * 60000);
         const pvLeistungAusreichend = await pruefePVLeistung(reichweite_h);
         const preisPhasen = await findePreisPhasen(datenTibberLink48h, hoherSchwellwert, niedrigerSchwellwert);
@@ -200,10 +201,28 @@ async function tibberSteuerungHauskraftwerk() {
         
         // Prüfe ob Entladesperre der Batterie gesetzt werden muss
         await pruefeBatterieEntladesperre(pvLeistungAusreichend,endZeitBatterie);
-
+        spitzenSchwellwert = round(hoherSchwellwert * (1 / (systemwirkungsgrad / 100)), 4);
+        
+        // Prüfen ob gerade eine Spitzenpreisphase ist
+        if(aktuellerPreisTibber > spitzenSchwellwert){
+            LogProgrammablauf += '30,';    
+            await DebugLog(preisPhasen,naechsteNiedrigphase,naechsteHochphase,spitzenSchwellwert,pvLeistungAusreichend);
+            LogProgrammablauf = '';
+            await setStateAsync(sID_besteLadezeit, `Spitzenpreisphase`);
+            return;
+        }
         // ist Prognose PV-Leistung ausreichend um Batterie zu laden oder maxBatterieSoC erreicht
         if (!pvLeistungAusreichend && aktuelleBatterieSoC_Pro < maxBatterieSoC) {
             LogProgrammablauf += '12,';
+            // Prüfen ob gerade eine Spitzenpreisphase ist
+            if(aktuellerPreisTibber > spitzenSchwellwert){
+                LogProgrammablauf += '29,';    
+                await DebugLog(preisPhasen,naechsteNiedrigphase,naechsteHochphase,spitzenSchwellwert,pvLeistungAusreichend);
+                LogProgrammablauf = '';
+                await setStateAsync(sID_besteLadezeit, `Spitzenpreisphase`);
+                await setStateAsync(sID_BatterieLaden, false);
+                return;
+            }
             // Ist aktuell eine Hochpreisphase
             //log(`naechsteHochphase= ${JSON.stringify(naechsteHochphase)} endZeitBatterie = ${endZeitBatterie} datejetzt = ${JSON.stringify(datejetzt)}`,'warn')
             if(naechsteHochphase.Startzeit?.getTime() <= datejetzt.getTime() && naechsteHochphase.Endzeit?.getTime() > datejetzt.getTime()){
@@ -219,29 +238,25 @@ async function tibberSteuerungHauskraftwerk() {
                     //log(`naechsteSpitzenphase = ${JSON.stringify(naechsteSpitzenphase)} `,'warn')
                     if (naechsteSpitzenphase.Startzeit) {
                         LogProgrammablauf += '15,';
-                        // ist aktuell eine Spitzenpreisphase
-                        if(naechsteSpitzenphase.Startzeit?.getTime() <= datejetzt.getTime() && naechsteSpitzenphase.Endzeit?.getTime() > datejetzt.getTime()){
-                            LogProgrammablauf += '29,';
-                            // Prüfen wie lange diese dauert und wie lange die Batterie geladen werden muss um diese zu überbrücken
-                            const dauerSpitzenphase_h = (naechsteSpitzenphase.Endzeit.getTime() - naechsteSpitzenphase.Startzeit.getTime()) / 3600000;
-                            const ladedauerBatt = await berechneLadezeitBatterie(dauerSpitzenphase_h);
-                            const differenzStunden = Math.max(0, Math.floor((naechsteSpitzenphase.Startzeit.getTime() - datejetzt.getTime()) / 3600000));
-                            const dateStartLadezeit = new Date(await bestLoadTime(differenzStunden, ladedauerBatt));
-                            const dateEndeLadezeit = new Date(dateStartLadezeit.getTime() + ladedauerBatt * 3600000);
-                            // Wenn die berechnete Ladezeit zu lange ist dann ende Ladezeit auf Startzeit Spitzenphase setzen
-                            if (dateEndeLadezeit.getTime() < naechsteSpitzenphase.Startzeit.getTime()) {
-                                await setStateAtSpecificTime(dateEndeLadezeit, sID_BatterieEntladesperre, true);
-                                await setStateAtSpecificTime(naechsteSpitzenphase.Startzeit, sID_BatterieEntladesperre, false);
-                            }else{
-                                LogProgrammablauf += '16,';
-                                // Timer Ladefreigabe setzen für berechnete dauer
-                                const formatTime = date => `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
-                                await setStateAsync(sID_besteLadezeit, `${formatTime(dateStartLadezeit)} Uhr bis ${formatTime(dateEndeLadezeit)} Uhr`);
-                                await setStateAtSpecificTime(dateStartLadezeit, sID_BatterieLaden, true);
-                                await setStateAtSpecificTime(dateEndeLadezeit, sID_BatterieLaden, false);
-                            }
-                            await setStateAsync(sID_besteLadezeit, `Spitzenpreisphase`);
+                        // Prüfen wie lange diese dauert und wie lange die Batterie geladen werden muss um diese zu überbrücken
+                        const dauerSpitzenphase_h = (naechsteSpitzenphase.Endzeit.getTime() - naechsteSpitzenphase.Startzeit.getTime()) / 3600000;
+                        const ladedauerBatt = await berechneLadezeitBatterie(dauerSpitzenphase_h);
+                        const differenzStunden = Math.max(0, Math.floor((naechsteSpitzenphase.Startzeit.getTime() - datejetzt.getTime()) / 3600000));
+                        const dateStartLadezeit = new Date(await bestLoadTime(differenzStunden, ladedauerBatt));
+                        const dateEndeLadezeit = new Date(dateStartLadezeit.getTime() + ladedauerBatt * 3600000);
+                        // Wenn die berechnete Ladezeit zu lange ist dann ende Ladezeit auf Startzeit Spitzenphase setzen
+                        if (dateEndeLadezeit.getTime() < naechsteSpitzenphase.Startzeit.getTime()) {
+                            await setStateAtSpecificTime(dateEndeLadezeit, sID_BatterieEntladesperre, true);
+                            await setStateAtSpecificTime(naechsteSpitzenphase.Startzeit, sID_BatterieEntladesperre, false);
+                        }else{
+                            LogProgrammablauf += '16,';
+                            // Timer Ladefreigabe setzen für berechnete dauer
+                            const formatTime = date => `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+                            await setStateAsync(sID_besteLadezeit, `${formatTime(dateStartLadezeit)} Uhr bis ${formatTime(dateEndeLadezeit)} Uhr`);
+                            await setStateAtSpecificTime(dateStartLadezeit, sID_BatterieLaden, true);
+                            await setStateAtSpecificTime(dateEndeLadezeit, sID_BatterieLaden, false);
                         }
+                        
                     }else{   
                         // aktuell in einer Hochpreisphase,keine Spitzenphase gefunden, Batterieladung reicht nicht aus zum überbrücken
                         await setStateAsync(sID_besteLadezeit, `Hochpreisphase`);
