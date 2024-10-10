@@ -203,14 +203,6 @@ async function tibberSteuerungHauskraftwerk() {
         await pruefeBatterieEntladesperre(pvLeistungAusreichend,endZeitBatterie);
         spitzenSchwellwert = round(hoherSchwellwert * (1 / (systemwirkungsgrad / 100)), 4);
         
-        // Prüfen ob gerade eine Spitzenpreisphase ist
-        if(aktuellerPreisTibber > spitzenSchwellwert){
-            LogProgrammablauf += '30,';    
-            await DebugLog(preisPhasen,naechsteNiedrigphase,naechsteHochphase,spitzenSchwellwert,pvLeistungAusreichend);
-            LogProgrammablauf = '';
-            await setStateAsync(sID_besteLadezeit, `Spitzenpreisphase`);
-            return;
-        }
         // ist Prognose PV-Leistung ausreichend um Batterie zu laden oder maxBatterieSoC erreicht
         if (!pvLeistungAusreichend && aktuelleBatterieSoC_Pro < maxBatterieSoC) {
             LogProgrammablauf += '12,';
