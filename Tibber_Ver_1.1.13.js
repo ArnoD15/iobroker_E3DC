@@ -14,8 +14,9 @@ const DebugAusgabeDetail = true;
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.1.12'
+const scriptVersion = 'Version 1.1.13'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
+// @ts-ignore
 const { DateTime } = require("luxon");
 // IDs Script Charge_Control
 const sID_Autonomiezeit =`${instanz}.Charge_Control.Allgemein.Autonomiezeit`;
@@ -1205,7 +1206,8 @@ on({id: regexPatternTibber, change: "ne"}, async function (obj){
     log(`-==== User Parameter ${obj.id.split('.')[4]} wurde in ${obj.state.val} geändert ====-`,'warn')
     if (obj.id.split('.')[4] == 'maxSOC_Batterie' ){maxBatterieSoC = obj.state.val}
     if (obj.id.split('.')[4] == 'maxLadeleistung' ){maxLadeleistungUser_W = obj.state.val}
-    if (obj.id.split('.')[4] == 'maxStrompreis' ){hoherSchwellwert = obj.state.val}
+    if (obj.id.split('.')[4] == 'hoherSchwellwertStrompreis' ){hoherSchwellwert = obj.state.val}
+    if (obj.id.split('.')[4] == 'niedrigerSchwellwertStrompreis' ){niedrigerSchwellwert = obj.state.val}
     if (obj.id.split('.')[4] == 'pvSchneebedeckt' ){schneeBedeckt = obj.state.val}
     if (obj.id.split('.')[4] == 'Systemwirkungsgrad' ){systemwirkungsgrad = obj.state.val}
     if (obj.id.split('.')[4] == 'BatteriepreisAktiv' ){batteriepreisAktiv = obj.state.val}
