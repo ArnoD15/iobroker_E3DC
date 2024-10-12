@@ -77,6 +77,9 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.5.8
+* Es werden die wichtigsten e3dc-rscp Adaptereinstellungen geprüft und wenn diese abweichen wird im LOG eine Warnung ausgegeben.
+
 ### Version: 1.5.7
 * Fehler behoben, dass beim Speichern der History Daten die UTC-Zeit verwendet wurde, was beim Monatswechsel zu einer verzögerten Aktualisierung des Diagramms geführt hat.
 
