@@ -18,7 +18,7 @@ const BUFFER_SIZE= 5;                                                           
 //------------------------------------------------------------------------------------------------------
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.5.7 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.5.8 ====- ${Logparser2}`);
 
 //******************************************************************************************************
 //****************************************** Objekt ID anlegen *****************************************
@@ -167,6 +167,7 @@ async function ScriptStart()
     log(`${Logparser1} -==== alle Objekt ID\'s angelegt ====- ${Logparser2}`);
     await CheckState();
     log(`${Logparser1} -==== alle Objekte ID\'s überprüft ====- ${Logparser2}`);
+    await pruefeAdapterEinstellungen();
     // Proplanta Länderauswahl zuordnen
     baseurl = await baseUrlsCountrys[country];
     homeConsumption = JSON.parse((await getStateAsync(sID_arrayHausverbrauch)).val);
@@ -195,6 +196,7 @@ async function ScriptStart()
         getStateAsync(sID_Batterie_SOC)             // Aktueller Batterie SOC
     ]).then(states => states.map(state => state.val));
 
+    startDischargeDefault = 65;
     Max_wrleistung_W = Max_wrleistung_W - 200;                                         // Maximale Wechselrichter Leistung (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
     Einspeiselimit_kWh = ((InstalliertPeakLeistung/100)*Einspeiselimit_Pro-200)/1000   // Einspeiselimit (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
     
@@ -304,11 +306,6 @@ async function CreateState(){
 // Alle User Eingaben prüfen ob Werte eingetragen wurden und Werte zuweisen
 async function CheckState() {
     const idUSER_ANPASSUNGEN = `${instanz}.${PfadEbene1}.${PfadEbene2[4]}`;
-    const e3dc_rscp_Adapter = getObject(`system.adapter.${instanzE3DC_RSCP}`);
-    if(e3dc_rscp_Adapter.native.setpower_interval != 0){
-        log(`!! Bei den Instanzeinstellungen vom Adapter e3dc-rscp wurde das SET_POWER Wiederholintervall nicht auf 0 eingestellt. Bitte ändern !!`,'error')
-        return;
-    }
     const objekte = [
         { id: '10_LogHistoryLokal', varName: 'logflag', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
         { id: '10_LogHistoryPath', varName: 'sLogPath', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
@@ -2137,6 +2134,67 @@ async function calculateBatteryRange(currentConsumptionW) {
     }
 }
 
+// Einstellungen e3dc-rscp Adapter prüfen
+async function pruefeAdapterEinstellungen() {
+    // Verwende 'await' für asynchrone Funktion
+    const e3dc_rscp_Adapter = await getObject(`system.adapter.${instanzE3DC_RSCP}`);
+
+    // Tags, die geprüft werden sollen
+    const tagsToCheckChargeControl = [
+        { tag: "TAG_EMS_REQ_POWER_PV"},
+        { tag: "TAG_EMS_REQ_POWER_BAT"},
+        { tag: "TAG_EMS_REQ_POWER_HOME"},
+        { tag: "TAG_EMS_REQ_POWER_GRID"},
+        { tag: "TAG_EMS_REQ_POWER_ADD"},
+        { tag: "TAG_EMS_REQ_BAT_SOC"},
+        { tag: "TAG_EMS_REQ_MODE"},
+        { tag: "TAG_EMS_REQ_STATUS"},
+        { tag: "TAG_EMS_REQ_POWER_PV_AC_OUT"},
+        { tag: "TAG_PM_REQ_POWER_L1"},
+        { tag: "TAG_PM_REQ_POWER_L2"},
+        { tag: "TAG_PM_REQ_POWER_L3"},
+        { tag: "TAG_PM_REQ_ENERGY_L1"},
+        { tag: "TAG_PM_REQ_ENERGY_L2"},
+        { tag: "TAG_PM_REQ_ENERGY_L3"},
+        { tag: "TAG_PVI_REQ_AC_POWER"},
+        { tag: "TAG_PVI_REQ_AC_VOLTAGE"},
+        { tag: "TAG_PVI_REQ_AC_CURRENT"},
+        { tag: "TAG_PVI_REQ_DC_POWER"},
+        { tag: "TAG_PVI_REQ_DC_VOLTAGE"},
+        { tag: "TAG_PVI_REQ_DC_CURRENT"},
+        { tag: "TAG_PVI_REQ_DC_STRING_ENERGY_ALL"},
+        { tag: "TAG_SYS_REQ_IS_SYSTEM_REBOOTING"},
+        { tag: "TAG_BAT_REQ_TRAINING_MODE"}
+    ];
+
+    const tagsToCheckWB = [
+        { tag: "TAG_WB_REQ_PM_POWER_L1"},
+        { tag: "TAG_WB_REQ_PM_POWER_L2"},
+        { tag: "TAG_WB_REQ_PM_POWER_L3"}
+    ];
+
+    // Überprüfung der Intervalle
+    for (let { tag} of tagsToCheckChargeControl) {
+        const item = e3dc_rscp_Adapter.native.polling_intervals.find(interval => interval.tag === tag);
+        if (item && item.interval !== `S`) {
+            log(`Bitte die Einstellungen des e3dc-rscp Adapter für ${tag} auf Abfrageintervall 'S' (kurz) setzen.`, 'warn');
+        }
+    }
+
+    // Überprüfung des kurzen Abfrageintervalls
+    const pollingIntervalShort = e3dc_rscp_Adapter.native.polling_interval_short;
+    if (pollingIntervalShort > 5) {
+        log(`Bitte das kurze Abfrageintervall des e3dc-rscp Adapter auf maximal 5 Sekunden setzen.`, 'warn');
+    }
+    
+    
+    if(e3dc_rscp_Adapter.native.setpower_interval != 0){
+        log(`!! Bei den Instanzeinstellungen vom Adapter e3dc-rscp wurde das SET_POWER Wiederholintervall nicht auf 0 eingestellt. Bitte ändern !!`,'error')
+        return;
+    }
+
+
+}
 
 //***************************************************************************************************
 //********************************** Schedules und Trigger Bereich **********************************
