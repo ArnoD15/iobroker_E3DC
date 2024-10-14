@@ -14,7 +14,7 @@ const DebugAusgabeDetail = true;
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.1.13'
+const scriptVersion = 'Version 1.1.14'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 // @ts-ignore
 const { DateTime } = require("luxon");
@@ -40,6 +40,7 @@ const sID_besteLadezeit = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.besteLadeze
 const sID_ladezeitBatterie = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.ladezeitBatterie`;                      // Anzeige in VIS Prognose Ladezeit Batterie bei aktuellen Einstellungen
 const sID_timerAktiv = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.timerAktiv`;                                  // Anzeige in VIS Status Timer um Batterie zu laden
 const sID_StrompreisBatterie = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.strompreisBatterie`                   // Anzeige in VIS aktueller Strompreis Batterie
+const sID_Spitzenstrompreis = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Spitzenstrompreis`                     // Anzeige in VIS aktueller Strompreis Batterie
 
 const sID_BatterieLaden =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.BatterieLaden`;                             // Schnittstelle zu Charge-Control für die Ladefreigabe
 const sID_eAutoLaden = `${instanz}.${PfadEbene1}.${PfadEbene2[1]}.eAutoLaden`;                                  // Schnittstelle zu E3DC_Wallbox Script Auto laden
@@ -70,7 +71,7 @@ let batterieKapazitaet_kWh, billigsterEinzelpreisBlock = 0, billigsterBlockPreis
 let batterieSOC_alt = null, aktuellerPreisTibber = null, strompreisBatterie,bruttoPreisBatterie,systemwirkungsgrad = 0 ;
 let hoherSchwellwert = 0, niedrigerSchwellwert = 0;
 
-let bLock = false, bEntladenSperren = false, schneeBedeckt = false, notstromAktiv = false, batteriepreisAktiv = false;                                                                 
+let bLock = false, schneeBedeckt = false, notstromAktiv = false, batteriepreisAktiv = false;                                                                 
 
 let timerIds = [], timerTarget = [], timerObjektID = [],timerState =[], batterieLadedaten = [],datenHeute =[], datenMorgen = [], datenTibberLink48h = [];
 
@@ -83,7 +84,8 @@ async function createState(){
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.besteLadezeit`, {'def':'', 'name':'Anzeige in VIS bester Zeitraum um Batterie zu laden und Status' ,'type':'string'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.ladezeitBatterie`, {'def': 0, 'name':'Anzeige in VIS Prognose Ladezeit Batterie bei aktuellen Einstellungen' ,'type':'number', 'unit':'h'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.timerAktiv`, {'def':false, 'name':'Anzeige in VIS Status Timer um Batterie zu laden' ,'type':'boolean'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.strompreisBatterie`, {'def': 0, 'name':'Anzeige in VIS aktueller Strompreis Batterie' ,'type':'number', 'unit':'kWh'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.strompreisBatterie`, {'def': 0, 'name':'Anzeige in VIS aktueller Strompreis Batterie' ,'type':'number', 'unit':'€'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Spitzenstrompreis`, {'def': 0, 'name':'Anzeige in VIS Schwellwert Spitzenstrompreis' ,'type':'number', 'unit':'€'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.BatterieLaden`, {'def':false, 'name':'Schnittstelle zu Charge-Control laden' ,'type':'boolean'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.eAutoLaden`, {'def':false, 'name':'Schnittstelle zu E3DC_Wallbox Script Auto laden' ,'type':'boolean'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.BatterieEntladesperre`, {'def':false, 'name':'Schnittstelle zu Charge-Control Entladesperre' ,'type':'boolean'});
@@ -190,6 +192,7 @@ async function tibberSteuerungHauskraftwerk() {
         aktuellerPreisTibber = await getCurrentPrice();
         //log(`preisPhasen.highPhases= ${JSON.stringify(preisPhasen.highPhases)}`,'warn')
         spitzenSchwellwert = round(hoherSchwellwert * (1 / (systemwirkungsgrad / 100)), 4);
+        await setStateAsync(sID_Spitzenstrompreis, spitzenSchwellwert);
         const naechsteNiedrigphase = findeAktuelleOderNaechstePhase(preisPhasen.lowPhases);
         const naechsteHochphase = findeAktuelleOderNaechstePhase(preisPhasen.highPhases);
         //log(`naechsteHochphase= ${JSON.stringify(naechsteHochphase)}`,'warn')
@@ -202,7 +205,6 @@ async function tibberSteuerungHauskraftwerk() {
         
         // Prüfe ob Entladesperre der Batterie gesetzt werden muss
         await pruefeBatterieEntladesperre(pvLeistungAusreichend,endZeitBatterie);
-        spitzenSchwellwert = round(hoherSchwellwert * (1 / (systemwirkungsgrad / 100)), 4);
         
         // ist Prognose PV-Leistung ausreichend um Batterie zu laden oder maxBatterieSoC erreicht
         if (!pvLeistungAusreichend && aktuelleBatterieSoC_Pro < maxBatterieSoC) {
@@ -223,7 +225,7 @@ async function tibberSteuerungHauskraftwerk() {
                 // Reicht die Batterieladung um diese zu überbrücken
                 if(naechsteHochphase.Endzeit?.getTime() > endZeitBatterie.getTime()){
                     LogProgrammablauf += '14,';
-                    spitzenSchwellwert = round(hoherSchwellwert * (1 / (systemwirkungsgrad / 100)), 4);
+                    
                     const spitzenPhasen = await findePreisPhasen(datenTibberLink48h, spitzenSchwellwert, spitzenSchwellwert);
                     const naechsteSpitzenphase = findeAktuelleOderNaechstePhase(spitzenPhasen.highPhases);
                         
@@ -321,6 +323,7 @@ async function tibberSteuerungHauskraftwerk() {
                 message = 'max SOC erreicht';
                 maxBatterieSoC = (await getStateAsync(sID_maxSoC)).val - 2;
                 loescheAlleLadenTimer()
+                await setStateAsync(sID_BatterieLaden, false);
            }
             
             await setStateAsync(sID_besteLadezeit, message);
@@ -373,7 +376,7 @@ async function pruefeBatterieEntladesperre(pvLeistungAusreichend,endZeitBatterie
         if (endZeit_ms >= sunriseEnd_ms && endZeit_ms <= sunset_ms) {
             sperreBatt = false; // Entladung ist möglich, weil die Batteriezeit in der Sonnenzeit liegt
         } 
-    }else if(aktuellerPreisTibber < hoherSchwellwert){
+    }else if(aktuellerPreisTibber < hoherSchwellwert && !pvLeistungAusreichend){
         sperreBatt = true;
     }else if(preisBatterie > aktuellerPreisTibber){
         //sperreBatt = true; // Test ohne Batteriepreis
@@ -431,76 +434,79 @@ function findeAktuelleOderNaechstePhase(arrayPhases) {
 }
 
 
-// Funktion prüft die Reichweite der Batterie bis zum Sonnenaufgang und ob die Prognose PV-Leistung dann ausreicht.
 async function pruefePVLeistung(reichweiteStunden) {
     LogProgrammablauf += '2,';
     reichweiteStunden = +reichweiteStunden || null;
-	
-    // Wenn PV-Module Schneebedeckt sind, nicht berechnen
-    if(schneeBedeckt){return false;}
-   
-    const tagHeute = new Date().getDate();
-    const tagMorgen = new Date(new Date().setDate(new Date().getDate() + 1)).getDate();
+    
+    // Wenn die PV-Module schneebedeckt sind, abbrechen
+    if (schneeBedeckt) return false;
+    
     const heute = new Date();
-    const morgen = new Date(new Date().setDate(new Date().getDate() + 1));
+    const morgen = new Date(new Date().setDate(heute.getDate() + 1));
     const aktuelleZeit_ms = Date.now();
-    
 
-    // PV-Prognose für den heutigen Tag in kWh
-    sID_PrognoseAuto_kWh
+    // Sonnenaufgang und Sonnenuntergang heute und morgen
+    const sunriseHeute_ms = getAstroDate("sunrise", heute).getTime();
+    const sunsetHeute_ms = getAstroDate("sunset", heute).getTime() - 2 * 3600000;  // 2 Stunden Puffer
+    const sunriseMorgen_ms = getAstroDate("sunrise", morgen).getTime();
+
+    // PV-Prognosen für heute und morgen in kWh
     let arrayPrognoseAuto_kWh = await getStateAsync(sID_PrognoseAuto_kWh).then(state => state.val);
-    let heuteErwartetePVLeistung_kWh = arrayPrognoseAuto_kWh[tagHeute];
-    let morgenErwartetePVLeistung_kWh = arrayPrognoseAuto_kWh[tagMorgen];
-    // Prognose des Batterie SOC nach Ablauf von "reichweiteStunden" in %
-    const prognoseBattSOC = await prognoseBatterieSOC(reichweiteStunden);
-    // Berechnung der benötigten kWh, um die Batterie nach den gegebenen Stunden aufzuladen
-    const benoetigteKapazitaet_kWh = (100 - prognoseBattSOC) / 100 * batterieKapazitaet_kWh;
-    // Sonnenaufgangszeit und Sonnenuntergangszeit
-    const sunriseEndTimeHeute_ms = getAstroDate("sunriseEnd").getTime();
-    const sunsetHeute_ms = getAstroDate("sunset").getTime() - 2*3600000;
-    const sunriseEndTimeMorgen_ms = getAstroDate("sunriseEnd", morgen).getTime();
-    // Berechne die verbleibende Zeit in Stunden bis zum Sonnenaufgang  (heute und morgen)
-    const stundenBisSunriseHeute = round((sunriseEndTimeHeute_ms - aktuelleZeit_ms) / (1000 * 60 * 60),2);
-    const stundenBisSunriseMorgen = round((sunriseEndTimeMorgen_ms - aktuelleZeit_ms) / (1000 * 60 * 60),2);
-    
-    
-    // ist aktuelle Zeit zwischen Sonnenaufgang und Sonnenuntergang
-    if (aktuelleZeit_ms >= sunriseEndTimeHeute_ms && aktuelleZeit_ms < sunsetHeute_ms) {
-        // Berechne die gesamte Sonnenzeit in Stunden (Sonnenaufgang bis Sonnenuntergang)
-        const gesamteSonnenstunden = (sunsetHeute_ms - sunriseEndTimeHeute_ms) / (1000 * 60 * 60);
-        // Berechne die verbleibenden Sonnenstunden ab der aktuellen Zeit bis zum Sonnenuntergang
+    let heuteErwartetePVLeistung_kWh = arrayPrognoseAuto_kWh[heute.getDate()];
+    let morgenErwartetePVLeistung_kWh = arrayPrognoseAuto_kWh[morgen.getDate()];
+
+    // Benötigte Kapazität, um Batterie auf maximalen SOC zu laden
+    const benoetigteKapazitaet_kWh = (100 - await prognoseBatterieSOC(reichweiteStunden)) / 100 * batterieKapazitaet_kWh;
+
+    // 1. Berechne die verbleibende Zeit bis zum nächsten Sonnenaufgang
+    let stundenBisSunrise;
+    if (aktuelleZeit_ms < sunriseHeute_ms) {
+        // Aktuelle Zeit ist vor dem Sonnenaufgang heute
+        stundenBisSunrise = (sunriseHeute_ms - aktuelleZeit_ms) / (1000 * 60 * 60);  // Umrechnung von ms in Stunden
+    } else if (aktuelleZeit_ms >= sunsetHeute_ms) {
+        // Aktuelle Zeit ist nach dem Sonnenuntergang heute -> Nächster Sonnenaufgang ist morgen
+        stundenBisSunrise = (sunriseMorgen_ms - aktuelleZeit_ms) / (1000 * 60 * 60);  // Zeit bis Sonnenaufgang morgen
+    } else {
+        // Aktuelle Zeit ist zwischen Sonnenaufgang und Sonnenuntergang heute
         const verbleibendeSonnenstunden = (sunsetHeute_ms - aktuelleZeit_ms) / (1000 * 60 * 60);
-        // Berechne die angepasste PV-Leistung für den Rest des Tages
-        const PVLeistung_kWh = (verbleibendeSonnenstunden / gesamteSonnenstunden) * heuteErwartetePVLeistung_kWh;
-        if (PVLeistung_kWh >= benoetigteKapazitaet_kWh) {
-            return true; // Die PV-Leistung reicht aus
-        }
-    }else{
-        // Prüfe, ob es vor oder nach Sonnenuntergang ist
-        if (aktuelleZeit_ms < sunsetHeute_ms) {
-            // Es ist vor Sonnenuntergang: Prüfe nur bis zum Sonnenaufgang heute
-            if (reichweiteStunden >= stundenBisSunriseHeute) {
-                // Überprüfung: Reicht die angepasste PV-Leistung aus, um die Batterie zu laden?
-                const battSOC = await prognoseBatterieSOC(stundenBisSunriseHeute);
-                const benKapazitaet_kWh = (100 - battSOC) / 100 * batterieKapazitaet_kWh;
-                if (heuteErwartetePVLeistung_kWh >= benKapazitaet_kWh) {
-                    return true; // Die PV-Leistung reicht aus, und die Batterie hält bis zum Sonnenaufgang
-                }
-            }
+        const gesamteSonnenstunden = (sunsetHeute_ms - sunriseHeute_ms) / (1000 * 60 * 60);
+
+        // Berechne die angepasste PV-Leistung für die verbleibenden Sonnenstunden
+        const PVLeistungBisSonnenuntergang = (verbleibendeSonnenstunden / gesamteSonnenstunden) * heuteErwartetePVLeistung_kWh;
+
+        // Prüfen, ob die verbleibende PV-Leistung ausreicht, um die Batterie zu laden
+        if (PVLeistungBisSonnenuntergang >= benoetigteKapazitaet_kWh) {
+            return reichweiteStunden >= verbleibendeSonnenstunden;  // Die Reichweite muss ausreichen bis zum Sonnenuntergang
         } else {
-            // Es ist nach Sonnenuntergang: Prüfe auch bis zum Sonnenaufgang morgen
-            if (reichweiteStunden >= stundenBisSunriseMorgen) {
-                const battSOC = await prognoseBatterieSOC(stundenBisSunriseMorgen);
-                const benKapazitaet_kWh = (100 - battSOC) / 100 * batterieKapazitaet_kWh;    
-                if (morgenErwartetePVLeistung_kWh >= benKapazitaet_kWh) {
-                    return true; // Die Batterie hält bis zum Sonnenaufgang + 1 Stunde morgen
-                }
-            }
+            return false;
         }
     }
+    
+    // 2. Prüfen, ob die aktuelle Reichweite bis zum Sonnenaufgang heute oder morgen ausreicht
+    if (reichweiteStunden < stundenBisSunrise) {
+        // Reichweite reicht nicht bis zum Sonnenaufgang -> Batterie hält nicht
+        return false;
+    }
+
+    // 3. Prüfen, ob die PV-Prognose ausreicht, um die Batterie auf max. SOC zu laden
+    if (aktuelleZeit_ms >= sunsetHeute_ms) {
+        // Nach Sonnenuntergang -> Prüfe die PV-Leistung für morgen
+        const prognoseBattSOCMorgen = await prognoseBatterieSOC(stundenBisSunrise);
+        const benoetigteKapazitaetMorgen_kWh = (100 - prognoseBattSOCMorgen) / 100 * batterieKapazitaet_kWh;
+        if (morgenErwartetePVLeistung_kWh >= benoetigteKapazitaetMorgen_kWh) {
+            return true;  // Morgen reicht die PV-Prognose aus, um die Batterie zu laden
+        }
+    } else {
+        // Vor Sonnenuntergang -> Prüfe die PV-Leistung für heute
+        if (heuteErwartetePVLeistung_kWh >= benoetigteKapazitaet_kWh) {
+            return true;  // Die heutige PV-Prognose reicht aus
+        }
+    }
+
     LogProgrammablauf += '3,';
-    return false; // Entweder reicht die Batterie-Reichweite nicht, oder die PV-Leistung reicht nicht aus
+    return false;  // Die Batterie kann nicht aufgeladen werden oder die Reichweite reicht nicht aus
 }
+
 
 // Funktion berechnet den Batterie SOC nach einer variablen Zeit in h bei einem berechnetem Durchschnittsverbrauch.
 async function prognoseBatterieSOC(entladezeitStunden) {
@@ -1204,13 +1210,14 @@ on({id: regexPatternTibber, change: "ne"}, async function (obj){
     bLock = true;
     setTimeout(() => bLock = false, 100);
     log(`-==== User Parameter ${obj.id.split('.')[4]} wurde in ${obj.state.val} geändert ====-`,'warn')
-    if (obj.id.split('.')[4] == 'maxSOC_Batterie' ){maxBatterieSoC = obj.state.val}
-    if (obj.id.split('.')[4] == 'maxLadeleistung' ){maxLadeleistungUser_W = obj.state.val}
-    if (obj.id.split('.')[4] == 'hoherSchwellwertStrompreis' ){hoherSchwellwert = obj.state.val}
-    if (obj.id.split('.')[4] == 'niedrigerSchwellwertStrompreis' ){niedrigerSchwellwert = obj.state.val}
-    if (obj.id.split('.')[4] == 'pvSchneebedeckt' ){schneeBedeckt = obj.state.val}
-    if (obj.id.split('.')[4] == 'Systemwirkungsgrad' ){systemwirkungsgrad = obj.state.val}
-    if (obj.id.split('.')[4] == 'BatteriepreisAktiv' ){batteriepreisAktiv = obj.state.val}
+    if (obj.id == sID_maxSoC ){maxBatterieSoC = obj.state.val}
+    if (obj.id == sID_maxLadeleistungUser_W){maxLadeleistungUser_W = obj.state.val}
+    if (obj.id == sID_hoherSchwellwertStrompreis){hoherSchwellwert = obj.state.val}
+    if (obj.id == sID_niedrigerSchwellwertStrompreis){niedrigerSchwellwert = obj.state.val}
+    if (obj.id == sID_Schneebedeckt){schneeBedeckt = obj.state.val}
+    if (obj.id == sID_Systemwirkungsgrad){systemwirkungsgrad = obj.state.val}
+    if (obj.id == sID_BatteriepreisAktiv){batteriepreisAktiv = obj.state.val}
+    if (obj.id == sID_Stromgestehungskosten){stromgestehungskosten = obj.state.val}
     await tibberSteuerungHauskraftwerk(); 
     await createDiagramm();
 });
