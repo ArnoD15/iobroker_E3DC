@@ -2406,7 +2406,7 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "html": "Bester Ladezeitraum innerhalb Reichweite"
+                "html": "Status Batterie laden "
             },
             "style": {
                 "left": "395px",
@@ -2817,7 +2817,7 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "html": "Akt. Strompreis Batterie mit Ladeverluste"
+                "html": "Schwellwert Spitzenstrompreis"
             },
             "style": {
                 "left": "394px",
@@ -2837,7 +2837,7 @@
         "e00035": {
             "tpl": "tplValueFloat",
             "data": {
-                "oid": "0_userdata.0.TibberSkript.Anzeige_VIS.strompreisBatterie",
+                "oid": "0_userdata.0.TibberSkript.Anzeige_VIS.Spitzenstrompreis",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -2878,7 +2878,7 @@
                 "signals-hide-edit-2": false,
                 "html_append_singular": "",
                 "html_append_plural": " €",
-                "html_prepend": "",
+                "html_prepend": "&nbsp;",
                 "lc-type": "last-change",
                 "lc-is-interval": true,
                 "lc-is-moment": false,
@@ -2908,8 +2908,8 @@
                 "width": "130px",
                 "height": "25px",
                 "border-radius": "2px",
-                "text-align": "center",
-                "font-size": "16px",
+                "text-align": "left",
+                "font-size": "19px",
                 "line-height": "25px",
                 "font-weight": ""
             },
@@ -3179,8 +3179,8 @@
                 "visibility-cond": "==",
                 "visibility-val": 1,
                 "visibility-groups-action": "hide",
-                "values": "0.10\t;\n0.11\t;\n0.12\t;\n0.13\t;\n0.14\t;\n0.15\t;\n0.16\t;\n0.17\t;\n0.18\t;\n0.19\t;\n0.20\t;\n0.21\t;\n0.22\t;\n0.23\t;\n0.24\t;\n0.25\t;\n0.26\t;\n0.27\t;\n0.28\t;\n0.29\t;\n0.30\t;\n0.31\t;\n0.32\t;\n0.33\t;\n0.34\t;\n0.35\t;\n0.36\t;\n0.37\t;\n0.38\t;\n0.39\t;\n0.40\t;\n0.41\t;\n0.42\t;\n0.43\t;\n0.44\t;\n0.45\t;\n0.46\t;\n0.47\t;\n0.48\t;\n0.49\t;\n0.50\t;\n",
-                "texts": "0,10 €\t;\n0,11 €\t;\n0,12 €\t;\n0,13 €\t;\n0,14 €\t;\n0,15 €\t;\n0,16 €\t;\n0,17 €\t;\n0,18 €\t;\n0,19 €\t;\n0,20 €\t;\n0,21 €\t;\n0,22 €\t;\n0,23 €\t;\n0,24 €\t;\n0,25 €\t;\n0,26 €\t;\n0,27 €\t;\n0,28 €\t;\n0,29 €\t;\n0,30 €\t;\n0,31 €\t;\n0,32 €\t;\n0,33 €\t;\n0,34 €\t;\n0,35 €\t;\n0,36 €\t;\n0,37 €\t;\n0,38 €\t;\n0,39 €\t;\n0,40 €\t;\n0,41 €\t;\n0,42 €\t;\n0,43 €\t;\n0,44 €\t;\n0,45 €\t;\n0,46 €\t;\n0,47 €\t;\n0,48 €\t;\n0,49 €\t;\n0,50 €\t;\n",
+                "values": "0.08    ;\n0.09    ;\n0.10\t;\n0.11\t;\n0.12\t;\n0.13\t;\n0.14\t;\n0.15\t;\n0.16\t;\n0.17\t;\n0.18\t;\n0.19\t;\n0.20\t;\n0.21\t;\n0.22\t;\n0.23\t;\n0.24\t;\n0.25\t;\n0.26\t;\n0.27\t;\n0.28\t;\n0.29\t;\n0.30\t;\n0.31\t;\n0.32\t;\n0.33\t;\n0.34\t;\n0.35\t;\n0.36\t;\n0.37\t;\n0.38\t;\n0.39\t;\n0.40\t;\n0.41\t;\n0.42\t;\n0.43\t;\n0.44\t;\n0.45\t;\n0.46\t;\n0.47\t;\n0.48\t;\n0.49\t;\n0.50\t;\n",
+                "texts": "0,08 €  ;\n0,09 €  ;\n0,10 €\t;\n0,11 €\t;\n0,12 €\t;\n0,13 €\t;\n0,14 €\t;\n0,15 €\t;\n0,16 €\t;\n0,17 €\t;\n0,18 €\t;\n0,19 €\t;\n0,20 €\t;\n0,21 €\t;\n0,22 €\t;\n0,23 €\t;\n0,24 €\t;\n0,25 €\t;\n0,26 €\t;\n0,27 €\t;\n0,28 €\t;\n0,29 €\t;\n0,30 €\t;\n0,31 €\t;\n0,32 €\t;\n0,33 €\t;\n0,34 €\t;\n0,35 €\t;\n0,36 €\t;\n0,37 €\t;\n0,38 €\t;\n0,39 €\t;\n0,40 €\t;\n0,41 €\t;\n0,42 €\t;\n0,43 €\t;\n0,44 €\t;\n0,45 €\t;\n0,46 €\t;\n0,47 €\t;\n0,48 €\t;\n0,49 €\t;\n0,50 €\t;\n",
                 "height": "200",
                 "signals-cond-0": "==",
                 "signals-val-0": true,
