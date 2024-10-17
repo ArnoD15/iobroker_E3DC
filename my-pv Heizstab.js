@@ -12,8 +12,9 @@ const sID_Batterie_Status   = `${instanzE3DC_RSCP}.EMS.BAT_SOC`; // Battery stat
 const sID_Bat_Charge_Limit  = `${instanzE3DC_RSCP}.EMS.SYS_SPECS.maxBatChargePower`;// Batterie Ladelimit
 
 // selbst definierte Variablen
-const sID_Eigenverbrauch    = '0_userdata.0.Charge_Control.Allgemein.Hausverbrauch'; // Household consumption power
-const sID_M_Power_W         = '0_userdata.0.Charge_Control.Allgemein.Akt_Berechnete_Ladeleistung_W'; // Calculated required charging power
+const sID_Eigenverbrauch    = '0_userdata.0.Charge_Control.Allgemein.Hausverbrauch'; 					// Household consumption power
+const sID_M_Power_W         = '0_userdata.0.Charge_Control.Allgemein.Akt_Berechnete_Ladeleistung_W'; 	// Calculated required charging power
+const sID_LeistungLW_Pumpe_W = 'modbus.2.holdingRegisters.41013_WP_Aufnahmeleistung';                   // Pfad zu den Leistungswerte Wärmepumpe eintragen ansonsten leer lassen
 
 // Heistab Modbus Variablen 
 const sID_LeistungHeizstab_W        = `${instanzHeizstab_Modbus}.holdingRegisters.1000_Power`; // Current power consumption of heating element in W
@@ -51,20 +52,21 @@ async function fetchAndUpdateHeizstabLeistung() {
             getStateAsync(sID_Soll_LeistungHeizstab_W),
             getStateAsync(sID_Power_Mode),
             getStateAsync(sID_Batterie_Status),
-            getStateAsync(sID_Bat_Charge_Limit)
+            getStateAsync(sID_Bat_Charge_Limit),
+			getStateAsync(sID_LeistungLW_Pumpe_W)
         ]);
 
         const [
             Wallbox_Leistung, Netz_Leistung, LeistungHeizstab, Eigenverbrauch, M_Power, Batterie_Leistung,
             IstTempHeizstab, MaxTempHeizstab, PV_Leistung, SollLeistungHeizstab, 
-            Power_Mode, Batterie_Status, Bat_Charge_Limit
+            Power_Mode, Batterie_Status, Bat_Charge_Limit, LeistungWP
         ] = states;
 
         // Ensure all states are fetched correctly
         const stateNames = [
             'Wallbox_Leistung', 'Netz_Leistung', 'LeistungHeizstab', 'Eigenverbrauch', 'M_Power', 'Batterie_Leistung',
             'IstTempHeizstab', 'MaxTempHeizstab', 'PV_Leistung', 'SollLeistungHeizstab',
-            'Power_Mode', 'Batterie_Status', 'Bat_Charge_Limit'
+            'Power_Mode', 'Batterie_Status', 'Bat_Charge_Limit', 'LeistungWP'
         ];
 
         stateNames.forEach((name, index) => {
@@ -81,10 +83,10 @@ async function fetchAndUpdateHeizstabLeistung() {
         let [
             Wallbox_Leistung_W, NetzLeistung_W, LeistungHeizstab_W, Hausverbrauch_W, M_Power_W, BatterieLeistung_W,
             IstTemp, MaxTemp, PV_Leistung_W, SollLeistungHeizstab_W, 
-            PowerMode, BatterieStatus, Charge_Limit
+            PowerMode, BatterieStatus, Charge_Limit, LeistungWP
         ] = states.map(state => state.val);
 
-        console.log(`Zustände abgefragt: Netz=${NetzLeistung_W}W, PV=${PV_Leistung_W}W, Hausverbrauch=${Hausverbrauch_W}W, LeistungHeizstab=${LeistungHeizstab_W}W, Batterie=${BatterieLeistung_W}W, IstTemp=${IstTemp}°C, MaxTemp=${MaxTemp}°C, SollLeistungHeizstab=${SollLeistungHeizstab_W}W, PowerMode=${PowerMode}, BatterieStatus=${BatterieStatus}, Charge_Limit=${Charge_Limit}, M_Power_W=${M_Power_W}`);
+        console.log(`Zustände abgefragt: Netz=${NetzLeistung_W}W, PV=${PV_Leistung_W}W, Hausverbrauch=${Hausverbrauch_W}W, LeistungHeizstab=${LeistungHeizstab_W}W, Batterie=${BatterieLeistung_W}W, IstTemp=${IstTemp}°C, MaxTemp=${MaxTemp}°C, SollLeistungHeizstab=${SollLeistungHeizstab_W}W, PowerMode=${PowerMode}, BatterieStatus=${BatterieStatus}, Charge_Limit=${Charge_Limit}, M_Power_W=${M_Power_W}W, LeistungWP = ${LeistungWP}W`);
 
         // Bedingungen prüfen
         if (PowerMode === 2 && Charge_Limit == M_Power_W && BatterieLeistung_W > 0) {
@@ -94,7 +96,7 @@ async function fetchAndUpdateHeizstabLeistung() {
         }
 
         // Verfügbaren Überschuss berechnen
-        let verfuegbarerUeberschuss_W = PV_Leistung_W - Hausverbrauch_W - M_Power_W- Wallbox_Leistung_W - sicherheitspuffer; // Verfügbarer Überschuss unter Berücksichtigung von PV-Leistung, Hausverbrauch, Soll-Ladeleistung und Sicherheitspuffer
+        let verfuegbarerUeberschuss_W = PV_Leistung_W - Hausverbrauch_W - M_Power_W- Wallbox_Leistung_W - LeistungWP - sicherheitspuffer; // Verfügbarer Überschuss unter Berücksichtigung von PV-Leistung, Hausverbrauch, Wärmepumpe, Soll-Ladeleistung und Sicherheitspuffer
         verfuegbarerUeberschuss_W = Math.max(verfuegbarerUeberschuss_W, 0); // Stellen Sie sicher, dass der Wert nicht negativ wird
 
         // Heizstab-Leistung bestimmen
