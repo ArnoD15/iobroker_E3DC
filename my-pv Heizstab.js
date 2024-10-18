@@ -83,20 +83,26 @@ async function fetchAndUpdateHeizstabLeistung() {
         let [
             Wallbox_Leistung_W, NetzLeistung_W, LeistungHeizstab_W, Hausverbrauch_W, M_Power_W, BatterieLeistung_W,
             IstTemp, MaxTemp, PV_Leistung_W, SollLeistungHeizstab_W, 
-            PowerMode, BatterieStatus, Charge_Limit, LeistungWP
+            PowerMode, BatterieStatus, Charge_Limit, LeistungWP_W
         ] = states.map(state => state.val);
 
         console.log(`Zustände abgefragt: Netz=${NetzLeistung_W}W, PV=${PV_Leistung_W}W, Hausverbrauch=${Hausverbrauch_W}W, LeistungHeizstab=${LeistungHeizstab_W}W, Batterie=${BatterieLeistung_W}W, IstTemp=${IstTemp}°C, MaxTemp=${MaxTemp}°C, SollLeistungHeizstab=${SollLeistungHeizstab_W}W, PowerMode=${PowerMode}, BatterieStatus=${BatterieStatus}, Charge_Limit=${Charge_Limit}, M_Power_W=${M_Power_W}W, LeistungWP = ${LeistungWP}W`);
 
         // Bedingungen prüfen
-        if (PowerMode === 2 && Charge_Limit == M_Power_W && BatterieLeistung_W > 0) {
-            console.log('Power_Mode ist 2 und Batterie soll mit max. Leistung geladen werden. Heizstab wird nicht aktiviert.');
-            await setStateAsync(sID_Soll_LeistungHeizstab_W, 0);
-            return;
+        if (PowerMode === 2) {
+            if (Charge_Limit === M_Power_W && NetzLeistung_W < -Math.abs(minimumHeizstabLeistung + 500)) {
+                M_Power_W = BatterieLeistung_W;
+            }else if (Charge_Limit === M_Power_W && BatterieLeistung_W > 0) {
+                console.log('Power_Mode ist 2 und Batterie soll mit max. Leistung geladen werden. Heizstab wird nicht aktiviert.');
+                await setStateAsync(sID_Soll_LeistungHeizstab_W, 0);
+                return;
+            }
+        } else {
+            M_Power_W = 0;
         }
 
         // Verfügbaren Überschuss berechnen
-        let verfuegbarerUeberschuss_W = PV_Leistung_W - Hausverbrauch_W - M_Power_W- Wallbox_Leistung_W - LeistungWP - sicherheitspuffer; // Verfügbarer Überschuss unter Berücksichtigung von PV-Leistung, Hausverbrauch, Wärmepumpe, Soll-Ladeleistung und Sicherheitspuffer
+        let verfuegbarerUeberschuss_W = PV_Leistung_W - Hausverbrauch_W - M_Power_W- Wallbox_Leistung_W - LeistungWP_W - sicherheitspuffer; // Verfügbarer Überschuss unter Berücksichtigung von PV-Leistung, Hausverbrauch, Wärmepumpe, Soll-Ladeleistung und Sicherheitspuffer
         verfuegbarerUeberschuss_W = Math.max(verfuegbarerUeberschuss_W, 0); // Stellen Sie sicher, dass der Wert nicht negativ wird
 
         // Heizstab-Leistung bestimmen
