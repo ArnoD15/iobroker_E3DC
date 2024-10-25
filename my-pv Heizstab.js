@@ -92,10 +92,6 @@ async function fetchAndUpdateHeizstabLeistung() {
         if (PowerMode === 2) {
             if (Charge_Limit === M_Power_W && NetzLeistung_W < -Math.abs(minimumHeizstabLeistung + 500)) {
                 M_Power_W = BatterieLeistung_W;
-            }else if (Charge_Limit === M_Power_W && BatterieLeistung_W > 0) {
-                console.log('Power_Mode ist 2 und Batterie soll mit max. Leistung geladen werden. Heizstab wird nicht aktiviert.');
-                await setStateAsync(sID_Soll_LeistungHeizstab_W, 0);
-                return;
             }
         } else {
             M_Power_W = 0;
