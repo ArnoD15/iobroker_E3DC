@@ -77,6 +77,9 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.5.10
+* Fehler behoben, dass bei einer ungünstigen Konstellation beim Neustart vom Script die PV-Leistungswerte vom aktuellen Monat gelöscht wurden.
+
 ### Version: 1.5.9
 * Fehler Objekt ID 0_userdata.0.Charge_Control.Allgemein.NotstromAusNetz korrigiert. Danke an psrelax für die Fehlersuche.
 

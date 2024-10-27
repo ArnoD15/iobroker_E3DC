@@ -18,7 +18,7 @@ const BUFFER_SIZE= 5;                                                           
 //------------------------------------------------------------------------------------------------------
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.5.9 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.5.10 ====- ${Logparser2}`);
 
 //******************************************************************************************************
 //****************************************** Objekt ID anlegen *****************************************
@@ -1301,26 +1301,28 @@ function nextDay(days) {
 
 // Summe PV Leistung berechnen Leistungszähler 0 und Leistungszähler 1
 async function SummePvLeistung(){   
-    let DatumAk = new Date();
-	//let TagHeute = DatumAk.getDate().toString().padStart(2,"0");
-	let TagHeute = DatumAk.getDate();
-    let IstPvLeistung0_kWh = 0;
-	let IstPvLeistung1_kWh = 0;
-	let IstPvLeistung_kWh = 0;
+    if(!bStart){
+        let DatumAk = new Date();
+	    //let TagHeute = DatumAk.getDate().toString().padStart(2,"0");
+	    let TagHeute = DatumAk.getDate();
+        let IstPvLeistung0_kWh = 0;
+	    let IstPvLeistung1_kWh = 0;
+	    let IstPvLeistung_kWh = 0;
 	
-    if (existsState(sID_PVErtragLM0)){
-	    IstPvLeistung0_kWh = parseFloat((await getStateAsync(sID_PVErtragLM0)).val);
-	    //if (DebugAusgabe) {log(`${Logparser1} PV-Leistung Leistungsmesser 0 Heute = ${IstPvLeistung0_kWh}${Logparser2}`);}
-	}
-	if (existsState(sID_PVErtragLM1)){
-	    IstPvLeistung1_kWh = parseFloat((await getStateAsync(sID_PVErtragLM1)).val);
-	    //if (DebugAusgabe) {log(`${Logparser1} PV-Leistung Leistungsmesser 1 Heute = ${IstPvLeistung1_kWh}${Logparser2}`);}
-	}
-	IstPvLeistung_kWh = IstPvLeistung0_kWh + IstPvLeistung1_kWh;
-	arrayPV_LeistungTag_kWh[TagHeute] = IstPvLeistung_kWh
-    await setStateAsync(sID_arrayPV_LeistungTag_kWh, arrayPV_LeistungTag_kWh);
+        if (existsState(sID_PVErtragLM0)){
+	        IstPvLeistung0_kWh = parseFloat((await getStateAsync(sID_PVErtragLM0)).val);
+	        //if (DebugAusgabe) {log(`${Logparser1} PV-Leistung Leistungsmesser 0 Heute = ${IstPvLeistung0_kWh}${Logparser2}`);}
+	    }
+	    if (existsState(sID_PVErtragLM1)){
+	        IstPvLeistung1_kWh = parseFloat((await getStateAsync(sID_PVErtragLM1)).val);
+	        //if (DebugAusgabe) {log(`${Logparser1} PV-Leistung Leistungsmesser 1 Heute = ${IstPvLeistung1_kWh}${Logparser2}`);}
+	    }
+	    IstPvLeistung_kWh = IstPvLeistung0_kWh + IstPvLeistung1_kWh;
+	    arrayPV_LeistungTag_kWh[TagHeute] = IstPvLeistung_kWh
+        await setStateAsync(sID_arrayPV_LeistungTag_kWh, arrayPV_LeistungTag_kWh);
     
-    await makeJson();
+        await makeJson();
+    }
 };
 
 // Methode zum Addieren/Subtrahieren einer Menge an Minuten auf eine Uhrzeit
