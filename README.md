@@ -77,6 +77,9 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.5.9
+* Fehler Objekt ID 0_userdata.0.Charge_Control.Allgemein.NotstromAusNetz korrigiert. Danke an psrelax für die Fehlersuche.
+
 ### Version: 1.5.8
 * Es werden die wichtigsten e3dc-rscp Adaptereinstellungen geprüft und wenn diese abweichen wird im LOG eine Warnung ausgegeben.
 
