@@ -2406,7 +2406,7 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "html": "Status Batterie laden "
+                "html": "Status:"
             },
             "style": {
                 "left": "395px",
@@ -2414,7 +2414,7 @@
                 "color": "#ffffff",
                 "font-size": "16px",
                 "z-index": "10",
-                "width": "320px",
+                "width": "100px",
                 "height": "25px",
                 "text-align": "left",
                 "text-shadow": "rgba(0, 0, 0, 0.9) 3px 3px 4px",
@@ -2484,11 +2484,11 @@
                 "html_prepend": ""
             },
             "style": {
-                "left": "573px",
+                "left": "463px",
                 "top": "82px",
                 "color": "#000000",
                 "z-index": "10",
-                "width": "500px",
+                "width": "610px",
                 "height": "25px",
                 "background-color": "#ffffff",
                 "border-radius": "2px",
@@ -2573,12 +2573,12 @@
                 "visibility-oid": "0_userdata.0.Tibber.Anzeige_VIS.timerAktiv"
             },
             "style": {
-                "left": "568px",
+                "left": "458px",
                 "top": "77px",
                 "z-index": "1",
                 "background-color": "",
                 "background": "",
-                "width": "510px",
+                "width": "620px",
                 "height": "34px",
                 "border-width": "1px",
                 "border-style": "double",
