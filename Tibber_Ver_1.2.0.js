@@ -265,7 +265,7 @@ async function tibberSteuerungHauskraftwerk() {
                 if(naechsteNiedrigphase.startzeit < endZeitBatterie){
                     // nicht laden und Timer für laden low Phase setzen.
                     LogProgrammablauf += '5,';
-                    // @ts-ignore dauer bis zur nächsten Niedrigphase
+                    // dauer bis zur nächsten Niedrigphase
                     const vonTime = new Date(naechsteNiedrigphase.startzeit)
                     const bisTime = new Date(naechsteNiedrigphase.endzeit)
                     // günstigste Startzeit zum Laden suchen
@@ -311,15 +311,28 @@ async function tibberSteuerungHauskraftwerk() {
                     if(reichweite_h - dauerPeakPhase_h > 0){
                         //Reichweite Batt reicht zum Abfragezeitraum noch aus.
                         LogProgrammablauf += '8,';
-                        const startSperre_h = reichweite_h - dauerPeakPhase_h
                         const jetzt = new Date();
-                        const dateStartSperrzeit = new Date(jetzt.getTime() + startSperre_h * 60 * 60 * 1000);
-                        const dateEndeSperrzeit = new Date(naechstePhase0.start)
-                        await setStateAtSpecificTime(new Date(dateStartSperrzeit), sID_BatterieEntladesperre, true);
-                        await setStateAtSpecificTime(new Date(dateEndeSperrzeit), sID_BatterieEntladesperre, false);
-                        const startTime = dateStartSperrzeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
-                        const endeTime = dateEndeSperrzeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
-                        let message = `Batterie sperre von ${startTime} bis ${endeTime} um Peak Phase zu überbrücken (aktive Phase: ${aktivePhase.type})`
+                        // günstigste Startzeit zum Laden suchen
+                        const dateBesteStartLadezeit = await bestLoadTime(aktivePhase.start,naechstePhase0.start,dauerPeakPhase_h)
+                        log(`dateBesteStartLadezeit = ${dateBesteStartLadezeit}`,'warn')
+                        let message
+                        if(dateBesteStartLadezeit < new Date()){
+                            // Günstigste Zeit überschritten Entladen sofort sperren 
+                            !battSperre ? await setStateAsync(sID_BatterieEntladesperre,true):null;
+                            const dateEndeSperrzeit = new Date(dateBesteStartLadezeit.getTime() + dauerPeakPhase_h * 60 * 60 * 1000);
+                            await setStateAtSpecificTime(new Date(dateEndeSperrzeit), sID_BatterieEntladesperre, false);
+                            const startTime = jetzt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
+                            const endeTime = dateEndeSperrzeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
+                            message = `Batterie sperre von ${startTime} bis ${endeTime} um Peak Phase zu überbrücken (aktive Phase: ${aktivePhase.type})`
+                        }else{
+                            const dateStartSperrzeit = new Date(dateBesteStartLadezeit);
+                            const dateEndeSperrzeit = new Date(dateBesteStartLadezeit.getTime() + dauerPeakPhase_h * 60 * 60 * 1000);
+                            await setStateAtSpecificTime(new Date(dateStartSperrzeit), sID_BatterieEntladesperre, true);
+                            await setStateAtSpecificTime(new Date(dateEndeSperrzeit), sID_BatterieEntladesperre, false);
+                            const startTime = dateStartSperrzeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
+                            const endeTime = dateEndeSperrzeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
+                            message = `Batterie sperre von ${startTime} bis ${endeTime} um Peak Phase zu überbrücken (aktive Phase: ${aktivePhase.type})`
+                        }
                         statusText != message ? await setStateAsync(sID_status,message): null;
                         await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
                         LogProgrammablauf = '';
