@@ -2426,7 +2426,7 @@
         "e00030": {
             "tpl": "tplValueString",
             "data": {
-                "oid": "0_userdata.0.TibberSkript.Anzeige_VIS.besteLadezeit",
+                "oid": "0_userdata.0.TibberSkript.Anzeige_VIS.status",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -2484,15 +2484,15 @@
                 "html_prepend": ""
             },
             "style": {
-                "left": "720px",
+                "left": "573px",
                 "top": "82px",
                 "color": "#000000",
                 "z-index": "10",
-                "width": "350px",
+                "width": "500px",
                 "height": "25px",
                 "background-color": "#ffffff",
                 "border-radius": "2px",
-                "font-size": "16px",
+                "font-size": "14px",
                 "line-height": "25px",
                 "text-align": "center"
             },
@@ -2573,12 +2573,12 @@
                 "visibility-oid": "0_userdata.0.Tibber.Anzeige_VIS.timerAktiv"
             },
             "style": {
-                "left": "715px",
+                "left": "568px",
                 "top": "77px",
                 "z-index": "1",
                 "background-color": "",
                 "background": "",
-                "width": "360px",
+                "width": "510px",
                 "height": "34px",
                 "border-width": "1px",
                 "border-style": "double",
