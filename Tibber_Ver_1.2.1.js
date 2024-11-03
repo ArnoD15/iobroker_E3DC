@@ -14,7 +14,7 @@ const DebugAusgabeDetail = true;
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.2.0'
+const scriptVersion = 'Version 1.2.1'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 // IDs Script Charge_Control
 const sID_Autonomiezeit =`${instanz}.Charge_Control.Allgemein.Autonomiezeit`;
@@ -107,31 +107,21 @@ async function ScriptStart()
     // Erstelle die Objekt IDs
     await createState();    
     log('-==== alle Objekt ID\'s angelegt ====-');
-    await pruefeAdapterEinstellungen()
+    await CheckState();
     // User Anpassungen parallel abrufen
     const results = await Promise.all([
-        getStateAsync(sID_BatteriepreisAktiv),
         getStateAsync(sID_BatterieLadedaten),
-        getStateAsync(sID_Systemwirkungsgrad),
-        getStateAsync(sID_Schneebedeckt),
         getStateAsync(sID_Batterie_SOC),
-        getStateAsync(sID_maxSoC),
-        getStateAsync(sID_maxLadeleistungUser_W),
-        getStateAsync(sID_hoherSchwellwertStrompreis),
-        getStateAsync(sID_niedrigerSchwellwertStrompreis),
-        getStateAsync(sID_Stromgestehungskosten),
         getStateAsync(sID_SPECIFIED_Battery_Capacity_0),
         getStateAsync(sID_maxEntladetiefeBatterie),
         getStateAsync(sID_BAT0_Alterungszustand)
     ]).then(states => states.map(state => state.val));
     [
-        batteriepreisAktiv, batterieLadedaten, systemwirkungsgrad, schneeBedeckt, 
-        aktuelleBatterieSoC_Pro, maxBatterieSoC, maxLadeleistungUser_W, 
-        hoherSchwellwert, niedrigerSchwellwert, stromgestehungskosten
+        batterieLadedaten, aktuelleBatterieSoC_Pro 
     ] = results; 
-    const batteryCapacity0 = results[10];
-    const entladetiefe_Pro = results[11];
-    const aSOC_Bat_Pro = results[12];
+    const batteryCapacity0 = results[2];
+    const entladetiefe_Pro = results[3];
+    const aSOC_Bat_Pro = results[4];
     
     if (existsState(sID_SPECIFIED_Battery_Capacity_1)){
         const batteryCapacity1 = (await getStateAsync(sID_SPECIFIED_Battery_Capacity_1)).val
@@ -160,22 +150,44 @@ async function ScriptStart()
     bStart = false;
 } 
 
-// Einstellungen e3dc-rscp Adapter prüfen
-async function pruefeAdapterEinstellungen() {
-    const e3dc_rscp_Adapter = getObject(`system.adapter.${instanzE3DC_RSCP}`);
-    //log(`e3dc_rscp_Adapter = ${JSON.stringify(e3dc_rscp_Adapter)}`,'warn')
-    const tag_BAT_SOC = e3dc_rscp_Adapter.native.polling_intervals.find(item => item.tag === "TAG_EMS_REQ_BAT_SOC")
-    const tag_POWER_BAT = e3dc_rscp_Adapter.native.polling_intervals.find(item => item.tag === "TAG_EMS_REQ_POWER_BAT")
-    const tag_POWER_GRID = e3dc_rscp_Adapter.native.polling_intervals.find(item => item.tag === "TAG_EMS_REQ_POWER_GRID")
-    if(tag_BAT_SOC.interval != `S` || tag_POWER_BAT.interval != `S` || tag_POWER_GRID.interval != `S`){
-        log(`Bitte die Einstellungen e3dc-rscp Adapter Abfrageintervalle bei den RSCP-TAG's "TAG_EMS_REQ_BAT_SOC" "TAG_EMS_REQ_POWER_BAT" "TAG_EMS_REQ_POWER_GRID" auf S = kurz einstellen`,'warn')
+// Alle User Eingaben prüfen ob Werte eingetragen wurden und Werte zuweisen
+async function CheckState() {
+    const idUSER_ANPASSUNGEN = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}`;
+    const objekte = [
+        { id: 'maxLadeleistung', varName: 'maxLadeleistungUser_W', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: 'hoherSchwellwertStrompreis', varName: 'hoherSchwellwert', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: 'niedrigerSchwellwertStrompreis', varName: 'niedrigerSchwellwert', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: 'pvSchneebedeckt', varName: 'schneeBedeckt', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' , min: false, max: true, errorMsg: 'pvSchneebedeckt kann nur true oder false sein' },
+        { id: 'maxSOC_Batterie', varName: 'maxBatterieSoC', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen', min: 0, max: 100, errorMsg: 'max Batterie SoC muss zwischen 0% und 100% sein' },
+        { id: 'Systemwirkungsgrad', varName: 'systemwirkungsgrad', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen', min: 0, max: 100, errorMsg: 'Systemwirkungsgrad muss zwischen 0% und 100% sein' },
+        { id: 'BatteriepreisAktiv', varName: 'batteriepreisAktiv', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen', min: false, max: true, errorMsg: 'BatteriepreisAktiv kann nur true oder false sein' },
+        { id: 'stromgestehungskosten', varName: 'stromgestehungskosten', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen'}
+    ];
+
+    for (const obj of objekte) {
+        const value = (await getStateAsync(`${idUSER_ANPASSUNGEN}.${obj.id}`)).val;
+        if (value === undefined || value === null) {
+            log(`Die Objekt ID = ${idUSER_ANPASSUNGEN}.${obj.id} ${obj.beschreibung} `, 'error');
+        } else {
+            eval(`${obj.varName} = value`);
+            if (obj.min !== undefined && (value < obj.min || value > obj.max)) {
+                console.error(obj.errorMsg);
+            }
+        }
     }
-    const pollingIntervalShort = e3dc_rscp_Adapter.native.polling_interval_short;    
-    if(pollingIntervalShort > 5){
-        log(`Bitte in den Einstellungen e3dc-rscp Adapter das Abfrageintervall S = kurz [sec] auf min. 5 sek.einstellen`,'warn')
+
+    // Pfadangaben zu den Modulen Modbus und e3dc-rscp überprüfen
+    const PruefeID = [
+        sID_Batterie_SOC, sID_Bat_Charge_Limit,sID_Notrom_Status, sID_SPECIFIED_Battery_Capacity_0,
+        sID_SPECIFIED_Battery_Capacity_1, sID_BAT0_Alterungszustand, sID_Power_Bat_W, sID_Power_Grid, sID_Notrom_Status
+    ];
+
+    for (const id of PruefeID) {
+        if (!existsObject(id)) {
+            log(`${id} existiert nicht, bitte prüfen`,'error');
+        }
     }
 }
-
 async function tibberSteuerungHauskraftwerk() {
     try {    
         LogProgrammablauf += '1,';
@@ -222,11 +234,14 @@ async function tibberSteuerungHauskraftwerk() {
         // Wenn max SOC erreicht wurde Funktion beenden
         if (aktuelleBatterieSoC_Pro >= maxBatterieSoC){
             LogProgrammablauf += '16,';
+            loescheAlleTimer('Laden');
             battLaden ? await setStateAsync(sID_BatterieLaden,false): null;
             // Entladen der Batterie sperren wenn Batteriepreis höher als Tibberpreis oder gleich letzter Ladepreis
             if(preisBatterie > aktuellerPreisTibber){
+                loescheAlleTimer('Entladesperre')
                 !battSperre ? await setStateAsync(sID_BatterieEntladesperre,true):null;
             }else{
+                loescheAlleTimer('Entladesperre')
                 battSperre ? await setStateAsync(sID_BatterieEntladesperre,false):null;
             }
             let message = `max SOC erreicht. Laden beendet (aktive Phase: ${aktivePhase.type})`;
@@ -314,19 +329,19 @@ async function tibberSteuerungHauskraftwerk() {
                         const jetzt = new Date();
                         // günstigste Startzeit zum Laden suchen
                         const dateBesteStartLadezeit = await bestLoadTime(aktivePhase.start,naechstePhase0.start,dauerPeakPhase_h)
-                        log(`dateBesteStartLadezeit = ${dateBesteStartLadezeit}`,'warn')
+                        const dateEndeSperrzeit = new Date(dateBesteStartLadezeit.getTime() + dauerPeakPhase_h * 60 * 60 * 1000);
+                        
                         let message
-                        if(dateBesteStartLadezeit < new Date()){
+                        if(dateBesteStartLadezeit.getTime() <= new Date().getTime() && dateEndeSperrzeit.getTime() > new Date().getTime()){
                             // Günstigste Zeit überschritten Entladen sofort sperren 
+                            loescheAlleTimer('Entladesperre')
                             !battSperre ? await setStateAsync(sID_BatterieEntladesperre,true):null;
-                            const dateEndeSperrzeit = new Date(dateBesteStartLadezeit.getTime() + dauerPeakPhase_h * 60 * 60 * 1000);
                             await setStateAtSpecificTime(new Date(dateEndeSperrzeit), sID_BatterieEntladesperre, false);
                             const startTime = jetzt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                             const endeTime = dateEndeSperrzeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                             message = `Batterie sperre von ${startTime} bis ${endeTime} um Peak Phase zu überbrücken (aktive Phase: ${aktivePhase.type})`
                         }else{
                             const dateStartSperrzeit = new Date(dateBesteStartLadezeit);
-                            const dateEndeSperrzeit = new Date(dateBesteStartLadezeit.getTime() + dauerPeakPhase_h * 60 * 60 * 1000);
                             await setStateAtSpecificTime(new Date(dateStartSperrzeit), sID_BatterieEntladesperre, true);
                             await setStateAtSpecificTime(new Date(dateEndeSperrzeit), sID_BatterieEntladesperre, false);
                             const startTime = dateStartSperrzeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
@@ -592,8 +607,8 @@ async function pruefePVLeistung(reichweiteStunden) {
 
     // Benötigte Kapazität, um die Batterie auf maximalen SOC zu laden
     const progBattSoC = await prognoseBatterieSOC(reichweiteStunden);
-    const benoetigteKapazitaet_kWh = (100 - progBattSoC.soc) / 100 * batterieKapazitaet_kWh;
-
+    const benoetigteKapazitaetPrognose_kWh = (100 - progBattSoC.soc) / 100 * batterieKapazitaet_kWh;
+    const benoetigteKapazitaet = (100 - aktuelleBatterieSoC_Pro) / 100 * batterieKapazitaet_kWh;
     // Berechnung der Zeit bis zum nächsten Sonnenaufgang
     let stundenBisSunrise;
     if (aktuelleZeit_ms < sunriseHeute_ms) {
@@ -609,9 +624,8 @@ async function pruefePVLeistung(reichweiteStunden) {
 
         // Berechne die PV-Leistung bis zum Sonnenuntergang
         const PVLeistungBisSonnenuntergang = (heuteErwartetePVLeistung_kWh / gesamteSonnenstunden)* verbleibendeSonnenstunden; 
-
         // Prüfen, ob die PV-Leistung bis Sonnenuntergang ausreicht
-        if (PVLeistungBisSonnenuntergang >= benoetigteKapazitaet_kWh) {
+        if (PVLeistungBisSonnenuntergang >= benoetigteKapazitaet) {
             const reichweite = reichweiteStunden >= verbleibendeSonnenstunden;
             const state = reichweite && true;  // Beide Bedingungen sind erfüllt, also state = true
             return { reichweite, pvLeistung: true, state };
@@ -636,7 +650,7 @@ async function pruefePVLeistung(reichweiteStunden) {
         }
     } else {
         // Prüfung der PV-Leistung für heute
-        if (heuteErwartetePVLeistung_kWh >= benoetigteKapazitaet_kWh) {
+        if (heuteErwartetePVLeistung_kWh >= benoetigteKapazitaetPrognose_kWh) {
             return { reichweite: true, pvLeistung: true, state: true };
         }
     }
@@ -1472,6 +1486,7 @@ on({id: sID_Batterie_SOC, change: "ne"}, async function (obj){
             batterieSOC_alt = aktuelleBatterieSoC_Pro
             batterieLadedaten.push({ soc: aktuelleBatterieSoC_Pro, price: aktuellerPreisTibber });
             await setStateAsync(sID_BatterieLadedaten,JSON.stringify(batterieLadedaten));
+            return;
        }
     }else{
         if(aktuelleBatterieSoC_Pro > batterieSOC_alt){
@@ -1479,9 +1494,11 @@ on({id: sID_Batterie_SOC, change: "ne"}, async function (obj){
             //preis_alt = stromgestehungskosten
             batterieLadedaten.push({ soc: aktuelleBatterieSoC_Pro, price: stromgestehungskosten });
             await setStateAsync(sID_BatterieLadedaten,JSON.stringify(batterieLadedaten));
+            return;
        }
 
     }
+    batterieSOC_alt = aktuelleBatterieSoC_Pro
 });
 
 // Tibber Steuerung alle 1 min. aufrufen.
