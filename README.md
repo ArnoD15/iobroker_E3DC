@@ -77,6 +77,9 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.5.11
+* Fehler behoben, dass die Autonomiezeit nicht auf 0:00 h gesetzt wurde, obwohl der Batterie SOC 0 % hatte.
+
 ### Version: 1.5.10
 * Fehler behoben, dass bei einer ungünstigen Konstellation beim Neustart vom Script die PV-Leistungswerte vom aktuellen Monat gelöscht wurden.
 

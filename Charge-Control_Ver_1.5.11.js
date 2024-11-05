@@ -18,7 +18,7 @@ const BUFFER_SIZE= 5;                                                           
 //------------------------------------------------------------------------------------------------------
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.5.10 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.5.11 ====- ${Logparser2}`);
 
 //******************************************************************************************************
 //****************************************** Objekt ID anlegen *****************************************
@@ -154,7 +154,7 @@ let bNotstromAusNetz, bAutomatikAnwahl, bAutomatikRegelung, bManuelleLadungBatt,
 //*********************************** Globale Variable ***********************************
 let LogProgrammablauf = "", Notstrom_Status, startDischargeDefault, Batterie_SOC_Proz, Speichergroesse_kWh
 let Max_wrleistung_W ,InstalliertPeakLeistung, Einspeiselimit_Pro, Einspeiselimit_kWh, maximumLadeleistung_W, Bat_Discharge_Limit_W
-let EinstellungAnwahl,PrognoseAnwahl,ReichweiteAktVerbrauchAlt=0, M_Power=0,M_Power_alt=0,Set_Power_Value_W=0;
+let EinstellungAnwahl,PrognoseAnwahl, M_Power=0,M_Power_alt=0,Set_Power_Value_W=0;
 let Batterie_SOC_alt_Proz=0, Notstrom_SOC_Proz = 0, Summe0 = 0, Summe1 = 0, Summe2 = 0, Summe3 = 0, baseurl, TibberSubscribeID;
 
 //***************************************************************************************************
@@ -464,7 +464,7 @@ async function Ladesteuerung()
     LogProgrammablauf = "";
 
     // Das Entladen aus dem Speicher wird freigegeben wenn:
-    // Notstrom oder Inselbetrieb aktiv ist oder bNotstromVerwenden = true oder bTibberLaden = true oder LadenAufNotstromSOC = true
+    // Notstrom oder Inselbetrieb aktiv ist oder bNotstromVerwenden = true oder bTibberLaden = true oder bLadenAufNotstromSOC = true
     // oder der Batterie SOC > der berechneten Reserve liegt oder PV-Leistung > 100W ist und vor Sonnenuntergang
     // Das Entladen aus dem Speicher wird gesperrt wenn:
     // Notstrom SOC erreicht wurde und aktuelle Zeit zwischen Sonnenuntergang und Sonnenaufgang liegt und Merker bNotstromVerwenden nicht true ist.
@@ -1949,6 +1949,7 @@ function logError(message, id) {
 async function calculateBatteryRange(currentConsumptionW) {
     // Setze currentConsumptionW auf 0, wenn es null, undefined oder kleiner als 0 is
     currentConsumptionW = (currentConsumptionW == null || currentConsumptionW >= 0) ? 0 : currentConsumptionW;
+    const akt_Autonomiezeit = (await getState(sID_Autonomiezeit)).val
     if (!homeAverage) {
         console.error('Keine Daten im homeAverage vorhanden.');
         return;
@@ -2136,6 +2137,8 @@ async function calculateBatteryRange(currentConsumptionW) {
     // Umwandlung der Reichweite in Stunden und Minuten
     const totalHours = Math.floor(totalRangeMinutes / 60);
     const totalMinutes = Math.round(totalRangeMinutes % 60);
+    
+    
     let currentRangeHours
     if (currentConsumptionW !== 0) {
        currentRangeHours = (battkWh * 1000) / Math.abs(currentConsumptionW);
@@ -2146,10 +2149,10 @@ async function calculateBatteryRange(currentConsumptionW) {
     const currentMinutes = Math.round((currentRangeHours - currentHours) * 60);
     
     // Aktualisierung der Autonomiezeit, wenn sich die Reichweite signifikant geändert hat
-    if (Math.abs(currentRangeHours - ReichweiteAktVerbrauchAlt) > 0.5) {
-        ReichweiteAktVerbrauchAlt = currentRangeHours;
+    if(akt_Autonomiezeit != `${currentHours}:${currentMinutes.toString().padStart(2,"0")} h / ${totalHours}:${totalMinutes.toString().padStart(2,"0")} h`){
         await setStateAsync(sID_Autonomiezeit, `${currentHours}:${currentMinutes.toString().padStart(2,"0")} h / ${totalHours}:${totalMinutes.toString().padStart(2,"0")} h` );
     }
+    
 }
 
 // Einstellungen e3dc-rscp Adapter prüfen
