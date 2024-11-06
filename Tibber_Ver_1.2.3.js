@@ -14,7 +14,7 @@ const DebugAusgabeDetail = true;
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.2.2'
+const scriptVersion = 'Version 1.2.3'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 // IDs Script Charge_Control
 const sID_Autonomiezeit =`${instanz}.Charge_Control.Allgemein.Autonomiezeit`;
@@ -402,12 +402,13 @@ async function tibberSteuerungHauskraftwerk() {
                     // Batterieladung reicht um die phase zu überbrücken
                     LogProgrammablauf += '10,';
                     await loescheAlleTimer('Laden');
-                    await loescheAlleTimer('Entladesperre')
                     let message = `Batterie SOC reicht um nächste Peak Phase zu überbrücken (aktive Phase: ${aktivePhase.type})`
                     statusText != message ? await setStateAsync(sID_status,message): null;
                     battLaden ? await setStateAsync(sID_BatterieLaden,false): null;
-                    battSperre ? await setStateAsync(sID_BatterieEntladesperre,false):null;
-                    
+                    if(preisBatterie < aktuellerPreisTibber){
+                        await loescheAlleTimer('Entladesperre')
+                        battSperre ? await setStateAsync(sID_BatterieEntladesperre,false):null;
+                    }
                     await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
                     LogProgrammablauf = '';
                     return;
@@ -629,7 +630,7 @@ async function pruefePVLeistung(reichweiteStunden) {
     // Berechnung der Zeit bis zum nächsten Sonnenaufgang
     let stundenBisSunrise;
     if (aktuelleZeit_ms < sunriseHeute_ms) {
-        // Vor Sonnenaufgang heute
+        // Vor Sonnenuntergang heute
         stundenBisSunrise = (sunriseHeute_ms - aktuelleZeit_ms) / (1000 * 60 * 60);
     } else if (aktuelleZeit_ms >= sunsetHeute_ms) {
         // Nach Sonnenuntergang -> Nächster Sonnenaufgang ist morgen
@@ -645,16 +646,17 @@ async function pruefePVLeistung(reichweiteStunden) {
         if (PVLeistungBisSonnenuntergang >= benoetigteKapazitaet) {
             const reichweite = reichweiteStunden >= verbleibendeSonnenstunden;
             const state = reichweite && true;  // Beide Bedingungen sind erfüllt, also state = true
+            LogProgrammablauf += '18/2,';
             return { reichweite, pvLeistung: true, state };
         } else {
-            LogProgrammablauf += '18/2,';
+            LogProgrammablauf += '18/3,';
             return { reichweite: false, pvLeistung: false, state: false };
         }
     }
 
     // Prüfung, ob die Reichweite bis zum Sonnenaufgang ausreicht
     if (reichweiteStunden < stundenBisSunrise) {
-        LogProgrammablauf += '18/3,';
+        LogProgrammablauf += '18/4,';
         return { reichweite: false, pvLeistung: false, state: false };
     }
 
@@ -663,16 +665,18 @@ async function pruefePVLeistung(reichweiteStunden) {
         const prognoseBattSOCMorgen = await prognoseBatterieSOC(stundenBisSunrise);
         const benoetigteKapazitaetMorgen_kWh = (100 - prognoseBattSOCMorgen.soc) / 100 * batterieKapazitaet_kWh;
         if (morgenErwartetePVLeistung_kWh >= benoetigteKapazitaetMorgen_kWh) {
+            LogProgrammablauf += '18/5,';
             return { reichweite: true, pvLeistung: true, state: true };
         }
     } else {
         // Prüfung der PV-Leistung für heute
         if (heuteErwartetePVLeistung_kWh >= benoetigteKapazitaetPrognose_kWh) {
+            LogProgrammablauf += '18/6,';
             return { reichweite: true, pvLeistung: true, state: true };
         }
     }
 
-    LogProgrammablauf += '18/4,';
+    LogProgrammablauf += '18/7,';
     return { reichweite: false, pvLeistung: false, state: false };
 }
 
