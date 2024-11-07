@@ -14,7 +14,7 @@ const DebugAusgabeDetail = true;
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.2.4'
+const scriptVersion = 'Version 1.2.5'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 // IDs Script Charge_Control
 const sID_Autonomiezeit =`${instanz}.Charge_Control.Allgemein.Autonomiezeit`;
@@ -319,7 +319,9 @@ async function tibberSteuerungHauskraftwerk() {
                     // nicht laden und Timer für laden normal Phase setzen.
                     await setStateAtSpecificTime(new Date(naechsteNormalphase.startzeit), sID_BatterieLaden, true);
                     await setStateAtSpecificTime(new Date(naechsteNormalphase.endzeit), sID_BatterieLaden, false);
-                    let message = `warte auf Normalpreisphase (aktive Phase: ${aktivePhase.type})`
+                    const startTime = naechsteNormalphase.startzeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
+                    const endeTime = naechsteNormalphase.endzeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
+                    let message = `warte auf Normalpreisphase von ${startTime} bis ${endeTime} (aktive Phase: ${aktivePhase.type})`
                     statusText != message ? await setStateAsync(sID_status,message): null;
                     await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
                     LogProgrammablauf = '';
@@ -1124,14 +1126,14 @@ async function DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend)
     if (DebugAusgabeDetail){log(`** bruttoPreisBatterie = ${bruttoPreisBatterie}`)}
     if (DebugAusgabeDetail){log(`** Aktueller Preis Tibber = ${aktuellerPreisTibber}`)}
     if (DebugAusgabeDetail){log(`** naechstePhasen[1].endLocale = ${ergebnis.naechstePhasen[1]?.endLocale}`)}
-    if (DebugAusgabeDetail){log(`** naechstePhasen[1].startLocale = ${ergebnis.naechstePhasen[1].startLocale}`)}
-    if (DebugAusgabeDetail){log(`** naechstePhasen[1].Type = ${ergebnis.naechstePhasen[1].type}`)}
+    if (DebugAusgabeDetail){log(`** naechstePhasen[1].startLocale = ${ergebnis.naechstePhasen[1]?.startLocale}`)}
+    if (DebugAusgabeDetail){log(`** naechstePhasen[1].Type = ${ergebnis.naechstePhasen[1]?.type}`)}
     if (DebugAusgabeDetail){log(`** naechstePhasen[0].endLocale = ${ergebnis.naechstePhasen[0]?.endLocale}`)}
-    if (DebugAusgabeDetail){log(`** naechstePhasen[0].startLocale = ${ergebnis.naechstePhasen[0].startLocale}`)}
-    if (DebugAusgabeDetail){log(`** naechstePhasen[0].Type = ${ergebnis.naechstePhasen[0].type}`)}
+    if (DebugAusgabeDetail){log(`** naechstePhasen[0].startLocale = ${ergebnis.naechstePhasen[0]?.startLocale}`)}
+    if (DebugAusgabeDetail){log(`** naechstePhasen[0].Type = ${ergebnis.naechstePhasen[0]?.type}`)}
     if (DebugAusgabeDetail){log(`** aktivePhase.endLocale = ${ergebnis.aktivePhase?.endLocale}`)}
     if (DebugAusgabeDetail){log(`** aktivePhase.startLocale = ${ergebnis.aktivePhase?.startLocale}`)}
-    if (DebugAusgabeDetail){log(`** aktivePhase.Type = ${ergebnis.aktivePhase.type}`)}
+    if (DebugAusgabeDetail){log(`** aktivePhase.Type = ${ergebnis.aktivePhase?.type}`)}
     //if (DebugAusgabeDetail){log(`ergebnis = ${JSON.stringify(ergebnis)}`)}
     if (DebugAusgabeDetail){log(`** Schwellwert Spitzenstrompreis = ${spitzenSchwellwert}`)}
     if (DebugAusgabeDetail){log(`** Schwellwert hoher Strompreis = ${hoherSchwellwert}`)}
@@ -1164,6 +1166,10 @@ async function findeergebnisphasen(data, highThreshold, lowThreshold) {
     let spitzenschwellwert = parseFloat((highThreshold * (1 / (systemwirkungsgrad / 100))).toFixed(4));
     
     //log(`highThreshold = ${highThreshold} lowThreshold = ${lowThreshold} systemwirkungsgrad = ${systemwirkungsgrad} spitzenschwellwert= ${spitzenschwellwert}`,'warn')
+    if (!Array.isArray(data) || data.length === 0) {
+        console.error("Fehler: 'data' ist entweder kein Array oder es ist leer.");
+        return; // Funktion beenden, wenn `data` leer oder kein Array ist
+    }
     
     if (highThreshold === NaN || lowThreshold === NaN || spitzenschwellwert === NaN || systemwirkungsgrad === NaN) {
         log(`function findeergebnisphasen highThreshold oder lowThreshold sind keine gültige Zahl`, 'error');
