@@ -14,7 +14,7 @@ const DebugAusgabeDetail = true;
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.2.3'
+const scriptVersion = 'Version 1.2.4'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 // IDs Script Charge_Control
 const sID_Autonomiezeit =`${instanz}.Charge_Control.Allgemein.Autonomiezeit`;
@@ -209,6 +209,8 @@ async function tibberSteuerungHauskraftwerk() {
         const pvLeistungAusreichend = await pruefePVLeistung(reichweite_h);
         const ergebnis = await findeergebnisphasen(datenTibberLink48h, hoherSchwellwert, niedrigerSchwellwert);
         const naechsteNiedrigphase = findeNaechstePhase(ergebnis.lowPhases);
+        //log(`ergebnis.lowPhases = ${JSON.stringify(ergebnis.normalPhases)}`,'warn')
+        //log(`naechsteNiedrigphase = ${JSON.stringify(naechsteNiedrigphase)}`,'warn')
         const aktivePhase = ergebnis.aktivePhase;
         if (!aktivePhase) {log('aktivePhase ist null oder undefined', 'warn');return;}
         let spitzenSchwellwert = 0, preisBatterie = 0;
@@ -1194,6 +1196,21 @@ async function findeergebnisphasen(data, highThreshold, lowThreshold) {
         }
     }
 
+    function getPhaseArray(currentPhase) {
+        switch (currentPhase?.type) {
+            case 'peak':
+                return peakPhases;
+            case 'high':
+                return highPhases;
+            case 'normal':
+                return normalPhases;
+            case 'low':
+                return lowPhases;
+            default:
+                return null;
+        }
+    }
+
     // Durchlaufe die Daten und verarbeite die Preise
     for (let i = 0; i < data.length; i++) {
         let tibberData = data[i];
@@ -1209,7 +1226,8 @@ async function findeergebnisphasen(data, highThreshold, lowThreshold) {
                 currentPhase.hours++;
             } else {
                 // Beende die aktuelle Phase und starte eine neue Spitzenpreisphase
-                addPhase(currentPhase ? (currentPhase.type === 'high' ? highPhases : lowPhases) : normalPhases, currentPhase);
+                addPhase(getPhaseArray(currentPhase), currentPhase);
+                              
                 currentPhase = {
                     type: 'peak',
                     start: startTime,
@@ -1229,7 +1247,7 @@ async function findeergebnisphasen(data, highThreshold, lowThreshold) {
                 currentPhase.hours++;
             } else {
                 // Beende die aktuelle Phase und starte eine neue Hochpreisphase
-                addPhase(currentPhase ? (currentPhase.type === 'peak' ? peakPhases : lowPhases) : normalPhases, currentPhase);
+                addPhase(getPhaseArray(currentPhase), currentPhase);
                 currentPhase = {
                     type: 'high',
                     start: startTime,
@@ -1249,7 +1267,7 @@ async function findeergebnisphasen(data, highThreshold, lowThreshold) {
                 currentPhase.hours++;
             } else {
                 // Beende die aktuelle Phase und starte eine neue Niedrigpreisphase
-                addPhase(currentPhase ? (currentPhase.type === 'peak' ? peakPhases : highPhases) : normalPhases, currentPhase);
+                addPhase(getPhaseArray(currentPhase), currentPhase);
                 currentPhase = {
                     type: 'low',
                     start: startTime,
@@ -1269,7 +1287,7 @@ async function findeergebnisphasen(data, highThreshold, lowThreshold) {
                 currentPhase.hours++;
             } else {
                 // Beende die aktuelle Phase und starte eine neue Normalpreisphase
-                addPhase(currentPhase ? (currentPhase.type === 'peak' ? peakPhases : highPhases) : lowPhases, currentPhase);
+                addPhase(getPhaseArray(currentPhase), currentPhase);
                 currentPhase = {
                     type: 'normal',
                     start: startTime,
@@ -1282,8 +1300,8 @@ async function findeergebnisphasen(data, highThreshold, lowThreshold) {
     }
 
     // Letzte Phase hinzufügen
-    addPhase(currentPhase ? (currentPhase.type === 'peak' ? peakPhases : (currentPhase.type === 'high' ? highPhases : lowPhases)) : normalPhases, currentPhase);
-
+    addPhase(getPhaseArray(currentPhase), currentPhase);
+    
     // Alle Phasen zusammenführen
     let allePhasen = [...peakPhases, ...highPhases, ...normalPhases, ...lowPhases];
 
