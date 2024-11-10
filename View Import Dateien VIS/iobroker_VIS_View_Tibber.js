@@ -505,7 +505,7 @@
                 "html": "Einstellungen"
             },
             "style": {
-                "left": "532px",
+                "left": "572px",
                 "top": "14px",
                 "color": "#ffffff",
                 "font-size": "35px",
@@ -733,7 +733,7 @@
                 "src": "/vis.0/Icon/TibberLogo.png"
             },
             "style": {
-                "left": "339px",
+                "left": "379px",
                 "top": "-5px",
                 "z-index": "1",
                 "width": "181px",
@@ -742,166 +742,6 @@
             "widgetSet": "basic"
         },
         "e00010": {
-            "tpl": "tplValueFloat",
-            "data": {
-                "oid": "tibberlink.0.LocalPulse.0.PulseInfo.node_status.node_temperature",
-                "g_fixed": false,
-                "g_visibility": false,
-                "g_css_font_text": true,
-                "g_css_background": true,
-                "g_css_shadow_padding": false,
-                "g_css_border": true,
-                "g_gestures": false,
-                "g_signals": false,
-                "g_last_change": false,
-                "visibility-cond": "==",
-                "visibility-val": 1,
-                "visibility-groups-action": "hide",
-                "is_comma": "true",
-                "factor": "1",
-                "signals-cond-0": "==",
-                "signals-val-0": true,
-                "signals-icon-0": "/vis/signals/lowbattery.png",
-                "signals-icon-size-0": 0,
-                "signals-blink-0": false,
-                "signals-horz-0": 0,
-                "signals-vert-0": 0,
-                "signals-hide-edit-0": false,
-                "signals-cond-1": "==",
-                "signals-val-1": true,
-                "signals-icon-1": "/vis/signals/lowbattery.png",
-                "signals-icon-size-1": 0,
-                "signals-blink-1": false,
-                "signals-horz-1": 0,
-                "signals-vert-1": 0,
-                "signals-hide-edit-1": false,
-                "signals-cond-2": "==",
-                "signals-val-2": true,
-                "signals-icon-2": "/vis/signals/lowbattery.png",
-                "signals-icon-size-2": 0,
-                "signals-blink-2": false,
-                "signals-horz-2": 0,
-                "signals-vert-2": 0,
-                "signals-hide-edit-2": false,
-                "html_append_singular": "",
-                "html_append_plural": " °C",
-                "html_prepend": "",
-                "lc-type": "last-change",
-                "lc-is-interval": true,
-                "lc-is-moment": false,
-                "lc-format": "",
-                "lc-position-vert": "top",
-                "lc-position-horz": "right",
-                "lc-offset-vert": 0,
-                "lc-offset-horz": 0,
-                "lc-font-size": "12px",
-                "lc-font-family": "",
-                "lc-font-style": "",
-                "lc-bkg-color": "",
-                "lc-color": "",
-                "lc-border-width": "0",
-                "lc-border-style": "",
-                "lc-border-color": "",
-                "lc-border-radius": 10,
-                "lc-zindex": 0,
-                "digits": "1"
-            },
-            "style": {
-                "left": "269px",
-                "top": "151px",
-                "z-index": "10",
-                "color": "#000000",
-                "background-color": "#ffffff",
-                "width": "100px",
-                "height": "20px",
-                "border-radius": "2px",
-                "text-align": "center",
-                "font-size": "16px",
-                "line-height": "20px",
-                "font-weight": ""
-            },
-            "widgetSet": "basic"
-        },
-        "e00011": {
-            "tpl": "tplValueFloat",
-            "data": {
-                "oid": "tibberlink.0.LocalPulse.0.PulseInfo.node_status.radio_tx_power",
-                "g_fixed": false,
-                "g_visibility": false,
-                "g_css_font_text": true,
-                "g_css_background": true,
-                "g_css_shadow_padding": false,
-                "g_css_border": true,
-                "g_gestures": false,
-                "g_signals": false,
-                "g_last_change": false,
-                "visibility-cond": "==",
-                "visibility-val": 1,
-                "visibility-groups-action": "hide",
-                "is_comma": "true",
-                "factor": "1",
-                "signals-cond-0": "==",
-                "signals-val-0": true,
-                "signals-icon-0": "/vis/signals/lowbattery.png",
-                "signals-icon-size-0": 0,
-                "signals-blink-0": false,
-                "signals-horz-0": 0,
-                "signals-vert-0": 0,
-                "signals-hide-edit-0": false,
-                "signals-cond-1": "==",
-                "signals-val-1": true,
-                "signals-icon-1": "/vis/signals/lowbattery.png",
-                "signals-icon-size-1": 0,
-                "signals-blink-1": false,
-                "signals-horz-1": 0,
-                "signals-vert-1": 0,
-                "signals-hide-edit-1": false,
-                "signals-cond-2": "==",
-                "signals-val-2": true,
-                "signals-icon-2": "/vis/signals/lowbattery.png",
-                "signals-icon-size-2": 0,
-                "signals-blink-2": false,
-                "signals-horz-2": 0,
-                "signals-vert-2": 0,
-                "signals-hide-edit-2": false,
-                "lc-type": "last-change",
-                "lc-is-interval": true,
-                "lc-is-moment": false,
-                "lc-format": "",
-                "lc-position-vert": "top",
-                "lc-position-horz": "right",
-                "lc-offset-vert": 0,
-                "lc-offset-horz": 0,
-                "lc-font-size": "12px",
-                "lc-font-family": "",
-                "lc-font-style": "",
-                "lc-bkg-color": "",
-                "lc-color": "",
-                "lc-border-width": "0",
-                "lc-border-style": "",
-                "lc-border-color": "",
-                "lc-border-radius": 10,
-                "lc-zindex": 0,
-                "html_append_singular": "",
-                "html_append_plural": " dBm"
-            },
-            "style": {
-                "left": "269px",
-                "top": "182px",
-                "z-index": "10",
-                "color": "#000000",
-                "background-color": "#ffffff",
-                "width": "100px",
-                "height": "20px",
-                "border-radius": "2px",
-                "text-align": "center",
-                "font-size": "16px",
-                "line-height": "20px",
-                "font-weight": ""
-            },
-            "widgetSet": "basic"
-        },
-        "e00012": {
             "tpl": "tplHtml",
             "data": {
                 "g_fixed": false,
@@ -959,103 +799,23 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "html": "Temperatur <br>\nTX-Power<br>\nRX-Sensitivity<br>\nBatterie Spannung<br>\n"
+                "html": "Batterie Spannung<br>\nTemperatur"
             },
             "style": {
-                "left": "115px",
-                "top": "145px",
+                "left": "130px",
+                "top": "118px",
                 "color": "#ffffff",
                 "font-size": "16px",
                 "z-index": "10",
                 "width": "140px",
-                "height": "123px",
+                "height": "60px",
                 "text-align": "right",
                 "text-shadow": "rgba(0, 0, 0, 0.9) 3px 3px 4px",
                 "line-height": "30px"
             },
             "widgetSet": "basic"
         },
-        "e00013": {
-            "tpl": "tplValueFloat",
-            "data": {
-                "oid": "tibberlink.0.LocalPulse.0.PulseInfo.node_status.acmp_rx_autolevel_300",
-                "g_fixed": false,
-                "g_visibility": false,
-                "g_css_font_text": true,
-                "g_css_background": true,
-                "g_css_shadow_padding": false,
-                "g_css_border": true,
-                "g_gestures": false,
-                "g_signals": false,
-                "g_last_change": false,
-                "visibility-cond": "==",
-                "visibility-val": 1,
-                "visibility-groups-action": "hide",
-                "is_comma": "true",
-                "factor": "1",
-                "signals-cond-0": "==",
-                "signals-val-0": true,
-                "signals-icon-0": "/vis/signals/lowbattery.png",
-                "signals-icon-size-0": 0,
-                "signals-blink-0": false,
-                "signals-horz-0": 0,
-                "signals-vert-0": 0,
-                "signals-hide-edit-0": false,
-                "signals-cond-1": "==",
-                "signals-val-1": true,
-                "signals-icon-1": "/vis/signals/lowbattery.png",
-                "signals-icon-size-1": 0,
-                "signals-blink-1": false,
-                "signals-horz-1": 0,
-                "signals-vert-1": 0,
-                "signals-hide-edit-1": false,
-                "signals-cond-2": "==",
-                "signals-val-2": true,
-                "signals-icon-2": "/vis/signals/lowbattery.png",
-                "signals-icon-size-2": 0,
-                "signals-blink-2": false,
-                "signals-horz-2": 0,
-                "signals-vert-2": 0,
-                "signals-hide-edit-2": false,
-                "html_append_singular": "",
-                "html_append_plural": " dBm",
-                "html_prepend": "",
-                "lc-type": "last-change",
-                "lc-is-interval": true,
-                "lc-is-moment": false,
-                "lc-format": "",
-                "lc-position-vert": "top",
-                "lc-position-horz": "right",
-                "lc-offset-vert": 0,
-                "lc-offset-horz": 0,
-                "lc-font-size": "12px",
-                "lc-font-family": "",
-                "lc-font-style": "",
-                "lc-bkg-color": "",
-                "lc-color": "",
-                "lc-border-width": "0",
-                "lc-border-style": "",
-                "lc-border-color": "",
-                "lc-border-radius": 10,
-                "lc-zindex": 0
-            },
-            "style": {
-                "left": "269px",
-                "top": "212px",
-                "z-index": "10",
-                "color": "#000000",
-                "background-color": "#ffffff",
-                "width": "100px",
-                "height": "20px",
-                "border-radius": "2px",
-                "text-align": "center",
-                "font-size": "16px",
-                "line-height": "20px",
-                "font-weight": ""
-            },
-            "widgetSet": "basic"
-        },
-        "e00014": {
+        "e00011": {
             "tpl": "tplValueFloat",
             "data": {
                 "oid": "tibberlink.0.LocalPulse.0.PulseInfo.node_status.node_battery_voltage",
@@ -1120,8 +880,8 @@
                 "lc-zindex": 0
             },
             "style": {
-                "left": "269px",
-                "top": "242px",
+                "left": "278px",
+                "top": "125px",
                 "z-index": "10",
                 "color": "#000000",
                 "background-color": "#ffffff",
@@ -1135,7 +895,7 @@
             },
             "widgetSet": "basic"
         },
-        "e00015": {
+        "e00012": {
             "tpl": "tplValueString",
             "data": {
                 "oid": "",
@@ -1212,7 +972,7 @@
             },
             "widgetSet": "basic"
         },
-        "e00016": {
+        "e00013": {
             "tpl": "tplCGradialGauge",
             "data": {
                 "g_fixed": false,
@@ -1333,15 +1093,15 @@
                 "valueBoxBorderRadius": "1"
             },
             "style": {
-                "left": "14px",
-                "top": "127px",
-                "width": "148px",
-                "height": "122px",
+                "left": "11px",
+                "top": "92px",
+                "width": "120px",
+                "height": "107px",
                 "z-index": "3"
             },
             "widgetSet": "canvas-gauges"
         },
-        "e00017": {
+        "e00014": {
             "tpl": "tplHtml",
             "data": {
                 "g_fixed": false,
@@ -1404,8 +1164,8 @@
             "style": {
                 "left": "5px",
                 "top": "84px",
-                "width": "380px",
-                "height": "183px",
+                "width": "379px",
+                "height": "123px",
                 "border-width": "4px",
                 "border-style": "ridge",
                 "border-color": "#ffffff",
@@ -1418,7 +1178,7 @@
             },
             "widgetSet": "basic"
         },
-        "e00018": {
+        "e00015": {
             "tpl": "tplTwSimpleDate",
             "data": {
                 "g_fixed": false,
@@ -1503,7 +1263,7 @@
             },
             "widgetSet": "timeandweather"
         },
-        "e00019": {
+        "e00016": {
             "tpl": "tplVis-materialdesign-Vuetify-Slider",
             "data": {
                 "oid": "0_userdata.0.TibberSkript.USER_ANPASSUNGEN.maxSOC_Batterie",
@@ -1606,7 +1366,7 @@
             },
             "widgetSet": "materialdesign"
         },
-        "e00020": {
+        "e00017": {
             "tpl": "tplValueString",
             "data": {
                 "oid": "",
@@ -1685,7 +1445,7 @@
             },
             "widgetSet": "basic"
         },
-        "e00021": {
+        "e00018": {
             "tpl": "tplVis-materialdesign-Vuetify-Slider",
             "data": {
                 "oid": "0_userdata.0.TibberSkript.USER_ANPASSUNGEN.maxLadeleistung",
@@ -1704,7 +1464,7 @@
                 "orientation": "horizontal",
                 "knobSize": "knobMedium",
                 "step": "1",
-                "vibrateOnMobilDevices": "48",
+                "vibrateOnMobilDevices": "0",
                 "showTicks": "yes",
                 "tickTextColor": "#f0142b",
                 "tickFontFamily": "\"Arial Black\", Gadget, sans-serif",
@@ -1788,7 +1548,7 @@
             },
             "widgetSet": "materialdesign"
         },
-        "e00022": {
+        "e00019": {
             "tpl": "tplValueString",
             "data": {
                 "oid": "",
@@ -1867,7 +1627,7 @@
             },
             "widgetSet": "basic"
         },
-        "e00023": {
+        "e00020": {
             "tpl": "tplValueString",
             "data": {
                 "oid": "",
@@ -1939,14 +1699,14 @@
                 "color": "#fff",
                 "font-family": "Jura-DemiBold",
                 "font-size": "16px",
-                "width": "320px",
-                "height": "20px",
+                "width": "280px",
+                "height": "25px",
                 "text-align": "left",
                 "opacity": ""
             },
             "widgetSet": "basic"
         },
-        "e00024": {
+        "e00021": {
             "tpl": "tplVis-materialdesign-Button-Toggle",
             "data": {
                 "oid": "0_userdata.0.TibberSkript.USER_ANPASSUNGEN.pvSchneebedeckt",
@@ -1966,7 +1726,7 @@
                 "toggleType": "boolean",
                 "stateIfNotTrueValue": "on",
                 "vibrateOnMobilDevices": "50",
-                "buttontext": "&nbsp;&nbsp;PV-Module schneefrei",
+                "buttontext": "&nbsp;PV-Module schneefrei",
                 "textFontFamily": "#mdwTheme:vis-materialdesign.0.fonts.button.default.text",
                 "textFontSize": "17",
                 "mdwButtonPrimaryColor": "#595959",
@@ -2021,7 +1781,7 @@
                 "labelColorTrue": "#ec0e3c",
                 "labelColorFalse": "#69e449",
                 "iconHeight": "28",
-                "labelTrue": "&nbsp;&nbsp;PV-Module schneebedeckt",
+                "labelTrue": "&nbsp;PV-Module schneebedeckt",
                 "labelWidth": "100",
                 "colorBgFalse": "",
                 "colorBgTrue": "",
@@ -2033,16 +1793,16 @@
                 "imageTrueColor": "#ec0e3c"
             },
             "style": {
-                "left": "718px",
+                "left": "663px",
                 "top": "273px",
-                "width": "360px",
+                "width": "220px",
                 "height": "30px",
                 "z-index": "50",
                 "text-shadow": "rgba(0, 0, 0, 0.9) 3px 3px 4px"
             },
             "widgetSet": "materialdesign"
         },
-        "e00025": {
+        "e00022": {
             "tpl": "tplHtml",
             "data": {
                 "g_fixed": false,
@@ -2108,7 +1868,7 @@
                 "color": "#ffffff",
                 "font-size": "16px",
                 "z-index": "10",
-                "width": "240px",
+                "width": "280px",
                 "height": "25px",
                 "text-align": "left",
                 "text-shadow": "rgba(0, 0, 0, 0.9) 3px 3px 4px",
@@ -2117,10 +1877,10 @@
             },
             "widgetSet": "basic"
         },
-        "e00026": {
+        "e00023": {
             "tpl": "tplValueFloat",
             "data": {
-                "oid": "0_userdata.0.TibberSkript.Anzeige_VIS.ladezeitBatterie",
+                "oid": "0_userdata.0.TibberSkript.Anzeige_VIS.strompreisBatterie",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -2160,8 +1920,8 @@
                 "signals-vert-2": 0,
                 "signals-hide-edit-2": false,
                 "html_append_singular": "",
-                "html_append_plural": " Stunden",
-                "html_prepend": "",
+                "html_append_plural": " €",
+                "html_prepend": "&nbsp;",
                 "lc-type": "last-change",
                 "lc-is-interval": true,
                 "lc-is-moment": false,
@@ -2180,25 +1940,25 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "digits": "0"
+                "digits": "3"
             },
             "style": {
-                "left": "719px",
+                "left": "661px",
                 "top": "240px",
-                "z-index": "10",
+                "z-index": "20",
                 "color": "#000000",
                 "background-color": "#ffffff",
                 "width": "130px",
                 "height": "25px",
                 "border-radius": "2px",
-                "text-align": "center",
-                "font-size": "16px",
+                "text-align": "left",
+                "font-size": "18px",
                 "line-height": "25px",
                 "font-weight": ""
             },
             "widgetSet": "basic"
         },
-        "e00027": {
+        "e00024": {
             "tpl": "tplValueString",
             "data": {
                 "oid": "0_userdata.0.TibberSkript.Anzeige_VIS.aktuellerEigenverbrauch",
@@ -2259,10 +2019,10 @@
                 "html_prepend": ""
             },
             "style": {
-                "left": "719px",
+                "left": "661px",
                 "top": "209px",
                 "color": "#000000",
-                "z-index": "10",
+                "z-index": "20",
                 "width": "130px",
                 "height": "25px",
                 "background-color": "#ffffff",
@@ -2273,7 +2033,7 @@
             },
             "widgetSet": "basic"
         },
-        "e00028": {
+        "e00025": {
             "tpl": "tplHtml",
             "data": {
                 "g_fixed": false,
@@ -2331,7 +2091,7 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "html": "Prognose Ladezeit Batterie"
+                "html": "Batteriepreis"
             },
             "style": {
                 "left": "394px",
@@ -2339,7 +2099,7 @@
                 "color": "#ffffff",
                 "font-size": "16px",
                 "z-index": "10",
-                "width": "240px",
+                "width": "280px",
                 "height": "25px",
                 "text-align": "left",
                 "text-shadow": "rgba(0, 0, 0, 0.9) 3px 3px 4px",
@@ -2348,7 +2108,7 @@
             },
             "widgetSet": "basic"
         },
-        "e00029": {
+        "e00026": {
             "tpl": "tplHtml",
             "data": {
                 "g_fixed": false,
@@ -2423,7 +2183,7 @@
             },
             "widgetSet": "basic"
         },
-        "e00030": {
+        "e00027": {
             "tpl": "tplValueString",
             "data": {
                 "oid": "0_userdata.0.TibberSkript.Anzeige_VIS.status",
@@ -2498,7 +2258,7 @@
             },
             "widgetSet": "basic"
         },
-        "e00031": {
+        "e00028": {
             "tpl": "tplValueListHtml8",
             "data": {
                 "oid": "0_userdata.0.TibberSkript.Anzeige_VIS.timerAktiv",
@@ -2593,7 +2353,7 @@
             },
             "widgetSet": "basic"
         },
-        "e00032": {
+        "e00029": {
             "tpl": "tplVis-materialdesign-Button-Toggle",
             "data": {
                 "oid": "0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_ScriptTibber",
@@ -2680,16 +2440,16 @@
                 "imageTrueColor": "#69e449"
             },
             "style": {
-                "left": "718px",
+                "left": "662px",
                 "top": "316px",
-                "width": "360px",
+                "width": "420px",
                 "height": "30px",
                 "z-index": "50",
                 "text-shadow": "rgba(0, 0, 0, 0.9) 3px 3px 4px"
             },
             "widgetSet": "materialdesign"
         },
-        "e00033": {
+        "e00030": {
             "tpl": "tplIFrame",
             "data": {
                 "g_fixed": false,
@@ -2759,7 +2519,7 @@
             },
             "widgetSet": "basic"
         },
-        "e00034": {
+        "e00031": {
             "tpl": "tplHtml",
             "data": {
                 "g_fixed": false,
@@ -2825,7 +2585,7 @@
                 "color": "#ffffff",
                 "font-size": "16px",
                 "z-index": "10",
-                "width": "320px",
+                "width": "280px",
                 "height": "25px",
                 "text-align": "left",
                 "text-shadow": "rgba(0, 0, 0, 0.9) 3px 3px 4px",
@@ -2834,7 +2594,7 @@
             },
             "widgetSet": "basic"
         },
-        "e00035": {
+        "e00032": {
             "tpl": "tplValueFloat",
             "data": {
                 "oid": "0_userdata.0.TibberSkript.Anzeige_VIS.Spitzenstrompreis",
@@ -2900,22 +2660,22 @@
                 "digits": "4"
             },
             "style": {
-                "left": "719px",
+                "left": "661px",
                 "top": "117px",
-                "z-index": "10",
+                "z-index": "20",
                 "color": "#000000",
                 "background-color": "#ffffff",
                 "width": "130px",
                 "height": "25px",
                 "border-radius": "2px",
                 "text-align": "left",
-                "font-size": "19px",
+                "font-size": "18px",
                 "line-height": "25px",
                 "font-weight": ""
             },
             "widgetSet": "basic"
         },
-        "e00036": {
+        "e00033": {
             "tpl": "tplVis-materialdesign-Button-Toggle",
             "data": {
                 "oid": "0_userdata.0.TibberSkript.USER_ANPASSUNGEN.BatteriepreisAktiv",
@@ -3002,16 +2762,16 @@
                 "imageTrueColor": "#69e449"
             },
             "style": {
-                "left": "718px",
+                "left": "662px",
                 "top": "359px",
-                "width": "360px",
+                "width": "420px",
                 "height": "30px",
                 "z-index": "50",
                 "text-shadow": "rgba(0, 0, 0, 0.9) 3px 3px 4px"
             },
             "widgetSet": "materialdesign"
         },
-        "e00037": {
+        "e00034": {
             "tpl": "tplValueString",
             "data": {
                 "oid": "",
@@ -3083,20 +2843,20 @@
                 "color": "#fff",
                 "font-family": "Jura-DemiBold",
                 "font-size": "16px",
-                "width": "320px",
-                "height": "20px",
+                "width": "280px",
+                "height": "25px",
                 "text-align": "left",
                 "opacity": ""
             },
             "widgetSet": "basic"
         },
-        "e00038": {
+        "e00035": {
             "tpl": "tplJquiSelectList",
             "data": {
                 "oid": "0_userdata.0.TibberSkript.USER_ANPASSUNGEN.hoherSchwellwertStrompreis",
                 "g_fixed": false,
                 "g_visibility": false,
-                "g_css_font_text": false,
+                "g_css_font_text": true,
                 "g_css_background": false,
                 "g_css_shadow_padding": false,
                 "g_css_border": false,
@@ -3108,7 +2868,7 @@
                 "visibility-groups-action": "hide",
                 "values": "0.10\t;\n0.11\t;\n0.12\t;\n0.13\t;\n0.14\t;\n0.15\t;\n0.16\t;\n0.17\t;\n0.18\t;\n0.19\t;\n0.20\t;\n0.21\t;\n0.22\t;\n0.23\t;\n0.24\t;\n0.25\t;\n0.26\t;\n0.27\t;\n0.28\t;\n0.29\t;\n0.30\t;\n0.31\t;\n0.32\t;\n0.33\t;\n0.34\t;\n0.35\t;\n0.36\t;\n0.37\t;\n0.38\t;\n0.39\t;\n0.40\t;\n0.41\t;\n0.42\t;\n0.43\t;\n0.44\t;\n0.45\t;\n0.46\t;\n0.47\t;\n0.48\t;\n0.49\t;\n0.50\t;\n",
                 "texts": "0,10 €\t;\n0,11 €\t;\n0,12 €\t;\n0,13 €\t;\n0,14 €\t;\n0,15 €\t;\n0,16 €\t;\n0,17 €\t;\n0,18 €\t;\n0,19 €\t;\n0,20 €\t;\n0,21 €\t;\n0,22 €\t;\n0,23 €\t;\n0,24 €\t;\n0,25 €\t;\n0,26 €\t;\n0,27 €\t;\n0,28 €\t;\n0,29 €\t;\n0,30 €\t;\n0,31 €\t;\n0,32 €\t;\n0,33 €\t;\n0,34 €\t;\n0,35 €\t;\n0,36 €\t;\n0,37 €\t;\n0,38 €\t;\n0,39 €\t;\n0,40 €\t;\n0,41 €\t;\n0,42 €\t;\n0,43 €\t;\n0,44 €\t;\n0,45 €\t;\n0,46 €\t;\n0,47 €\t;\n0,48 €\t;\n0,49 €\t;\n0,50 €\t;\n",
-                "height": "200",
+                "height": "170",
                 "signals-cond-0": "==",
                 "signals-val-0": true,
                 "signals-icon-0": "/vis/signals/lowbattery.png",
@@ -3155,33 +2915,32 @@
                 "open": false
             },
             "style": {
-                "left": "719px",
+                "left": "662px",
                 "top": "148px",
                 "width": "130px",
-                "height": "24px",
-                "z-index": "20"
+                "height": "25px",
+                "z-index": "20",
+                "font-size": "14px",
+                "line-height": ""
             },
             "widgetSet": "jqui"
         },
-        "e00039": {
+        "e00036": {
             "tpl": "tplJquiSelectList",
             "data": {
                 "oid": "0_userdata.0.TibberSkript.USER_ANPASSUNGEN.niedrigerSchwellwertStrompreis",
                 "g_fixed": false,
                 "g_visibility": false,
-                "g_css_font_text": false,
+                "g_css_font_text": true,
                 "g_css_background": false,
                 "g_css_shadow_padding": false,
                 "g_css_border": false,
                 "g_gestures": false,
                 "g_signals": false,
                 "g_last_change": false,
-                "visibility-cond": "==",
-                "visibility-val": 1,
-                "visibility-groups-action": "hide",
-                "values": "0.08    ;\n0.09    ;\n0.10\t;\n0.11\t;\n0.12\t;\n0.13\t;\n0.14\t;\n0.15\t;\n0.16\t;\n0.17\t;\n0.18\t;\n0.19\t;\n0.20\t;\n0.21\t;\n0.22\t;\n0.23\t;\n0.24\t;\n0.25\t;\n0.26\t;\n0.27\t;\n0.28\t;\n0.29\t;\n0.30\t;\n0.31\t;\n0.32\t;\n0.33\t;\n0.34\t;\n0.35\t;\n0.36\t;\n0.37\t;\n0.38\t;\n0.39\t;\n0.40\t;\n0.41\t;\n0.42\t;\n0.43\t;\n0.44\t;\n0.45\t;\n0.46\t;\n0.47\t;\n0.48\t;\n0.49\t;\n0.50\t;\n",
+                "values": "0.08;\n0.09;\n0.10;\n0.11;\n0.12;\n0.13;\n0.14;\n0.15;\n0.16;\n0.17;\n0.18;\n0.19;\n0.20;\n0.21;\n0.22;\n0.23;\n0.24;\n0.25;\n0.26;\n0.27;\n0.28;\n0.29;\n0.30;\n0.31;\n0.32;\n0.33;\n0.34;\n0.35;\n0.36;\n0.37;\n0.38;\n0.39;\n0.40;\n0.41;\n0.42;\n0.43;\n0.44;\n0.45;\n0.46;\n0.47;\n0.48;\n0.49;\n0.50;",
                 "texts": "0,08 €  ;\n0,09 €  ;\n0,10 €\t;\n0,11 €\t;\n0,12 €\t;\n0,13 €\t;\n0,14 €\t;\n0,15 €\t;\n0,16 €\t;\n0,17 €\t;\n0,18 €\t;\n0,19 €\t;\n0,20 €\t;\n0,21 €\t;\n0,22 €\t;\n0,23 €\t;\n0,24 €\t;\n0,25 €\t;\n0,26 €\t;\n0,27 €\t;\n0,28 €\t;\n0,29 €\t;\n0,30 €\t;\n0,31 €\t;\n0,32 €\t;\n0,33 €\t;\n0,34 €\t;\n0,35 €\t;\n0,36 €\t;\n0,37 €\t;\n0,38 €\t;\n0,39 €\t;\n0,40 €\t;\n0,41 €\t;\n0,42 €\t;\n0,43 €\t;\n0,44 €\t;\n0,45 €\t;\n0,46 €\t;\n0,47 €\t;\n0,48 €\t;\n0,49 €\t;\n0,50 €\t;\n",
-                "height": "200",
+                "height": "170",
                 "signals-cond-0": "==",
                 "signals-val-0": true,
                 "signals-icon-0": "/vis/signals/lowbattery.png",
@@ -3206,6 +2965,11 @@
                 "signals-horz-2": 0,
                 "signals-vert-2": 0,
                 "signals-hide-edit-2": false,
+                "no_style": false,
+                "open": false,
+                "visibility-cond": "==",
+                "visibility-val": 1,
+                "visibility-groups-action": "hide",
                 "lc-type": "last-change",
                 "lc-is-interval": true,
                 "lc-is-moment": false,
@@ -3223,20 +2987,19 @@
                 "lc-border-style": "",
                 "lc-border-color": "",
                 "lc-border-radius": 10,
-                "lc-zindex": 0,
-                "no_style": false,
-                "open": false
+                "lc-zindex": 0
             },
             "style": {
-                "left": "719px",
+                "left": "662px",
                 "top": "179px",
                 "width": "130px",
-                "height": "24px",
-                "z-index": "20"
+                "height": "25px",
+                "z-index": "20",
+                "font-size": "14px"
             },
             "widgetSet": "jqui"
         },
-        "e00040": {
+        "e00037": {
             "tpl": "tplVis-materialdesign-Button-Toggle",
             "data": {
                 "oid": "0_userdata.0.TibberSkript.OutputSignal.BatterieLaden",
@@ -3323,7 +3086,7 @@
                 "imageTrueColor": "#69e449"
             },
             "style": {
-                "left": "868px",
+                "left": "872px",
                 "top": "125px",
                 "width": "210px",
                 "height": "30px",
@@ -3332,7 +3095,7 @@
             },
             "widgetSet": "materialdesign"
         },
-        "e00041": {
+        "e00038": {
             "tpl": "tplVis-materialdesign-Button-Toggle",
             "data": {
                 "oid": "0_userdata.0.TibberSkript.OutputSignal.BatterieEntladesperre",
@@ -3419,8 +3182,8 @@
                 "imageTrueColor": "#69e449"
             },
             "style": {
-                "left": "868px",
-                "top": "178px",
+                "left": "872px",
+                "top": "169px",
                 "width": "210px",
                 "height": "30px",
                 "z-index": "50",
@@ -3428,7 +3191,7 @@
             },
             "widgetSet": "materialdesign"
         },
-        "e00042": {
+        "e00039": {
             "tpl": "tplVis-materialdesign-Button-Toggle",
             "data": {
                 "oid": "0_userdata.0.TibberSkript.OutputSignal.eAutoLaden",
@@ -3515,14 +3278,510 @@
                 "imageTrueColor": "#69e449"
             },
             "style": {
-                "left": "868px",
-                "top": "230px",
+                "left": "872px",
+                "top": "213px",
                 "width": "210px",
                 "height": "30px",
                 "z-index": "50",
                 "text-shadow": "rgba(0, 0, 0, 0.9) 3px 3px 4px"
             },
             "widgetSet": "materialdesign"
+        },
+        "e00040": {
+            "tpl": "tplHtml",
+            "data": {
+                "g_fixed": false,
+                "g_visibility": false,
+                "g_css_font_text": true,
+                "g_css_background": false,
+                "g_css_shadow_padding": false,
+                "g_css_border": false,
+                "g_gestures": false,
+                "g_signals": false,
+                "g_last_change": false,
+                "visibility-cond": "==",
+                "visibility-val": 1,
+                "visibility-groups-action": "hide",
+                "refreshInterval": "0",
+                "signals-cond-0": "==",
+                "signals-val-0": true,
+                "signals-icon-0": "/vis/signals/lowbattery.png",
+                "signals-icon-size-0": 0,
+                "signals-blink-0": false,
+                "signals-horz-0": 0,
+                "signals-vert-0": 0,
+                "signals-hide-edit-0": false,
+                "signals-cond-1": "==",
+                "signals-val-1": true,
+                "signals-icon-1": "/vis/signals/lowbattery.png",
+                "signals-icon-size-1": 0,
+                "signals-blink-1": false,
+                "signals-horz-1": 0,
+                "signals-vert-1": 0,
+                "signals-hide-edit-1": false,
+                "signals-cond-2": "==",
+                "signals-val-2": true,
+                "signals-icon-2": "/vis/signals/lowbattery.png",
+                "signals-icon-size-2": 0,
+                "signals-blink-2": false,
+                "signals-horz-2": 0,
+                "signals-vert-2": 0,
+                "signals-hide-edit-2": false,
+                "lc-type": "last-change",
+                "lc-is-interval": true,
+                "lc-is-moment": false,
+                "lc-format": "",
+                "lc-position-vert": "top",
+                "lc-position-horz": "right",
+                "lc-offset-vert": 0,
+                "lc-offset-horz": 0,
+                "lc-font-size": "12px",
+                "lc-font-family": "",
+                "lc-font-style": "",
+                "lc-bkg-color": "",
+                "lc-color": "",
+                "lc-border-width": "0",
+                "lc-border-style": "",
+                "lc-border-color": "",
+                "lc-border-radius": 10,
+                "lc-zindex": 0,
+                "html": "Prognose Ladezeit Batterie"
+            },
+            "style": {
+                "left": "8px",
+                "top": "228px",
+                "color": "#ffffff",
+                "font-size": "16px",
+                "z-index": "10",
+                "width": "240px",
+                "height": "25px",
+                "text-align": "left",
+                "text-shadow": "rgba(0, 0, 0, 0.9) 3px 3px 4px",
+                "line-height": "25px",
+                "font-family": "Jura-DemiBold"
+            },
+            "widgetSet": "basic"
+        },
+        "e00041": {
+            "tpl": "tplValueFloat",
+            "data": {
+                "oid": "0_userdata.0.TibberSkript.Anzeige_VIS.ladezeitBatterie",
+                "g_fixed": false,
+                "g_visibility": false,
+                "g_css_font_text": true,
+                "g_css_background": true,
+                "g_css_shadow_padding": false,
+                "g_css_border": true,
+                "g_gestures": false,
+                "g_signals": false,
+                "g_last_change": false,
+                "visibility-cond": "==",
+                "visibility-val": 1,
+                "visibility-groups-action": "hide",
+                "is_comma": false,
+                "factor": "1",
+                "signals-cond-0": "==",
+                "signals-val-0": true,
+                "signals-icon-0": "/vis/signals/lowbattery.png",
+                "signals-icon-size-0": 0,
+                "signals-blink-0": false,
+                "signals-horz-0": 0,
+                "signals-vert-0": 0,
+                "signals-hide-edit-0": false,
+                "signals-cond-1": "==",
+                "signals-val-1": true,
+                "signals-icon-1": "/vis/signals/lowbattery.png",
+                "signals-icon-size-1": 0,
+                "signals-blink-1": false,
+                "signals-horz-1": 0,
+                "signals-vert-1": 0,
+                "signals-hide-edit-1": false,
+                "signals-cond-2": "==",
+                "signals-val-2": true,
+                "signals-icon-2": "/vis/signals/lowbattery.png",
+                "signals-icon-size-2": 0,
+                "signals-blink-2": false,
+                "signals-horz-2": 0,
+                "signals-vert-2": 0,
+                "signals-hide-edit-2": false,
+                "html_append_singular": "",
+                "html_append_plural": " Stunden",
+                "html_prepend": "",
+                "lc-type": "last-change",
+                "lc-is-interval": true,
+                "lc-is-moment": false,
+                "lc-format": "",
+                "lc-position-vert": "top",
+                "lc-position-horz": "right",
+                "lc-offset-vert": 0,
+                "lc-offset-horz": 0,
+                "lc-font-size": "12px",
+                "lc-font-family": "",
+                "lc-font-style": "",
+                "lc-bkg-color": "",
+                "lc-color": "",
+                "lc-border-width": "0",
+                "lc-border-style": "",
+                "lc-border-color": "",
+                "lc-border-radius": 10,
+                "lc-zindex": 0,
+                "digits": "0"
+            },
+            "style": {
+                "left": "234px",
+                "top": "228px",
+                "z-index": "10",
+                "color": "#000000",
+                "background-color": "#ffffff",
+                "width": "130px",
+                "height": "25px",
+                "border-radius": "2px",
+                "text-align": "center",
+                "font-size": "16px",
+                "line-height": "25px",
+                "font-weight": ""
+            },
+            "widgetSet": "basic"
+        },
+        "e00042": {
+            "tpl": "tplValueFloat",
+            "data": {
+                "oid": "tibberlink.0.LocalPulse.0.PulseInfo.node_status.node_temperature",
+                "g_fixed": false,
+                "g_visibility": false,
+                "g_css_font_text": true,
+                "g_css_background": true,
+                "g_css_shadow_padding": false,
+                "g_css_border": true,
+                "g_gestures": false,
+                "g_signals": false,
+                "g_last_change": false,
+                "visibility-cond": "==",
+                "visibility-val": 1,
+                "visibility-groups-action": "hide",
+                "is_comma": "true",
+                "factor": "1",
+                "signals-cond-0": "==",
+                "signals-val-0": true,
+                "signals-icon-0": "/vis/signals/lowbattery.png",
+                "signals-icon-size-0": 0,
+                "signals-blink-0": false,
+                "signals-horz-0": 0,
+                "signals-vert-0": 0,
+                "signals-hide-edit-0": false,
+                "signals-cond-1": "==",
+                "signals-val-1": true,
+                "signals-icon-1": "/vis/signals/lowbattery.png",
+                "signals-icon-size-1": 0,
+                "signals-blink-1": false,
+                "signals-horz-1": 0,
+                "signals-vert-1": 0,
+                "signals-hide-edit-1": false,
+                "signals-cond-2": "==",
+                "signals-val-2": true,
+                "signals-icon-2": "/vis/signals/lowbattery.png",
+                "signals-icon-size-2": 0,
+                "signals-blink-2": false,
+                "signals-horz-2": 0,
+                "signals-vert-2": 0,
+                "signals-hide-edit-2": false,
+                "html_append_singular": "",
+                "html_append_plural": " °C",
+                "html_prepend": "",
+                "lc-type": "last-change",
+                "lc-is-interval": true,
+                "lc-is-moment": false,
+                "lc-format": "",
+                "lc-position-vert": "top",
+                "lc-position-horz": "right",
+                "lc-offset-vert": 0,
+                "lc-offset-horz": 0,
+                "lc-font-size": "12px",
+                "lc-font-family": "",
+                "lc-font-style": "",
+                "lc-bkg-color": "",
+                "lc-color": "",
+                "lc-border-width": "0",
+                "lc-border-style": "",
+                "lc-border-color": "",
+                "lc-border-radius": 10,
+                "lc-zindex": 0
+            },
+            "style": {
+                "left": "278px",
+                "top": "156px",
+                "z-index": "10",
+                "color": "#000000",
+                "background-color": "#ffffff",
+                "width": "100px",
+                "height": "20px",
+                "border-radius": "2px",
+                "text-align": "center",
+                "font-size": "16px",
+                "line-height": "20px",
+                "font-weight": ""
+            },
+            "widgetSet": "basic"
+        },
+        "e00043": {
+            "tpl": "tplVis-materialdesign-Button-Toggle",
+            "data": {
+                "oid": "0_userdata.0.TibberSkript.USER_ANPASSUNGEN.automPreisanpassung",
+                "g_fixed": false,
+                "g_visibility": false,
+                "g_css_font_text": true,
+                "g_css_background": false,
+                "g_css_shadow_padding": false,
+                "g_css_border": false,
+                "g_gestures": false,
+                "g_signals": false,
+                "g_last_change": false,
+                "visibility-cond": "==",
+                "visibility-val": 1,
+                "visibility-groups-action": "hide",
+                "buttonStyle": "raised",
+                "toggleType": "boolean",
+                "stateIfNotTrueValue": "on",
+                "vibrateOnMobilDevices": "50",
+                "buttontext": "&nbsp;manu. Preisanpassung",
+                "textFontFamily": "#mdwTheme:vis-materialdesign.0.fonts.button.default.text",
+                "textFontSize": "17",
+                "mdwButtonPrimaryColor": "#595959",
+                "mdwButtonSecondaryColor": "",
+                "image": "checkbox-blank-outline",
+                "iconPosition": "left",
+                "autoLockAfter": "10",
+                "lockIconColor": "#mdwTheme:vis-materialdesign.0.colors.button.lock_icon",
+                "lockFilterGrayscale": "30",
+                "signals-cond-0": "==",
+                "signals-val-0": true,
+                "signals-icon-0": "/vis/signals/lowbattery.png",
+                "signals-icon-size-0": 0,
+                "signals-blink-0": false,
+                "signals-horz-0": 0,
+                "signals-vert-0": 0,
+                "signals-hide-edit-0": false,
+                "signals-cond-1": "==",
+                "signals-val-1": true,
+                "signals-icon-1": "/vis/signals/lowbattery.png",
+                "signals-icon-size-1": 0,
+                "signals-blink-1": false,
+                "signals-horz-1": 0,
+                "signals-vert-1": 0,
+                "signals-hide-edit-1": false,
+                "signals-cond-2": "==",
+                "signals-val-2": true,
+                "signals-icon-2": "/vis/signals/lowbattery.png",
+                "signals-icon-size-2": 0,
+                "signals-blink-2": false,
+                "signals-horz-2": 0,
+                "signals-vert-2": 0,
+                "signals-hide-edit-2": false,
+                "lc-type": "last-change",
+                "lc-is-interval": true,
+                "lc-is-moment": false,
+                "lc-format": "",
+                "lc-position-vert": "top",
+                "lc-position-horz": "right",
+                "lc-offset-vert": 0,
+                "lc-offset-horz": 0,
+                "lc-font-size": "12px",
+                "lc-font-family": "",
+                "lc-font-style": "",
+                "lc-bkg-color": "",
+                "lc-color": "",
+                "lc-border-width": "0",
+                "lc-border-style": "",
+                "lc-border-color": "",
+                "lc-border-radius": 10,
+                "lc-zindex": 0,
+                "labelColorTrue": "#69e449",
+                "labelColorFalse": "#ec0e3c",
+                "iconHeight": "28",
+                "labelTrue": "&nbsp;autom. Preisanpassung",
+                "labelWidth": "100",
+                "colorBgFalse": "",
+                "colorBgTrue": "",
+                "mdwButtonColorPress": "",
+                "valueOff": "false",
+                "valueOn": "true",
+                "imageColor": "#ec0e3c",
+                "imageTrue": "checkbox-marked-outline",
+                "imageTrueColor": "#69e449"
+            },
+            "style": {
+                "left": "892px",
+                "top": "273px",
+                "width": "190px",
+                "height": "30px",
+                "z-index": "50",
+                "text-shadow": "rgba(0, 0, 0, 0.9) 3px 3px 4px"
+            },
+            "widgetSet": "materialdesign"
+        },
+        "e00044": {
+            "tpl": "tplValueFloat",
+            "data": {
+                "oid": "0_userdata.0.TibberSkript.USER_ANPASSUNGEN.hoherSchwellwertStrompreis",
+                "g_fixed": false,
+                "g_visibility": true,
+                "g_css_font_text": true,
+                "g_css_background": true,
+                "g_css_shadow_padding": false,
+                "g_css_border": true,
+                "g_gestures": false,
+                "g_signals": false,
+                "g_last_change": false,
+                "visibility-cond": "==",
+                "visibility-val": "true",
+                "visibility-groups-action": "hide",
+                "is_comma": true,
+                "factor": "1",
+                "signals-cond-0": "==",
+                "signals-val-0": true,
+                "signals-icon-0": "/vis/signals/lowbattery.png",
+                "signals-icon-size-0": 0,
+                "signals-blink-0": false,
+                "signals-horz-0": 0,
+                "signals-vert-0": 0,
+                "signals-hide-edit-0": false,
+                "signals-cond-1": "==",
+                "signals-val-1": true,
+                "signals-icon-1": "/vis/signals/lowbattery.png",
+                "signals-icon-size-1": 0,
+                "signals-blink-1": false,
+                "signals-horz-1": 0,
+                "signals-vert-1": 0,
+                "signals-hide-edit-1": false,
+                "signals-cond-2": "==",
+                "signals-val-2": true,
+                "signals-icon-2": "/vis/signals/lowbattery.png",
+                "signals-icon-size-2": 0,
+                "signals-blink-2": false,
+                "signals-horz-2": 0,
+                "signals-vert-2": 0,
+                "signals-hide-edit-2": false,
+                "html_append_singular": "",
+                "html_append_plural": " €",
+                "html_prepend": "&nbsp;",
+                "lc-type": "last-change",
+                "lc-is-interval": true,
+                "lc-is-moment": false,
+                "lc-format": "",
+                "lc-position-vert": "top",
+                "lc-position-horz": "right",
+                "lc-offset-vert": 0,
+                "lc-offset-horz": 0,
+                "lc-font-size": "12px",
+                "lc-font-family": "",
+                "lc-font-style": "",
+                "lc-bkg-color": "",
+                "lc-color": "",
+                "lc-border-width": "0",
+                "lc-border-style": "",
+                "lc-border-color": "",
+                "lc-border-radius": 10,
+                "lc-zindex": 0,
+                "digits": "4",
+                "visibility-oid": "0_userdata.0.TibberSkript.USER_ANPASSUNGEN.automPreisanpassung"
+            },
+            "style": {
+                "left": "661px",
+                "top": "148px",
+                "z-index": "20",
+                "color": "#000000",
+                "background-color": "#ffffff",
+                "width": "130px",
+                "height": "25px",
+                "border-radius": "2px",
+                "text-align": "left",
+                "font-size": "18px",
+                "line-height": "25px",
+                "font-weight": ""
+            },
+            "widgetSet": "basic"
+        },
+        "e00045": {
+            "tpl": "tplValueFloat",
+            "data": {
+                "oid": "0_userdata.0.TibberSkript.USER_ANPASSUNGEN.niedrigerSchwellwertStrompreis",
+                "g_fixed": false,
+                "g_visibility": true,
+                "g_css_font_text": true,
+                "g_css_background": true,
+                "g_css_shadow_padding": false,
+                "g_css_border": true,
+                "g_gestures": false,
+                "g_signals": false,
+                "g_last_change": false,
+                "visibility-cond": "==",
+                "visibility-val": "true",
+                "visibility-groups-action": "hide",
+                "is_comma": true,
+                "factor": "1",
+                "signals-cond-0": "==",
+                "signals-val-0": true,
+                "signals-icon-0": "/vis/signals/lowbattery.png",
+                "signals-icon-size-0": 0,
+                "signals-blink-0": false,
+                "signals-horz-0": 0,
+                "signals-vert-0": 0,
+                "signals-hide-edit-0": false,
+                "signals-cond-1": "==",
+                "signals-val-1": true,
+                "signals-icon-1": "/vis/signals/lowbattery.png",
+                "signals-icon-size-1": 0,
+                "signals-blink-1": false,
+                "signals-horz-1": 0,
+                "signals-vert-1": 0,
+                "signals-hide-edit-1": false,
+                "signals-cond-2": "==",
+                "signals-val-2": true,
+                "signals-icon-2": "/vis/signals/lowbattery.png",
+                "signals-icon-size-2": 0,
+                "signals-blink-2": false,
+                "signals-horz-2": 0,
+                "signals-vert-2": 0,
+                "signals-hide-edit-2": false,
+                "html_append_singular": "",
+                "html_append_plural": " €",
+                "html_prepend": "&nbsp;",
+                "lc-type": "last-change",
+                "lc-is-interval": true,
+                "lc-is-moment": false,
+                "lc-format": "",
+                "lc-position-vert": "top",
+                "lc-position-horz": "right",
+                "lc-offset-vert": 0,
+                "lc-offset-horz": 0,
+                "lc-font-size": "12px",
+                "lc-font-family": "",
+                "lc-font-style": "",
+                "lc-bkg-color": "",
+                "lc-color": "",
+                "lc-border-width": "0",
+                "lc-border-style": "",
+                "lc-border-color": "",
+                "lc-border-radius": 10,
+                "lc-zindex": 0,
+                "digits": "4",
+                "visibility-oid": "0_userdata.0.TibberSkript.USER_ANPASSUNGEN.automPreisanpassung"
+            },
+            "style": {
+                "left": "661px",
+                "top": "178px",
+                "z-index": "20",
+                "color": "#000000",
+                "background-color": "#ffffff",
+                "width": "130px",
+                "height": "25px",
+                "border-radius": "2px",
+                "text-align": "left",
+                "font-size": "18px",
+                "line-height": "25px",
+                "font-weight": ""
+            },
+            "widgetSet": "basic"
         }
     },
     "name": "28_E3DC_Tibber",
