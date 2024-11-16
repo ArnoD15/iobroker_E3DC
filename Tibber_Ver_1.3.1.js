@@ -14,7 +14,7 @@ const DebugAusgabeDetail = true;
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.3.0'
+const scriptVersion = 'Version 1.3.1'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 // IDs Script Charge_Control
 const sID_Autonomiezeit =`${instanz}.Charge_Control.Allgemein.Autonomiezeit`;
@@ -458,8 +458,14 @@ async function tibberSteuerungHauskraftwerk() {
             }
             LogProgrammablauf += '13,';
             // günstigste Ladezeit suchen um auf max SOC zu laden
-            const vonTime = new Date(aktivePhase.start)
-            const bisTime = new Date(aktivePhase.end)
+            let vonTime = new Date(aktivePhase.start)
+            let bisTime = new Date(aktivePhase.end)
+            const dauerNormalPhase_h = round((aktivePhase.end - aktivePhase.start) / (1000 * 60 * 60),2)
+            // Prüfen ob die dauer der Pahse reicht um die Batterie auf max SOC zu laden und wenn nicht dann ab aktueller Urzeit suchen
+            // den günstigsten Zeitraum suchen
+            if(ladeZeit_h >dauerNormalPhase_h){
+                vonTime = new Date()
+            }
             const dateBesteStartLadezeit = await bestLoadTime(vonTime,bisTime,ladeZeit_h)
             // Prüfen ob der Zeitraum größer ist als die benötigte Zeit 
             const difference_ms = bisTime.getTime() - vonTime.getTime();
@@ -1476,9 +1482,9 @@ async function loescheAlleTimer(timerID) {
 // Schwellwerte automatisch setzen
 async function autoPreisanpassung(strompreis) {
     if (strompreis.toFixed(2) != strompreis.toFixed(4)) {
-        hoherSchwellwert =toFloat((Math.ceil(strompreis * 100) / 100).toFixed(2));
+        hoherSchwellwert =toFloat((Math.ceil(strompreis * 100) / 100 +0.01).toFixed(2));
     } else {
-        hoherSchwellwert =(strompreis + 0.01).toFixed(2);
+        hoherSchwellwert =(strompreis + 0.02).toFixed(2);
     }
     niedrigerSchwellwert = stromgestehungskosten
     
