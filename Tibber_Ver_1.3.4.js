@@ -14,7 +14,7 @@ const DebugAusgabeDetail = true;
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.3.3'
+const scriptVersion = 'Version 1.3.4'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 // IDs Script Charge_Control
 const sID_Autonomiezeit =`${instanz}.Charge_Control.Allgemein.Autonomiezeit`;
@@ -68,7 +68,7 @@ const arrayID_TibberPrices =[sID_PricesTodayJSON,sID_PricesTomorrowJSON];
 let maxBatterieSoC = 0, aktuelleBatterieSoC_Pro,aktuelleBatterieSoC_alt = 0, ladeZeit_h, maxLadeleistungUser_W, stromgestehungskosten;
 let batterieKapazitaet_kWh = 0, minStrompreis_48h = 0, LogProgrammablauf = "";
 let batterieSOC_alt = null, aktuellerPreisTibber = null, strompreisBatterie,bruttoPreisBatterie,systemwirkungsgrad = 0 ;
-let hoherSchwellwert = 0, niedrigerSchwellwert = 0, peakSchwellwert = 0, dateBesteReichweiteLadezeit_alt = null;
+let hoherSchwellwert = 0, niedrigerSchwellwert = 0, peakSchwellwert = 0, dateBesteReichweiteLadezeit_alt = new Date();
 
 let bLock = false, schneeBedeckt = false, autPreisanpassung = false, notstromAktiv = false, batteriepreisAktiv = false, bStart = true;;                                                                 
 let battLaden = false, autoLaden = false, battSperre = false, battSperrePrio = false, statusText = ``;
@@ -292,7 +292,6 @@ async function tibberSteuerungHauskraftwerk() {
             LogProgrammablauf = '';
             return;
         }
-        
         if (aktivePhaseType === 'high'){
             LogProgrammablauf += '11,';
             // ist innerhalb der Reichweite Batterie eine niedrig Preisphase
@@ -304,7 +303,7 @@ async function tibberSteuerungHauskraftwerk() {
                     const vonTime = new Date(naechsteNiedrigphase.startzeit)
                     const bisTime = new Date(naechsteNiedrigphase.endzeit)
                     // günstigste Startzeit zum Laden suchen
-                    const dateBesteStartLadezeit = await bestLoadTime(vonTime,bisTime,ladeZeit_h)
+                    const dateBesteStartLadezeit = bestLoadTime(vonTime,bisTime,ladeZeit_h)
                     // Prüfen ob der Zeitraum größer ist als die benötigte Zeit 
                     const difference_ms = bisTime.getTime() - vonTime.getTime();
                     let diffZeit_h = Math.min(difference_ms / (1000 * 60 * 60), ladeZeit_h);
@@ -351,7 +350,7 @@ async function tibberSteuerungHauskraftwerk() {
                         LogProgrammablauf += '11/4,';
                         const jetzt = new Date();
                         // günstigste Startzeit zum Laden suchen
-                        const dateBesteStartLadezeit = await bestLoadTime(aktivePhase.start,naechstePhase0.start,dauerPeakPhase_h)
+                        const dateBesteStartLadezeit = bestLoadTime(aktivePhase.start,naechstePhase0.start,dauerPeakPhase_h)
                         const dateEndeSperrzeit = new Date(dateBesteStartLadezeit.getTime() + dauerPeakPhase_h * 60 * 60 * 1000);
                         
                         let message
@@ -393,7 +392,7 @@ async function tibberSteuerungHauskraftwerk() {
                                 const bisTime = new Date(ergebnisPreisvergleich.peakZeit)
                                 const vonTime = new Date(aktivePhase.start)
                                 log(`vonTime = ${vonTime} bisTime = ${bisTime}`,'warn')
-                                const startZeit = await bestLoadTime(vonTime,bisTime,ladezeitBatt_h)
+                                const startZeit = bestLoadTime(vonTime,bisTime,ladezeitBatt_h)
                                 log(`startZeit = ${startZeit}`,'warn')
                                 const endeZeit = new Date(startZeit.getTime() + ladezeitBatt_h * 60 * 60 * 1000);
                                 log(`endeZeit = ${endeZeit}`,'warn')
@@ -443,14 +442,15 @@ async function tibberSteuerungHauskraftwerk() {
                 vonTime = new Date()
             }
             // günstigste Startzeit suchen um auf max SOC zu laden
-            const dateBesteStartLadezeit = await bestLoadTime(vonTime,bisTime,ladeZeit_h)
+            const dateBesteStartLadezeit = bestLoadTime(vonTime,bisTime,ladeZeit_h)
             const dateBesteEndeLadezeit = new Date(dateBesteStartLadezeit.getTime() + ladeZeit_h * 60 * 60 * 1000);
             // Reichweite Batterie um eine Stunde Puffer Zeit reduzieren
             const reduzEndZeitBatterie = new Date(endZeitBatterie);
             reduzEndZeitBatterie.setHours(reduzEndZeitBatterie.getHours() - 1);
             // Prüfen ob es einen günstigerern Ladezeitraum innerhalb der Batteriereichweite gibt
-            const dateBesteReichweiteLadezeit = await bestLoadTime(new Date(),reduzEndZeitBatterie,ladeZeit_h)
+            const dateBesteReichweiteLadezeit = bestLoadTime(new Date(),reduzEndZeitBatterie,ladeZeit_h)
             // Differenz berechnen und nur wenn > 1 das Laden stoppen. Verhindert ein ständiges ein und ausschalten 
+            log(`dateBesteReichweiteLadezeit_alt = ${dateBesteReichweiteLadezeit_alt}`,'warn')
             const diffBesteReichweiteLadezeit_h = (dateBesteReichweiteLadezeit_alt.getTime()-dateBesteReichweiteLadezeit.getTime())/ (1000 * 60 * 60)
             dateBesteReichweiteLadezeit_alt = dateBesteReichweiteLadezeit;
             if(dateBesteStartLadezeit > new Date() && diffBesteReichweiteLadezeit_h > 1){
@@ -547,7 +547,7 @@ async function tibberSteuerungHauskraftwerk() {
             // günstigste Ladezeit suchen
             const bisTime = new Date(aktivePhase.end)
             const vonTime = new Date(aktivePhase.start)
-            const dateBesteStartLadezeit = await bestLoadTime(vonTime,bisTime,ladeZeit_h)
+            const dateBesteStartLadezeit = bestLoadTime(vonTime,bisTime,ladeZeit_h)
             const dateEndeLadezeit = new Date(dateBesteStartLadezeit);
             dateEndeLadezeit.setHours(dateEndeLadezeit.getHours() + ladeZeit_h);
             await setStateAtSpecificTime(new Date(dateBesteStartLadezeit), sID_BatterieLaden, true);
@@ -894,7 +894,7 @@ async function setStateAtSpecificTime(targetTime, stateID, state) {
 
 // Die Funktion bestLoadTime dient dazu, innerhalb eines bestimmten Zeitraums den günstigsten Startzeitpunkt
 // für eine Ladezeit (in Stunden) zu ermitteln, basierend auf den Preisdaten Tibber.
-async function bestLoadTime(dateStartTime, dateEndTime, ladezeit_h) {
+function bestLoadTime(dateStartTime, dateEndTime, ladezeit_h) {
     try {
         //log(`dateStartTime = ${dateStartTime} dateEndTime = ${dateEndTime} ladezeit_h = ${ladezeit_h} datenTibberLink48h = ${JSON.stringify(datenTibberLink48h)}`, 'warn');
         // Konvertiere Ladezeit in Float, wenn sie als String übergeben wurde
@@ -957,7 +957,6 @@ async function bestLoadTime(dateStartTime, dateEndTime, ladezeit_h) {
 
         // Aktualisiere den durchschnittlichen Preis pro Stunde
         billigsterBlockPreis = billigsterBlockPreis / ladezeit_h;
-
         // Gibt die günstigste Zeit zurück, falls vorhanden
         if (billigsteZeit) {
             return new Date(billigsteZeit);
