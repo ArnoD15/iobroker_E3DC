@@ -14,7 +14,7 @@ const DebugAusgabeDetail = true;
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.3.4'
+const scriptVersion = 'Version 1.3.5'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 // IDs Script Charge_Control
 const sID_Autonomiezeit =`${instanz}.Charge_Control.Allgemein.Autonomiezeit`;
@@ -252,8 +252,8 @@ async function tibberSteuerungHauskraftwerk() {
 
         // Entladen der Batterie sperren wenn Batteriepreis höher als Tibberpreis und sperre nicht über Timer gesetzt wurde
         if (!battSperrePrio) {
-            if (preisBatterie > aktuellerPreisTibber && !battSperre) {
-                await setStateAsync(sID_BatterieEntladesperre, true);
+            if (preisBatterie > aktuellerPreisTibber) {
+                if(!battSperre){await setStateAsync(sID_BatterieEntladesperre, true);}
             } else if (battSperre) {
                 await setStateAsync(sID_BatterieEntladesperre, false);
             }
@@ -450,7 +450,6 @@ async function tibberSteuerungHauskraftwerk() {
             // Prüfen ob es einen günstigerern Ladezeitraum innerhalb der Batteriereichweite gibt
             const dateBesteReichweiteLadezeit = bestLoadTime(new Date(),reduzEndZeitBatterie,ladeZeit_h)
             // Differenz berechnen und nur wenn > 1 das Laden stoppen. Verhindert ein ständiges ein und ausschalten 
-            log(`dateBesteReichweiteLadezeit_alt = ${dateBesteReichweiteLadezeit_alt}`,'warn')
             const diffBesteReichweiteLadezeit_h = (dateBesteReichweiteLadezeit_alt.getTime()-dateBesteReichweiteLadezeit.getTime())/ (1000 * 60 * 60)
             dateBesteReichweiteLadezeit_alt = dateBesteReichweiteLadezeit;
             if(dateBesteStartLadezeit > new Date() && diffBesteReichweiteLadezeit_h > 1){
@@ -1594,18 +1593,20 @@ on({id: sID_Power_Grid, change: "ne"}, async function (obj){
 on({id: sID_Batterie_SOC, change: "ne"}, async function (obj){	
     if(bStart){return};
     try {
-        let [leistungBatterie,batterieLaden,power_Grid] = await Promise.all([
+        let [batterieLaden] = await Promise.all([
             getStateAsync(sID_Power_Bat_W),
-            getStateAsync(sID_BatterieLaden),
-            getStateAsync(sID_Power_Grid)
         ]).then(states => states.map(state => state.val));
-        leistungBatterie = Math.abs(leistungBatterie);
         aktuelleBatterieSoC_Pro = obj.state.val
     
-         // Entferne alle Einträge mit einem SoC-Wert, der über dem aktuellen SoC liegt
-        batterieLadedaten = batterieLadedaten.filter(data => data.soc <= aktuelleBatterieSoC_Pro);
-        await setStateAsync(sID_BatterieLadedaten,JSON.stringify(batterieLadedaten));
-    
+        // Entferne alle Einträge mit einem SoC-Wert, der über dem aktuellen SoC liegt
+        //batterieLadedaten = batterieLadedaten.filter(data => data.soc <= aktuelleBatterieSoC_Pro);
+        //await setStateAsync(sID_BatterieLadedaten,JSON.stringify(batterieLadedaten));
+        // Entferne überschüssige Einträge am Ende des Arrays
+        while (batterieLadedaten.length > aktuelleBatterieSoC_Pro) {
+            batterieLadedaten.pop(); // Entferne den letzten Eintrag
+        }
+        await setStateAsync(sID_BatterieLadedaten, JSON.stringify(batterieLadedaten));
+
         // Laden stoppen, wenn max. SOC erreicht oder überschritten ist
         if(aktuelleBatterieSoC_Pro >= maxBatterieSoC){
             LogProgrammablauf += '28,';
@@ -1614,12 +1615,11 @@ on({id: sID_Batterie_SOC, change: "ne"}, async function (obj){
         }
 
         // Neue Werte schreiben wenn der SOC ansteigt
-        const neuerEintrag = {
-            soc: aktuelleBatterieSoC_Pro,
-            price: batterieLaden && leistungBatterie > 0 ? aktuellerPreisTibber : stromgestehungskosten,
-        };
-    
-        if (aktuelleBatterieSoC_Pro > batterieSOC_alt) {
+        if (aktuelleBatterieSoC_Pro > batterieSOC_alt) {    
+            const neuerEintrag = {
+                soc: aktuelleBatterieSoC_Pro,
+                price: batterieLaden ? aktuellerPreisTibber : stromgestehungskosten,
+            };
             batterieLadedaten.push(neuerEintrag);
             await setStateAsync(sID_BatterieLadedaten, JSON.stringify(batterieLadedaten));
         }
