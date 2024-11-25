@@ -6,7 +6,8 @@ const PfadEbene1 = 'TibberSkript';                                              
 const PfadEbene2 = ['Anzeige_VIS','OutputSignal','History','USER_ANPASSUNGEN']                		            // Pfad innerhalb PfadEbene1
 const instanzE3DC_RSCP = 'e3dc-rscp.0'
 const DebugAusgabeDetail = true;
-
+const hystereseReichweite_h = 0.5;                                                                              // Hysterese-Schwelle von ±30 Minuten
+const hystereseBatterie_pro = 2;                                                                                // Hysterese-Schwelle von ±2 %
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
 //------------------------------------------------------------------------------------------------------
 
@@ -14,7 +15,7 @@ const DebugAusgabeDetail = true;
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.3.5'
+const scriptVersion = 'Version 1.3.6'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 // IDs Script Charge_Control
 const sID_Autonomiezeit =`${instanz}.Charge_Control.Allgemein.Autonomiezeit`;
@@ -23,18 +24,18 @@ const sID_maxEntladetiefeBatterie =`${instanz}.Charge_Control.USER_ANPASSUNGEN.1
 const sID_PrognoseAuto_kWh =`${instanz}.Charge_Control.History.PrognoseAuto_kWh`
 
 // IDs des Adapters e3dc-rscp
-const sID_Batterie_SOC =`${instanzE3DC_RSCP}.EMS.BAT_SOC`;                                                              // aktueller Batterie_SOC
-const sID_Bat_Charge_Limit =`${instanzE3DC_RSCP}.EMS.SYS_SPECS.maxBatChargePower`;                                      // Batterie Ladelimit
-const sID_SPECIFIED_Battery_Capacity_0 =`${instanzE3DC_RSCP}.BAT.BAT_0.SPECIFIED_CAPACITY`;                             // Installierte Batterie Kapazität Batteriekreis 0
-const sID_SPECIFIED_Battery_Capacity_1 =`${instanzE3DC_RSCP}.BAT.BAT_1.SPECIFIED_CAPACITY`;                             // Installierte Batterie Kapazität Batteriekreis 1
-const sID_BAT0_Alterungszustand =`${instanzE3DC_RSCP}.BAT.BAT_0.ASOC`;                                                  // Batterie ASOC e3dc-rscp
-const sID_Power_Bat_W = `${instanzE3DC_RSCP}.EMS.POWER_BAT`;                                                            // aktuelle Batterie_Leistung'
-const sID_Power_Grid = `${instanzE3DC_RSCP}.EMS.POWER_GRID`                                                             // Leistung aus Netz
-const sID_Notrom_Status =`${instanzE3DC_RSCP}.EMS.EMERGENCY_POWER_STATUS`;                                              // 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
+const sID_Batterie_SOC =`${instanzE3DC_RSCP}.EMS.BAT_SOC`;                                                      // aktueller Batterie_SOC
+const sID_Bat_Charge_Limit =`${instanzE3DC_RSCP}.EMS.SYS_SPECS.maxBatChargePower`;                              // Batterie Ladelimit
+const sID_SPECIFIED_Battery_Capacity_0 =`${instanzE3DC_RSCP}.BAT.BAT_0.SPECIFIED_CAPACITY`;                     // Installierte Batterie Kapazität Batteriekreis 0
+const sID_SPECIFIED_Battery_Capacity_1 =`${instanzE3DC_RSCP}.BAT.BAT_1.SPECIFIED_CAPACITY`;                     // Installierte Batterie Kapazität Batteriekreis 1
+const sID_BAT0_Alterungszustand =`${instanzE3DC_RSCP}.BAT.BAT_0.ASOC`;                                          // Batterie ASOC e3dc-rscp
+const sID_Power_Bat_W = `${instanzE3DC_RSCP}.EMS.POWER_BAT`;                                                    // aktuelle Batterie_Leistung'
+const sID_Power_Grid = `${instanzE3DC_RSCP}.EMS.POWER_GRID`                                                     // Leistung aus Netz
+const sID_Notrom_Status =`${instanzE3DC_RSCP}.EMS.EMERGENCY_POWER_STATUS`;                                      // 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
     
 // IDs des Script Tibber
 const sID_aktuellerEigenverbrauch = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.aktuellerEigenverbrauch`;        // Anzeige in VIS durchschnittlicher Eigenverbrauch
-const sID_status = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.status`;                            // Anzeige in VIS Status
+const sID_status = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.status`;                                          // Anzeige in VIS Status
 const sID_ladezeitBatterie = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.ladezeitBatterie`;                      // Anzeige in VIS Prognose Ladezeit Batterie bei aktuellen Einstellungen
 const sID_timerAktiv = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.timerAktiv`;                                  // Anzeige in VIS Status Timer um Batterie zu laden
 const sID_StrompreisBatterie = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.strompreisBatterie`                   // Anzeige in VIS aktueller Strompreis Batterie
@@ -67,8 +68,10 @@ const arrayID_TibberPrices =[sID_PricesTodayJSON,sID_PricesTomorrowJSON];
 
 let maxBatterieSoC = 0, aktuelleBatterieSoC_Pro,aktuelleBatterieSoC_alt = 0, ladeZeit_h, maxLadeleistungUser_W, stromgestehungskosten;
 let batterieKapazitaet_kWh = 0, minStrompreis_48h = 0, LogProgrammablauf = "";
-let batterieSOC_alt = null, aktuellerPreisTibber = null, strompreisBatterie,bruttoPreisBatterie,systemwirkungsgrad = 0 ;
-let hoherSchwellwert = 0, niedrigerSchwellwert = 0, peakSchwellwert = 0, dateBesteReichweiteLadezeit_alt = new Date();
+let batterieSOC_alt = null, aktuellerPreisTibber = null, Reichweite_alt = null ;
+let hoherSchwellwert = 0, niedrigerSchwellwert = 0, peakSchwellwert = 0, systemwirkungsgrad = 0;
+let dateBesteReichweiteLadezeit_alt = new Date();
+let strompreisBatterie, bruttoPreisBatterie;
 
 let bLock = false, schneeBedeckt = false, autPreisanpassung = false, notstromAktiv = false, batteriepreisAktiv = false, bStart = true;;                                                                 
 let battLaden = false, autoLaden = false, battSperre = false, battSperrePrio = false, statusText = ``;
@@ -210,8 +213,14 @@ async function tibberSteuerungHauskraftwerk() {
         ]).then(states => states.map(state => state.val));
         
         const [stunden, minuten] = (await getStateAsync(sID_Autonomiezeit)).val.split(' / ')[1].split(' ')[0].split(':').map(Number);
-        const reichweite_h = round(stunden + (minuten /60),2)
+        let reichweite_h = round(stunden + (minuten /60),2)
         const datejetzt = new Date();
+        // Hysterese-Schwelle von ±30 Minuten dass kleine zeitliche Unterschiede nicht zu einem häufigen Wechsel führen
+        if(Math.abs(reichweite_h-Reichweite_alt) >= hystereseReichweite_h){
+            Reichweite_alt = reichweite_h    
+        }else{
+            reichweite_h = Reichweite_alt
+        }
         const endZeitBatterie = new Date(datejetzt.getTime() + reichweite_h * 3600000);
         const pvLeistungAusreichend = await pruefePVLeistung(reichweite_h);
         const ergebnis = await findeergebnisphasen(datenTibberLink48h, hoherSchwellwert, niedrigerSchwellwert);
@@ -219,9 +228,9 @@ async function tibberSteuerungHauskraftwerk() {
         //log(`ergebnis.lowPhases = ${JSON.stringify(ergebnis.normalPhases)}`,'warn')
         //log(`naechsteNiedrigphase = ${JSON.stringify(naechsteNiedrigphase)}`,'warn')
         
-        // Batterieschwankungen +-1% ignorieren
+        // Batterieschwankungen +-2% ignorieren
         const diffBatSOC = Math.abs(aktuelleBatterieSoC_Pro - aktuelleBatterieSoC_alt)
-        if(diffBatSOC >=2 || ladeZeit_h == undefined){
+        if(diffBatSOC >= hystereseBatterie_pro || ladeZeit_h == undefined){
             ladeZeit_h = await berechneLadezeitBatterie(null,aktuelleBatterieSoC_Pro)
         }
         const aktivePhase = ergebnis.aktivePhase;
@@ -632,13 +641,12 @@ async function pruefePVLeistung(reichweiteStunden) {
     try {   
         LogProgrammablauf += '18,';
         reichweiteStunden = parseFloat(reichweiteStunden);
-
         // Prüfung: Ist reichweiteStunden eine gültige Zahl?
         if (isNaN(reichweiteStunden)) {
             log(`function pruefePVLeistung(): reichweiteStunden ist keine gültige Zahl`, 'error');
             return { reichweite: false, pvLeistung: false, state: false };
         }
-
+        
         // Wenn die PV-Module schneebedeckt sind, abbrechen
         if (schneeBedeckt) {
             LogProgrammablauf += '18/1,';
@@ -895,36 +903,35 @@ async function setStateAtSpecificTime(targetTime, stateID, state) {
 // für eine Ladezeit (in Stunden) zu ermitteln, basierend auf den Preisdaten Tibber.
 function bestLoadTime(dateStartTime, dateEndTime, ladezeit_h) {
     try {
-        //log(`dateStartTime = ${dateStartTime} dateEndTime = ${dateEndTime} ladezeit_h = ${ladezeit_h} datenTibberLink48h = ${JSON.stringify(datenTibberLink48h)}`, 'warn');
-        // Konvertiere Ladezeit in Float, wenn sie als String übergeben wurde
+        // Konvertiere und validiere die Ladezeit
         ladezeit_h = parseFloat(ladezeit_h);
-        
-        // Überprüfe, ob Ladezeit eine Zahl ist
         if (isNaN(ladezeit_h)) {
             log(`function bestLoadTime: ladezeit_h ist keine gültige Zahl`, 'error');
-            return;
+            return null;
+        }
+        // Setze ladezeit_h auf 1, wenn es <= 0 ist
+        if (ladezeit_h <= 0) { ladezeit_h = 1; }
+        
+        // Validierung der globalen Variable datenTibberLink48h
+        if (!Array.isArray(datenTibberLink48h) || datenTibberLink48h.length === 0) {
+            log(`function bestLoadTime: datenTibberLink48h ist keine gültiges Array oder enthält keine Werte.`, 'error');
+            return null;
         }
         
-        // Prüfen ob der Zeitraum > ist als die Ladzeit, ansonsten die Ladezeit reduzieren
-        const difference_ms = dateEndTime.getTime() - dateStartTime.getTime();
-        ladezeit_h = Math.min(difference_ms / (1000 * 60 * 60), ladezeit_h);
-        // Start- und Endzeiten zu Datumsobjekten umwandeln, falls nötig
+        // Konvertiere Start- und Endzeit zu Datumsobjekten, falls notwendig
         dateStartTime = new Date(dateStartTime);
         dateEndTime = new Date(dateEndTime);
-
-        // Überprüfe ob die Start- und Endzeiten gültig sind
+        
+        // Überprüfe, ob Start- und Endzeiten gültig sind
         if (isNaN(dateStartTime) || isNaN(dateEndTime)) {
             log(`function bestLoadTime: Ungültiges Start- oder Enddatum`, 'error');
-            return;
+            return null;
         }
 
-        // Wenn Ladezeit 0 oder kleiner ist, auf 1 Stunde setzen
-        if (ladezeit_h <= 0) { ladezeit_h = 1; }
+        // Ladezeit begrenzen, wenn sie länger als der verfügbare Zeitraum ist
+        const difference_ms = dateEndTime.getTime() - dateStartTime.getTime();
+        ladezeit_h = Math.min(difference_ms / (1000 * 60 * 60), ladezeit_h);
 
-        // Initialisiere Variablen für günstigsten Preis und Zeit
-        let billigsterBlockPreis = Infinity;
-        let billigsteZeit = null;
-        
         // Auf volle Stunden runden
         dateStartTime.setMinutes(0, 0, 0);        
         if (dateEndTime.getMinutes() > 0 || dateEndTime.getSeconds() > 0 || dateEndTime.getMilliseconds() > 0) {
@@ -932,7 +939,11 @@ function bestLoadTime(dateStartTime, dateEndTime, ladezeit_h) {
             dateEndTime.setHours(dateEndTime.getHours() + 1);
         }
         dateEndTime.setMinutes(0, 0, 0);
-                
+
+        // Variablen für günstigsten Ladezeitblock initialisieren
+        let billigsterBlockPreis = Infinity;
+        let billigsteZeit = null;
+
         // Iteriere durch die Daten, um den günstigsten Ladezeitpunkt innerhalb des Zeitraums zu finden
         for (let i = 0; i < datenTibberLink48h.length - ladezeit_h; i++) {
             const startEntry = datenTibberLink48h[i];
@@ -960,13 +971,13 @@ function bestLoadTime(dateStartTime, dateEndTime, ladezeit_h) {
         if (billigsteZeit) {
             return new Date(billigsteZeit);
         } else {
-            log(`function bestLoadTime: Kein Eintrag innerhalb des angegebenen Zeitraums gefunden`, 'error');
+            log(`function bestLoadTime: Kein Eintrag gefunden datenTibberLink48h.length = ${datenTibberLink48h.length} billigsteZeit = ${billigsteZeit}`, 'error');
         }
     } catch (error) {
         log(`Fehler in Funktion bestLoadTime: ${error.message}`, 'error');
     }
 }
-
+        
 async function createDiagramm(){
     // JSON-Daten parsen
     const [reichweite_h, minuten] = (await getStateAsync(sID_Autonomiezeit)).val.split(' / ')[1].split(' ')[0].split(':').map(Number);
