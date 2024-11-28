@@ -965,8 +965,13 @@ function bestLoadTime(dateStartTime, dateEndTime, ladezeit_h) {
         // Iteriere durch die Daten, um den günstigsten Ladezeitpunkt innerhalb des Zeitraums zu finden
         for (let i = 0; i < datenTibberLink48h.length - ladezeit_h; i++) {
             const startEntry = datenTibberLink48h[i];
-            const startTime = new Date(startEntry.startsAt);
-
+            let startTime
+            if (!startEntry || !startEntry.startsAt){
+                log(`Keinen Eintrag für i = ${i} in den Tibberdaten48h = ${JSON.stringify(datenTibberLink48h[i])} gefunden. datenTibberLink48h.length = ${datenTibberLink48h.length} ladezeit_h = ${ladezeit_h}`,'error');
+            } else {
+                startTime = new Date(startEntry.startsAt);
+            } 
+            
             // Prüfe, ob der Startzeitpunkt innerhalb des angegebenen Zeitrahmens liegt
             if (startTime.getTime() >= dateStartTime.getTime() && startTime.getTime() < dateEndTime.getTime()) {
                 // Berechne die Gesamtkosten für den Stundenblock
