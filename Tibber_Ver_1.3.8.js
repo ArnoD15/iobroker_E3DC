@@ -15,7 +15,7 @@ const hystereseBatterie_pro = 2;                                                
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.3.7'
+const scriptVersion = 'Version 1.3.8'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 // IDs Script Charge_Control
 const sID_Autonomiezeit =`${instanz}.Charge_Control.Allgemein.Autonomiezeit`;
@@ -658,9 +658,10 @@ function findeNaechstePhase(arrayPhases) {
 async function pruefePVLeistung(reichweiteStunden) {
     try {   
         LogProgrammablauf += '18,';
-        reichweiteStunden = parseFloat(reichweiteStunden);
+        let nreichweiteStunden = parseFloat(reichweiteStunden);
+        nreichweiteStunden = Math.floor(nreichweiteStunden)
         // Prüfung: Ist reichweiteStunden eine gültige Zahl?
-        if (isNaN(reichweiteStunden)) {
+        if (isNaN(nreichweiteStunden)) {
             log(`function pruefePVLeistung(): reichweiteStunden ist keine gültige Zahl`, 'error');
             return { reichweite: false, pvLeistung: false, state: false };
         }
@@ -686,7 +687,7 @@ async function pruefePVLeistung(reichweiteStunden) {
         let morgenErwartetePVLeistung_kWh = parseFloat(arrayPrognoseAuto_kWh[morgen.getDate()]);
 
         // Benötigte Kapazität, um die Batterie auf maximalen SOC zu laden
-        const progBattSoC = await prognoseBatterieSOC(reichweiteStunden);
+        const progBattSoC = await prognoseBatterieSOC(nreichweiteStunden);
         const benoetigteKapazitaetPrognose_kWh = (100 - progBattSoC.soc) / 100 * batterieKapazitaet_kWh;
         const benoetigteKapazitaet = (100 - aktuelleBatterieSoC_Pro) / 100 * batterieKapazitaet_kWh;
         // Berechnung der Zeit bis zum nächsten Sonnenaufgang
@@ -706,7 +707,7 @@ async function pruefePVLeistung(reichweiteStunden) {
             const PVLeistungBisSonnenuntergang = (heuteErwartetePVLeistung_kWh / gesamteSonnenstunden)* verbleibendeSonnenstunden; 
             // Prüfen, ob die PV-Leistung bis Sonnenuntergang ausreicht
             if (PVLeistungBisSonnenuntergang >= benoetigteKapazitaet) {
-                const reichweite = reichweiteStunden >= verbleibendeSonnenstunden;
+                const reichweite = nreichweiteStunden >= verbleibendeSonnenstunden;
                 const state = reichweite && true;  // Beide Bedingungen sind erfüllt, also state = true
                 LogProgrammablauf += '18/2,';
                 return { reichweite, pvLeistung: true, state };
@@ -717,7 +718,7 @@ async function pruefePVLeistung(reichweiteStunden) {
         }
 
         // Prüfung, ob die Reichweite bis zum Sonnenaufgang ausreicht
-        if (reichweiteStunden < stundenBisSunrise) {
+        if (nreichweiteStunden < stundenBisSunrise) {
             LogProgrammablauf += '18/4,';
             return { reichweite: false, pvLeistung: false, state: false };
         }
@@ -919,17 +920,15 @@ async function setStateAtSpecificTime(targetTime, stateID, state) {
 
 // Die Funktion bestLoadTime dient dazu, innerhalb eines bestimmten Zeitraums den günstigsten Startzeitpunkt
 // für eine Ladezeit (in Stunden) zu ermitteln, basierend auf den Preisdaten Tibber.
-function bestLoadTime(dateStartTime, dateEndTime, ladezeit_h) {
+function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h) {
     try {
         // Konvertiere und validiere die Ladezeit
-        ladezeit_h = parseFloat(ladezeit_h);
-        if (isNaN(ladezeit_h)) {
+        nladezeit_h = Math.ceil(nladezeit_h);
+        if (isNaN(nladezeit_h)) {
             log(`function bestLoadTime: ladezeit_h ist keine gültige Zahl`, 'error');
             return null;
         }
-        // Setze ladezeit_h auf 1, wenn es <= 0 ist
-        if (ladezeit_h <= 0) { ladezeit_h = 1; }
-        
+                
         // Validierung der globalen Variable datenTibberLink48h
         if (!Array.isArray(datenTibberLink48h) || datenTibberLink48h.length === 0) {
             log(`function bestLoadTime: datenTibberLink48h ist keine gültiges Array oder enthält keine Werte.`, 'error');
@@ -948,8 +947,11 @@ function bestLoadTime(dateStartTime, dateEndTime, ladezeit_h) {
 
         // Ladezeit begrenzen, wenn sie länger als der verfügbare Zeitraum ist
         const difference_ms = dateEndTime.getTime() - dateStartTime.getTime();
-        ladezeit_h = Math.min(difference_ms / (1000 * 60 * 60), ladezeit_h);
-
+        nladezeit_h = Math.min(difference_ms / (1000 * 60 * 60), nladezeit_h);
+          
+        // Ladezeit auf mindestens 1 setzen
+        nladezeit_h = Math.max(nladezeit_h, 1);
+        
         // Auf volle Stunden runden
         dateStartTime.setMinutes(0, 0, 0);        
         if (dateEndTime.getMinutes() > 0 || dateEndTime.getSeconds() > 0 || dateEndTime.getMilliseconds() > 0) {
@@ -961,13 +963,13 @@ function bestLoadTime(dateStartTime, dateEndTime, ladezeit_h) {
         // Variablen für günstigsten Ladezeitblock initialisieren
         let billigsterBlockPreis = Infinity;
         let billigsteZeit = null;
-
+        
         // Iteriere durch die Daten, um den günstigsten Ladezeitpunkt innerhalb des Zeitraums zu finden
-        for (let i = 0; i < datenTibberLink48h.length - ladezeit_h; i++) {
+        for (let i = 0; i < datenTibberLink48h.length - nladezeit_h; i++) {
             const startEntry = datenTibberLink48h[i];
             let startTime
             if (!startEntry || !startEntry.startsAt){
-                log(`Keinen Eintrag für i = ${i} in den Tibberdaten48h = ${JSON.stringify(datenTibberLink48h[i])} gefunden. datenTibberLink48h.length = ${datenTibberLink48h.length} ladezeit_h = ${ladezeit_h}`,'error');
+                log(`Keinen Eintrag für i = ${i} in den Tibberdaten48h = ${JSON.stringify(datenTibberLink48h[i])} gefunden. datenTibberLink48h.length = ${datenTibberLink48h.length} ladezeit_h = ${nladezeit_h}`,'error');
             } else {
                 startTime = new Date(startEntry.startsAt);
             } 
@@ -976,7 +978,7 @@ function bestLoadTime(dateStartTime, dateEndTime, ladezeit_h) {
             if (startTime.getTime() >= dateStartTime.getTime() && startTime.getTime() < dateEndTime.getTime()) {
                 // Berechne die Gesamtkosten für den Stundenblock
                 let blockPreis = 0;
-                for (let j = 0; j < ladezeit_h; j++) {
+                for (let j = 0; j < nladezeit_h; j++) {
                     const entry = datenTibberLink48h[i + j];
                     blockPreis += entry.total;
                 }
@@ -989,7 +991,7 @@ function bestLoadTime(dateStartTime, dateEndTime, ladezeit_h) {
         }
 
         // Aktualisiere den durchschnittlichen Preis pro Stunde
-        billigsterBlockPreis = billigsterBlockPreis / ladezeit_h;
+        billigsterBlockPreis = billigsterBlockPreis / nladezeit_h;
         // Gibt die günstigste Zeit zurück, falls vorhanden
         if (billigsteZeit) {
             return new Date(billigsteZeit);
