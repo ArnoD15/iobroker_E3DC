@@ -15,7 +15,7 @@ const hystereseBatterie_pro = 2;                                                
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.3.8'
+const scriptVersion = 'Version 1.3.9'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 // IDs Script Charge_Control
 const sID_Autonomiezeit =`${instanz}.Charge_Control.Allgemein.Autonomiezeit`;
@@ -235,7 +235,8 @@ async function tibberSteuerungHauskraftwerk() {
         }
         const aktivePhase = ergebnis.aktivePhase;
         if (!aktivePhase) {log('aktivePhase ist null oder undefined', 'warn');return;}
-        let spitzenSchwellwert = 0, preisBatterie = 0;
+        let preisBatterie = 0;
+        let spitzenSchwellwert = round(hoherSchwellwert * (1 / (systemwirkungsgrad / 100)), 4);
         
         // Tibber Preis aktualisieren
         aktuellerPreisTibber = await getCurrentPrice();
@@ -286,7 +287,6 @@ async function tibberSteuerungHauskraftwerk() {
         const naechstePhase0 = ergebnis?.naechstePhasen[0] // @ts-ignore
         const dauerAktivePhase_h = aktivePhase ? round((new Date(aktivePhase.end) - new Date()) / (1000 * 60 * 60),2):null
         const aktivePhaseType = aktivePhase.type;    
-        spitzenSchwellwert = round(hoherSchwellwert * (1 / (systemwirkungsgrad / 100)), 4);
         peakSchwellwert != spitzenSchwellwert ? await setStateAsync(sID_Spitzenstrompreis, spitzenSchwellwert):null;
         
         // Prüfe ob die aktive Phase === 'peak' ist, dann wird nicht geladen
@@ -922,6 +922,14 @@ async function setStateAtSpecificTime(targetTime, stateID, state) {
 // für eine Ladezeit (in Stunden) zu ermitteln, basierend auf den Preisdaten Tibber.
 function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h) {
     try {
+        // Variablen für günstigsten Ladezeitblock initialisieren
+        let billigsterBlockPreis = Infinity;
+        let billigsteZeit = null;
+        
+        // Konvertiere Start- und Endzeit zu Datumsobjekten, falls notwendig
+        dateStartTime = new Date(dateStartTime);
+        dateEndTime = new Date(dateEndTime);
+        
         // Konvertiere und validiere die Ladezeit
         nladezeit_h = Math.ceil(nladezeit_h);
         if (isNaN(nladezeit_h)) {
@@ -935,10 +943,30 @@ function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h) {
             return null;
         }
         
-        // Konvertiere Start- und Endzeit zu Datumsobjekten, falls notwendig
-        dateStartTime = new Date(dateStartTime);
-        dateEndTime = new Date(dateEndTime);
+        // Auf volle Stunden runden
+        dateStartTime.setMinutes(0, 0, 0);        
+        if (dateEndTime.getMinutes() > 0 || dateEndTime.getSeconds() > 0 || dateEndTime.getMilliseconds() > 0) {
+            // Eine Stunde hinzufügen, wenn nicht schon exakt eine volle Stunde
+            dateEndTime.setHours(dateEndTime.getHours() + 1);
+        }
+        dateEndTime.setMinutes(0, 0, 0);
         
+        // Ermittlung der Zeitgrenzen
+        const validStartTime = new Date(datenTibberLink48h[0].startsAt);
+        const validEndTime = new Date(datenTibberLink48h[datenTibberLink48h.length - 1].startsAt);
+        validEndTime.setHours(validEndTime.getHours() + 1);
+
+        // Validierung von dateStartTime und dateEndTime
+        if (dateStartTime < validStartTime) {
+            log(`dateStartTime liegt vor dem gültigen Zeitraum. Anpassung auf ${validStartTime}`, 'warn');
+            dateStartTime = validStartTime;
+        }
+
+        if (dateEndTime > validEndTime) {
+            log(`dateEndTime liegt nach dem gültigen Zeitraum. Anpassung auf ${validEndTime}`, 'warn');
+            dateEndTime = validEndTime;
+        }
+
         // Überprüfe, ob Start- und Endzeiten gültig sind
         if (isNaN(dateStartTime) || isNaN(dateEndTime)) {
             log(`function bestLoadTime: Ungültiges Start- oder Enddatum`, 'error');
@@ -952,24 +980,12 @@ function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h) {
         // Ladezeit auf mindestens 1 setzen
         nladezeit_h = Math.max(nladezeit_h, 1);
         
-        // Auf volle Stunden runden
-        dateStartTime.setMinutes(0, 0, 0);        
-        if (dateEndTime.getMinutes() > 0 || dateEndTime.getSeconds() > 0 || dateEndTime.getMilliseconds() > 0) {
-            // Eine Stunde hinzufügen, wenn nicht schon exakt eine volle Stunde
-            dateEndTime.setHours(dateEndTime.getHours() + 1);
-        }
-        dateEndTime.setMinutes(0, 0, 0);
-
-        // Variablen für günstigsten Ladezeitblock initialisieren
-        let billigsterBlockPreis = Infinity;
-        let billigsteZeit = null;
-        
         // Iteriere durch die Daten, um den günstigsten Ladezeitpunkt innerhalb des Zeitraums zu finden
         for (let i = 0; i < datenTibberLink48h.length - nladezeit_h; i++) {
             const startEntry = datenTibberLink48h[i];
             let startTime
             if (!startEntry || !startEntry.startsAt){
-                log(`Keinen Eintrag für i = ${i} in den Tibberdaten48h = ${JSON.stringify(datenTibberLink48h[i])} gefunden. datenTibberLink48h.length = ${datenTibberLink48h.length} ladezeit_h = ${nladezeit_h}`,'error');
+                log(`Keinen Eintrag für i = ${i} in den Tibberdaten48h = ${JSON.stringify(datenTibberLink48h[i])} gefunden. datenTibberLink48h.length = ${datenTibberLink48h.length} nladezeit_h = ${nladezeit_h}`,'error');
             } else {
                 startTime = new Date(startEntry.startsAt);
             } 
@@ -996,7 +1012,7 @@ function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h) {
         if (billigsteZeit) {
             return new Date(billigsteZeit);
         } else {
-            log(`function bestLoadTime: Kein Eintrag gefunden datenTibberLink48h.length = ${datenTibberLink48h.length} billigsteZeit = ${billigsteZeit}`, 'error');
+            log(`function bestLoadTime: Kein Eintrag gefunden datenTibberLink48h.length = ${datenTibberLink48h.length} billigsteZeit = ${billigsteZeit} nladezeit_h = ${nladezeit_h}`, 'error');
         }
     } catch (error) {
         log(`Fehler in Funktion bestLoadTime: ${error.message}`, 'error');
