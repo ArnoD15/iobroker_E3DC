@@ -1012,7 +1012,7 @@ function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h) {
         if (billigsteZeit) {
             return new Date(billigsteZeit);
         } else {
-            log(`function bestLoadTime: Kein Eintrag gefunden datenTibberLink48h.length = ${datenTibberLink48h.length} billigsteZeit = ${billigsteZeit} nladezeit_h = ${nladezeit_h}`, 'error');
+            log(`function bestLoadTime: Kein Eintrag gefunden dateStartTime = ${dateStartTime} dateEndTime = ${dateEndTime} datenTibberLink48h.length = ${datenTibberLink48h.length} billigsteZeit = ${billigsteZeit} nladezeit_h = ${nladezeit_h}`, 'error');
         }
     } catch (error) {
         log(`Fehler in Funktion bestLoadTime: ${error.message}`, 'error');
