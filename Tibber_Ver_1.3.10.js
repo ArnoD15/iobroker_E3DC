@@ -15,7 +15,7 @@ const hystereseBatterie_pro = 2;                                                
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.3.9'
+const scriptVersion = 'Version 1.3.10'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 // IDs Script Charge_Control
 const sID_Autonomiezeit =`${instanz}.Charge_Control.Allgemein.Autonomiezeit`;
@@ -131,6 +131,7 @@ async function ScriptStart()
     const entladetiefe_Pro = results[3];
     const aSOC_Bat_Pro = results[4];
     aktuelleBatterieSoC_alt = aktuelleBatterieSoC_Pro
+    batterieSOC_alt = aktuelleBatterieSoC_Pro
     if (existsState(sID_SPECIFIED_Battery_Capacity_1)){
         const batteryCapacity1 = (await getStateAsync(sID_SPECIFIED_Battery_Capacity_1)).val
         batterieKapazitaet_kWh = (batteryCapacity0 + batteryCapacity1) / 1000;
@@ -301,28 +302,30 @@ async function tibberSteuerungHauskraftwerk() {
             LogProgrammablauf = '';
             return;
         }
+        
         if (aktivePhaseType === 'high'){
             LogProgrammablauf += '11,';
-            // ist innerhalb der Reichweite Batterie eine niedrig Preisphase
+            
+            // ist innerhalb der Reichweite Batterie eine low Preisphase
             if (naechsteNiedrigphase.state){
                 if(naechsteNiedrigphase.startzeit < endZeitBatterie){
-                    // nicht laden und Timer für laden low Phase setzen.
+                    // nicht laden
                     LogProgrammablauf += '11/1,';
-                    // dauer bis zur nächsten Niedrigphase
+                    // dauer bis zur nächsten lowphase
                     const vonTime = new Date(naechsteNiedrigphase.startzeit)
                     const bisTime = new Date(naechsteNiedrigphase.endzeit)
                     // günstigste Startzeit zum Laden suchen
-                    const dateBesteStartLadezeit = bestLoadTime(vonTime,bisTime,ladeZeit_h)
-                    // Prüfen ob der Zeitraum größer ist als die benötigte Zeit 
-                    const difference_ms = bisTime.getTime() - vonTime.getTime();
-                    let diffZeit_h = Math.min(difference_ms / (1000 * 60 * 60), ladeZeit_h);
-                    const dateBesteEndeLadezeit = new Date(dateBesteStartLadezeit.getTime() + diffZeit_h * 60 * 60 * 1000);
-                    // Timer Laden setzen
-                    await setStateAtSpecificTime(new Date(dateBesteStartLadezeit), sID_BatterieLaden, true);
-                    await setStateAtSpecificTime(new Date(dateBesteEndeLadezeit), sID_BatterieLaden, false);
-                    const hours = dateBesteStartLadezeit.getHours().toString().padStart(2, '0');
-                    const minutes = dateBesteStartLadezeit.getMinutes().toString().padStart(2, '0');
-                    let message = `warte auf Normalpreisphase. Start laden ${hours}:${minutes} Uhr (aktive Phase: ${aktivePhase.type})`
+                    const dateBesteStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h)
+                    // Prüfen ob Startzeit low Preisphase bereits erreicht ist und wenn nein die Ladefreigabe entfernen
+                    if(naechsteNiedrigphase.startzeit.getTime() > new Date().getTime()){
+                        if(battLaden){
+                            await loescheAlleTimer('Laden');
+                            await setStateAsync(sID_BatterieLaden,false)
+                        }
+                    }
+                    const hours = dateBesteStartLade.zeit.getHours().toString().padStart(2, '0');
+                    const minutes = dateBesteStartLade.zeit.getMinutes().toString().padStart(2, '0');
+                    let message = `warte auf Niedrigpreisphase. Start laden ${hours}:${minutes} Uhr (aktive Phase: ${aktivePhase.type})`
                     statusText != message ? await setStateAsync(sID_status,message): null;
                     await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
                     LogProgrammablauf = '';
@@ -332,20 +335,17 @@ async function tibberSteuerungHauskraftwerk() {
             // ist innerhalb der Reichweite Batterie eine normal Preisphase
             if (naechsteNormalphase.state){
                 if(naechsteNormalphase.startzeit < endZeitBatterie){
-                    // nicht laden und Timer für laden normal Phase setzen.
+                    // nicht laden
                     LogProgrammablauf += '11/2,';
                     const vonTime = new Date(naechsteNormalphase.startzeit)
                     const bisTime = new Date(naechsteNormalphase.endzeit)
                     // günstigste Startzeit zum Laden suchen
-                    const dateBesteStartLadezeit = bestLoadTime(vonTime,bisTime,ladeZeit_h)
+                    const dateBesteStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h)
                     // Prüfen ob der Zeitraum größer ist als die benötigte Zeit 
                     const difference_ms = bisTime.getTime() - vonTime.getTime();
                     let diffZeit_h = Math.min(difference_ms / (1000 * 60 * 60), ladeZeit_h);
-                    const dateBesteEndeLadezeit = new Date(dateBesteStartLadezeit.getTime() + diffZeit_h * 60 * 60 * 1000);
-                    // Timer Laden setzen
-                    await setStateAtSpecificTime(new Date(dateBesteStartLadezeit), sID_BatterieLaden, true);
-                    await setStateAtSpecificTime(new Date(dateBesteEndeLadezeit), sID_BatterieLaden, false);
-                    const startTime = dateBesteStartLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
+                    const dateBesteEndeLadezeit = new Date(dateBesteStartLade.zeit.getTime() + diffZeit_h * 60 * 60 * 1000);
+                    const startTime = dateBesteStartLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                     const endeTime = dateBesteEndeLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                     let message = `warte auf Normalpreisphase von ${startTime} bis ${endeTime} (aktive Phase: ${aktivePhase.type})`
                     statusText != message ? await setStateAsync(sID_status,message): null;
@@ -368,11 +368,11 @@ async function tibberSteuerungHauskraftwerk() {
                         LogProgrammablauf += '11/4,';
                         const jetzt = new Date();
                         // günstigste Startzeit zum Laden suchen
-                        const dateBesteStartLadezeit = bestLoadTime(aktivePhase.start,naechstePhase0.start,dauerPeakPhase_h)
-                        const dateEndeSperrzeit = new Date(dateBesteStartLadezeit.getTime() + dauerPeakPhase_h * 60 * 60 * 1000);
+                        const dateBesteStartLade = bestLoadTime(aktivePhase.start,naechstePhase0.start,dauerPeakPhase_h)
+                        const dateEndeSperrzeit = new Date(dateBesteStartLade.zeit.getTime() + dauerPeakPhase_h * 60 * 60 * 1000);
                         
                         let message
-                        if(dateBesteStartLadezeit.getTime() <= new Date().getTime() && dateEndeSperrzeit.getTime() > new Date().getTime()){
+                        if(dateBesteStartLade.zeit.getTime() <= new Date().getTime() && dateEndeSperrzeit.getTime() > new Date().getTime()){
                             // Günstigste Zeit überschritten Entladen sofort sperren 
                             await loescheAlleTimer('Entladesperre')
                             battSperrePrio = true;
@@ -382,7 +382,7 @@ async function tibberSteuerungHauskraftwerk() {
                             const endeTime = dateEndeSperrzeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                             message = `Batterie sperre von ${startTime} bis ${endeTime} um Peak Phase zu überbrücken (aktive Phase: ${aktivePhase.type})`
                         }else{
-                            const dateStartSperrzeit = new Date(dateBesteStartLadezeit);
+                            const dateStartSperrzeit = new Date(dateBesteStartLade.zeit);
                             await setStateAtSpecificTime(new Date(dateStartSperrzeit), sID_BatterieEntladesperre, true);
                             await setStateAtSpecificTime(new Date(dateEndeSperrzeit), sID_BatterieEntladesperre, false);
                             const startTime = dateStartSperrzeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
@@ -401,25 +401,26 @@ async function tibberSteuerungHauskraftwerk() {
                         const sunsetHeute_ms = getAstroDate("sunset", datejetzt).getTime() - 2 * 3600000;  // 2 Stunden Puffer  // Sonnenuntergang -2 h
                         // Nur aus Netz laden Laden wenn Preis höher 0,1€ als aktueller Preis ist und nur soviel um diese phase zu überbrücken
                         // und nur Nachts wenn keine PV-Leistung möglich ist oder Module Schneebedeckt sind.(Absicherung wenn PV-Prognose falsch ist)
-                        if ((aktuelleZeit_ms < sunriseHeute_ms && aktuelleZeit_ms >= sunsetHeute_ms) || schneeBedeckt) {
+                        if (aktuelleZeit_ms < sunriseHeute_ms || aktuelleZeit_ms >= sunsetHeute_ms || schneeBedeckt) {
                             const ergebnisPreisvergleich = await preisUnterschiedPruefen(naechstePhase0.end)
+                            //log(`ergebnisPreisvergleich = ${JSON.stringify(ergebnisPreisvergleich)}`,'warn')
                             if(ergebnisPreisvergleich.state == true){
                                 const ladezeitBatt_h = await berechneLadezeitBatterie(dauerPeakPhase_h,null)
                                 //const bisPeak_h = (new Date(ergebnisPreisvergleich.peakZeit).getTime() - jetzt.getTime()) / (1000 * 60 * 60);
-                                log(`ladezeitBatt_h = ${ladezeitBatt_h}`,'warn')
+                                //log(`ladezeitBatt_h = ${ladezeitBatt_h}`,'warn')
                                 const bisTime = new Date(ergebnisPreisvergleich.peakZeit)
                                 const vonTime = new Date(aktivePhase.start)
-                                log(`vonTime = ${vonTime} bisTime = ${bisTime}`,'warn')
-                                const startZeit = bestLoadTime(vonTime,bisTime,ladezeitBatt_h)
-                                log(`startZeit = ${startZeit}`,'warn')
-                                const endeZeit = new Date(startZeit.getTime() + ladezeitBatt_h * 60 * 60 * 1000);
-                                log(`endeZeit = ${endeZeit}`,'warn')
-                                await setStateAtSpecificTime(new Date(startZeit), sID_BatterieLaden, true);
+                                //log(`vonTime = ${vonTime} bisTime = ${bisTime}`,'warn')
+                                const start = bestLoadTime(vonTime,bisTime,ladezeitBatt_h)
+                                //log(`startZeit = ${start.zeit}`,'warn')
+                                const endeZeit = new Date(start.zeit.getTime() + ladezeitBatt_h * 60 * 60 * 1000);
+                                //log(`endeZeit = ${endeZeit}`,'warn')
+                                await setStateAtSpecificTime(new Date(start.zeit), sID_BatterieLaden, true);
                                 await setStateAtSpecificTime(new Date(endeZeit), sID_BatterieLaden, false);
                                 // Batterie sperren ab Leidezeitpunkt bis zum Start der Peak Phase
-                                await setStateAtSpecificTime(new Date(startZeit), sID_BatterieEntladesperre, true);
+                                await setStateAtSpecificTime(new Date(start.zeit), sID_BatterieEntladesperre, true);
                                 await setStateAtSpecificTime(new Date(naechstePhase0.start), sID_BatterieEntladesperre, false);
-                                const startTime = startZeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
+                                const startTime = start.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                                 const endeTime = endeZeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                                 let message = `Batterie laden von ${startTime} bis ${endeTime} um Peakphase zu überbrücken (aktive Phase: ${aktivePhase.type})`
                                 statusText != message ? await setStateAsync(sID_status,message): null;
@@ -450,56 +451,34 @@ async function tibberSteuerungHauskraftwerk() {
         
         if (aktivePhaseType === 'normal'){
             LogProgrammablauf += '12,';
-            let vonTime = new Date(aktivePhase.start)
-            let bisTime = new Date(aktivePhase.end)
-            const dauerNormalPhase_h = round((aktivePhase.end - aktivePhase.start) / (1000 * 60 * 60),2)
-            // Prüfen ob die dauer der Phase reicht um die Batterie auf max SOC zu laden und wenn nicht dann ab aktueller Urzeit
-            // den günstigsten Zeitraum suchen
-            if(ladeZeit_h >dauerNormalPhase_h){
-                LogProgrammablauf += '12/1,';
-                vonTime = new Date()
-            }
-            // günstigste Startzeit suchen um auf max SOC zu laden
-            const dateBesteStartLadezeit = bestLoadTime(vonTime,bisTime,ladeZeit_h)
-            const dateBesteEndeLadezeit = new Date(dateBesteStartLadezeit.getTime() + ladeZeit_h * 60 * 60 * 1000);
-            // Reichweite Batterie um eine Stunde Puffer Zeit reduzieren
-            const reduzEndZeitBatterie = new Date(endZeitBatterie);
-            reduzEndZeitBatterie.setHours(reduzEndZeitBatterie.getHours() - 1);
-            // Prüfen ob es einen günstigerern Ladezeitraum innerhalb der Batteriereichweite gibt
-            const dateBesteReichweiteLadezeit = bestLoadTime(new Date(),reduzEndZeitBatterie,ladeZeit_h)
-            // Differenz berechnen und nur wenn > 1 das Laden stoppen. Verhindert ein ständiges ein und ausschalten 
-            const diffBesteReichweiteLadezeit_h = (dateBesteReichweiteLadezeit_alt.getTime()-dateBesteReichweiteLadezeit.getTime())/ (1000 * 60 * 60)
-            dateBesteReichweiteLadezeit_alt = dateBesteReichweiteLadezeit;
-            if(dateBesteStartLadezeit > new Date() && diffBesteReichweiteLadezeit_h > 1){
-                LogProgrammablauf += '12/2,';
-                // Beste Ladezeit noch nicht erreicht Laden sperren
-                battLaden ? await setStateAsync(sID_BatterieLaden,false): null;
-            }
+            const vonTime = new Date(aktivePhase.start)
+            const bisTime = new Date(aktivePhase.end)
             
-            // ist innerhalb der Reichweite Batterie eine niedrig Preisphase
+            // ist innerhalb der Reichweite Batterie eine low Preisphase
             if (naechsteNiedrigphase.state){
                 if(naechsteNiedrigphase.startzeit < endZeitBatterie){
-                    // nicht laden und Timer für laden low Phase setzen.
-                    LogProgrammablauf += '12/3,';
-                    // dauer bis zur nächsten Niedrigphase
+                    // nicht laden
+                    LogProgrammablauf += '12/1,';
+                    // dauer bis zur nächsten lowphase
                     const vonTime = new Date(naechsteNiedrigphase.startzeit)
                     const bisTime = new Date(naechsteNiedrigphase.endzeit)
                     // günstigste Startzeit zum Laden suchen
-                    const dateBesteStartLadezeit = bestLoadTime(vonTime,bisTime,ladeZeit_h)
+                    const dateBesteStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h)
                     // Prüfen ob der Zeitraum größer ist als die benötigte Zeit 
                     const difference_ms = bisTime.getTime() - vonTime.getTime();
                     let diffZeit_h = Math.min(difference_ms / (1000 * 60 * 60), ladeZeit_h);
-                    const dateBesteEndeLadezeit = new Date(dateBesteStartLadezeit.getTime() + diffZeit_h * 60 * 60 * 1000);
-                    // Prüfen ob Startzeit bereits erreicht ist und wenn nein die Ladefreigabe entfernen
+                    const dateBesteEndeLadezeit = new Date(dateBesteStartLade.zeit.getTime() + diffZeit_h * 60 * 60 * 1000);
+                    // Prüfen ob Startzeit low Preisphase bereits erreicht ist und wenn nein die Ladefreigabe entfernen
                     if(naechsteNiedrigphase.startzeit.getTime() > new Date().getTime()){
-                        battLaden ? await setStateAsync(sID_BatterieLaden,false): null;
+                        if(battLaden){
+                            LogProgrammablauf += '12/2,';
+                            await loescheAlleTimer('Laden');
+                            await setStateAsync(sID_BatterieLaden,false)
+                        }
                     }
-                    // Timer Laden setzen
-                    await setStateAtSpecificTime(new Date(dateBesteStartLadezeit), sID_BatterieLaden, true);
-                    await setStateAtSpecificTime(new Date(dateBesteEndeLadezeit), sID_BatterieLaden, false);
-                    const startTime = dateBesteStartLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
+                    const startTime = dateBesteStartLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                     const endeTime = dateBesteEndeLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
-                    let message = `warte auf niedrigere Preise von ${startTime} bis ${endeTime}  (aktive Phase: ${aktivePhase.type})`
+                    let message = `warte auf Niedrigpreisphase von ${startTime} bis ${endeTime}  (aktive Phase: ${aktivePhase.type})`
                     statusText != message ? await setStateAsync(sID_status,message): null;
                     await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
                     LogProgrammablauf = '';
@@ -507,18 +486,68 @@ async function tibberSteuerungHauskraftwerk() {
                 }
             }
             
+            
+            // günstigste Startzeit suchen um auf max SOC zu laden
+            const dateBestePhaseStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h)
+            const dateBesteReichweiteLade = bestLoadTime(new Date(),endZeitBatterie,ladeZeit_h)
+            const dateBesteEndeLadezeit = new Date(dateBestePhaseStartLade.zeit.getTime() + ladeZeit_h * 60 * 60 * 1000);
+            // Differenz berechnen und nur wenn > 1 das Laden stoppen. Verhindert ein ständiges ein und ausschalten 
+            const diffBesteLadezeit_h = Math.abs((dateBestePhaseStartLade.zeit.getTime()-dateBesteReichweiteLade.zeit.getTime())/ (1000 * 60 * 60))
+            
+            // Prüfen ob es einen günstigerern Ladezeitraum innerhalb der Batteriereichweite gibt
+            if(dateBestePhaseStartLade.preis > dateBesteReichweiteLade.preis && diffBesteLadezeit_h > 1 && dateBesteReichweiteLade.zeit > new Date()){
+                LogProgrammablauf += '12/4,';
+                // Beste Ladezeit noch nicht erreicht Laden sperren
+                if(battLaden){
+                    await loescheAlleTimer('Laden');
+                    await setStateAsync(sID_BatterieLaden,false);
+                }
+                const dateReichweiteEndeLadezeit = new Date(dateBesteReichweiteLade.zeit.getTime() + ladeZeit_h * 60 * 60 * 1000);
+                await setStateAtSpecificTime(dateBesteReichweiteLade.zeit, sID_BatterieLaden, true);
+                await setStateAtSpecificTime(dateReichweiteEndeLadezeit, sID_BatterieLaden, false);
+                const startTime = dateBestePhaseStartLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
+                const endeTime = dateReichweiteEndeLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
+                let message = `Laden von ${startTime} bis ${endeTime} (aktive Phase: ${aktivePhase.type})`    
+                statusText != message ? await setStateAsync(sID_status,message): null;
+                await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
+                LogProgrammablauf = '';
+                return;
+            
+            // Prüfen ob der günstigste Ladezeitraum noch nicht abgelaufen ist und Batterie laden bereits aktiv ist
+            }else if(dateBesteEndeLadezeit > new Date() && !battLaden){
+                // günstigster Ladezeitraum noch nicht abgelaufen und Laden nicht aktiv  
+                LogProgrammablauf += '12/5,';
+                // setze Timer
+                if(dateBestePhaseStartLade.zeit.getTime() < new Date().getTime() && dateBesteEndeLadezeit.getTime() > new Date().getTime() ){
+                    // Start Zeit bereits abgelaufen und Ende Zeit noch nicht erreicht sofort laden.
+                    LogProgrammablauf += '12/6,';
+                    await setStateAsync(sID_BatterieLaden,true)
+                    await setStateAtSpecificTime(dateBesteEndeLadezeit, sID_BatterieLaden, false);
+                }else{
+                    await setStateAtSpecificTime(dateBestePhaseStartLade.zeit, sID_BatterieLaden, true);
+                    await setStateAtSpecificTime(dateBesteEndeLadezeit, sID_BatterieLaden, false);
+                }
+                const startTime = dateBestePhaseStartLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
+                const endeTime = dateBesteEndeLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
+                let message = `Laden von ${startTime} bis ${endeTime} (aktive Phase: ${aktivePhase.type})`    
+                statusText != message ? await setStateAsync(sID_status,message): null;
+                await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
+                LogProgrammablauf = '';
+                return;
+            }
+            
             // Prüfen ob der günstigste Ladezeitraum bereits abgelaufen ist aber max SOC noch nicht erreicht wurde
             // Nur zulassen wenn der SOC um 10% unter max SOC ist, um ein/aus schalten zu verhindern.
-            if(dateBesteEndeLadezeit < new Date() && (aktuelleBatterieSoC_Pro < (maxBatterieSoC - 10) || dateBesteReichweiteLadezeit > new Date())){
-                LogProgrammablauf += '12/4,';
+            if(dateBesteEndeLadezeit < new Date() && (aktuelleBatterieSoC_Pro < (maxBatterieSoC - 10) || dateBesteReichweiteLade.zeit > new Date())){
+                LogProgrammablauf += '12/7,';
                 // Beste Ladezeit bereits abgelaufen, es muss aber noch nachgeladen werden
-                if(dateBesteReichweiteLadezeit > new Date()){
+                if(dateBesteReichweiteLade.zeit > new Date()){
                     // günstigere Ladezeit innerhalb Batteriereichweite gefunden
-                    LogProgrammablauf += '12/5,';
-                    const dateBesteEndeLadezeit = new Date(dateBesteReichweiteLadezeit.getTime() + ladeZeit_h * 60 * 60 * 1000);
-                    await setStateAtSpecificTime(dateBesteReichweiteLadezeit, sID_BatterieLaden, true);
+                    LogProgrammablauf += '12/8,';
+                    const dateBesteEndeLadezeit = new Date(dateBesteReichweiteLade.zeit.getTime() + ladeZeit_h * 60 * 60 * 1000);
+                    await setStateAtSpecificTime(dateBesteReichweiteLade.zeit, sID_BatterieLaden, true);
                     await setStateAtSpecificTime(dateBesteEndeLadezeit, sID_BatterieLaden, false);
-                    const startTime = dateBesteReichweiteLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
+                    const startTime = dateBesteReichweiteLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                     const endeTime = dateBesteEndeLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                     let message = `Beste Ladezeit abgelaufen. Nachladen von ${startTime} bis ${endeTime} (aktive Phase: ${aktivePhase.type})` 
                     statusText != message ? await setStateAsync(sID_status,message): null;
@@ -538,30 +567,7 @@ async function tibberSteuerungHauskraftwerk() {
                 return;
             }
             
-            // Prüfen ob der günstigste Ladezeitraum noch nicht abgelaufen ist und Batterie laden bereits aktiv ist
-            if(dateBesteEndeLadezeit > new Date() && !battLaden){
-                // günstigster Ladezeitraum noch nicht abgelaufen und Laden nicht aktiv  
-                LogProgrammablauf += '12/6,';
-                // setze Timer
-                if(dateBesteStartLadezeit.getTime() < new Date().getTime() && dateBesteEndeLadezeit.getTime() > new Date().getTime() ){
-                    // Start Zeit bereits abgelaufen und Ende Zeit noch nicht erreicht sofort laden.
-                    LogProgrammablauf += '12/7,';
-                    await setStateAsync(sID_BatterieLaden,true)
-                    await setStateAtSpecificTime(dateBesteEndeLadezeit, sID_BatterieLaden, false);
-                }else{
-                    await setStateAtSpecificTime(dateBesteStartLadezeit, sID_BatterieLaden, true);
-                    await setStateAtSpecificTime(dateBesteEndeLadezeit, sID_BatterieLaden, false);
-                }
-                const startTime = dateBesteStartLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
-                const endeTime = dateBesteEndeLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
-                let message = `Laden von ${startTime} bis ${endeTime} (aktive Phase: ${aktivePhase.type})`    
-                statusText != message ? await setStateAsync(sID_status,message): null;
-                await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
-                LogProgrammablauf = '';
-                return;
-            }    
-            
-            LogProgrammablauf += '12/8,';
+            LogProgrammablauf += '12/9,';
             await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
             LogProgrammablauf = '';
             return;
@@ -573,10 +579,10 @@ async function tibberSteuerungHauskraftwerk() {
             // günstigste Ladezeit suchen
             const bisTime = new Date(aktivePhase.end)
             const vonTime = new Date(aktivePhase.start)
-            const dateBesteStartLadezeit = bestLoadTime(vonTime,bisTime,ladeZeit_h)
-            const dateEndeLadezeit = new Date(dateBesteStartLadezeit);
+            const dateBesteStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h)
+            const dateEndeLadezeit = new Date(dateBesteStartLade.zeit);
             dateEndeLadezeit.setHours(dateEndeLadezeit.getHours() + ladeZeit_h);
-            await setStateAtSpecificTime(new Date(dateBesteStartLadezeit), sID_BatterieLaden, true);
+            await setStateAtSpecificTime(new Date(dateBesteStartLade.zeit), sID_BatterieLaden, true);
             await setStateAtSpecificTime(new Date(dateEndeLadezeit), sID_BatterieLaden, false);
             await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
             LogProgrammablauf = '';
@@ -924,6 +930,7 @@ function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h) {
     try {
         // Variablen für günstigsten Ladezeitblock initialisieren
         let billigsterBlockPreis = Infinity;
+        let billigsterPreis = Infinity;
         let billigsteZeit = null;
         
         // Konvertiere Start- und Endzeit zu Datumsobjekten, falls notwendig
@@ -936,7 +943,14 @@ function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h) {
             log(`function bestLoadTime: ladezeit_h ist keine gültige Zahl`, 'error');
             return null;
         }
-                
+
+        // Ladezeit begrenzen, wenn sie länger als der verfügbare Zeitraum ist
+        const difference_ms = dateEndTime.getTime() - dateStartTime.getTime();
+        nladezeit_h = Math.min(difference_ms / (1000 * 60 * 60), nladezeit_h);
+          
+        // Ladezeit auf mindestens 1 setzen
+        nladezeit_h = Math.max(nladezeit_h, 1);
+
         // Validierung der globalen Variable datenTibberLink48h
         if (!Array.isArray(datenTibberLink48h) || datenTibberLink48h.length === 0) {
             log(`function bestLoadTime: datenTibberLink48h ist keine gültiges Array oder enthält keine Werte.`, 'error');
@@ -952,14 +966,19 @@ function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h) {
         dateEndTime.setMinutes(0, 0, 0);
         
         // Ermittlung der Zeitgrenzen
-        const validStartTime = new Date(datenTibberLink48h[0].startsAt);
+        const validStartTime_max = new Date(datenTibberLink48h[0].startsAt);
+        const validStartTime_min = new Date(datenTibberLink48h[datenTibberLink48h.length - (1+nladezeit_h)].startsAt);
         const validEndTime = new Date(datenTibberLink48h[datenTibberLink48h.length - 1].startsAt);
         validEndTime.setHours(validEndTime.getHours() + 1);
 
         // Validierung von dateStartTime und dateEndTime
-        if (dateStartTime < validStartTime) {
-            log(`dateStartTime liegt vor dem gültigen Zeitraum. Anpassung auf ${validStartTime}`, 'warn');
-            dateStartTime = validStartTime;
+        if (dateStartTime < validStartTime_max) {
+            log(`dateStartTime liegt vor dem gültigen Zeitraum. Anpassung auf ${validStartTime_max}`, 'warn');
+            dateStartTime = validStartTime_max;
+        }
+        if (dateStartTime > validStartTime_min) {
+            log(`dateStartTime liegt vor dem gültigen Zeitraum. Anpassung auf ${validStartTime_min}`, 'warn');
+            dateStartTime = validStartTime_min;
         }
 
         if (dateEndTime > validEndTime) {
@@ -973,13 +992,6 @@ function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h) {
             return null;
         }
 
-        // Ladezeit begrenzen, wenn sie länger als der verfügbare Zeitraum ist
-        const difference_ms = dateEndTime.getTime() - dateStartTime.getTime();
-        nladezeit_h = Math.min(difference_ms / (1000 * 60 * 60), nladezeit_h);
-          
-        // Ladezeit auf mindestens 1 setzen
-        nladezeit_h = Math.max(nladezeit_h, 1);
-        
         // Iteriere durch die Daten, um den günstigsten Ladezeitpunkt innerhalb des Zeitraums zu finden
         for (let i = 0; i < datenTibberLink48h.length - nladezeit_h; i++) {
             const startEntry = datenTibberLink48h[i];
@@ -998,6 +1010,12 @@ function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h) {
                     const entry = datenTibberLink48h[i + j];
                     blockPreis += entry.total;
                 }
+                
+                // Suche den günstigsten Stunden Preis
+                if(datenTibberLink48h[i].total < billigsterPreis ){
+                    billigsterPreis = datenTibberLink48h[i].total
+                }
+                
                 // Prüfe, ob dieser Block der günstigste ist
                 if (blockPreis < billigsterBlockPreis) {
                     billigsterBlockPreis = blockPreis;
@@ -1005,12 +1023,17 @@ function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h) {
                 }
             }
         }
-
+        
         // Aktualisiere den durchschnittlichen Preis pro Stunde
         billigsterBlockPreis = billigsterBlockPreis / nladezeit_h;
         // Gibt die günstigste Zeit zurück, falls vorhanden
         if (billigsteZeit) {
-            return new Date(billigsteZeit);
+            return{
+                zeit: new Date(billigsteZeit),
+                preis_d: billigsterBlockPreis, 
+                preis: billigsterPreis
+            }
+        
         } else {
             log(`function bestLoadTime: Kein Eintrag gefunden dateStartTime = ${dateStartTime} dateEndTime = ${dateEndTime} datenTibberLink48h.length = ${datenTibberLink48h.length} billigsteZeit = ${billigsteZeit} nladezeit_h = ${nladezeit_h}`, 'error');
         }
@@ -1441,15 +1464,34 @@ async function findeergebnisphasen(data, highThreshold, lowThreshold) {
 // ab der der Preis um 0,1 € teurer ist.
 function preisUnterschiedPruefen(bisZeit) {
     try {    
-        const aktuelleZeit = new Date();
-        const bisZeitDate = new Date(bisZeit.getTime() + 1 * 60 * 60 * 1000); 
+        LogProgrammablauf += '15,';
+        let aktuelleZeit = new Date();
+        let bisZeitDate = new Date(bisZeit.getTime() + 1 * 60 * 60 * 1000); 
+        
+        // Ermittlung der Zeitgrenzen
+        const validStartTime = new Date(datenTibberLink48h[0].startsAt);
+        const validEndTime = new Date(datenTibberLink48h[datenTibberLink48h.length - 1].startsAt);
+        validEndTime.setHours(validEndTime.getHours() + 1);
+
+        // Validierung von dateStartTime und dateEndTime
+        if (aktuelleZeit < validStartTime) {
+            //log(`dateStartTime liegt vor dem gültigen Zeitraum. Anpassung auf ${validStartTime}`, 'warn');
+            aktuelleZeit = validStartTime;
+        }
+
+        if (bisZeitDate > validEndTime) {
+            //log(`dateEndTime liegt nach dem gültigen Zeitraum. Anpassung auf ${validEndTime}`, 'warn');
+            bisZeitDate = validEndTime;
+        }
+
         // Filtere die Daten basierend auf der aktuellen Uhrzeit und der angegebenen Uhrzeit
         const gefilterteDaten = datenTibberLink48h.filter(d => {
             const startZeit = new Date(d.startsAt);
             return startZeit >= aktuelleZeit && startZeit <= bisZeitDate;
         });
-    
+        
         if (gefilterteDaten.length === 0) {
+            LogProgrammablauf += '15/1,';
             return {// Keine Daten im angegebenen Zeitraum
                 state:false,
                 peakZeit: null,
@@ -1471,6 +1513,7 @@ function preisUnterschiedPruefen(bisZeit) {
         // Wenn der aktuelle Preis höher ist als der teuerste Preis dann beenden.
         if(aktuellerPreisTibber > teuersterPreis){
             //Peak überschritten 
+            LogProgrammablauf += '15/2,';
             return {
                 state:false,
                 peakZeit: null,
@@ -1479,21 +1522,23 @@ function preisUnterschiedPruefen(bisZeit) {
         }
         // Preisunterschied prüfen
         const preisDifferenz = teuersterPreis - guenstigsterPreis;
-    
+        
         if (preisDifferenz > 0.1) {
             // Finde den Zeitpunkt, ab dem der Preis um 0,1 € teurer ist
             const teuererPreisZeitpunkt = gefilterteDaten.find(d => d.total >= guenstigsterPreis + 0.1);
-        
+            
             if (teuererPreisZeitpunkt) {
                 // Berechne die Dauer, bis der Preis nicht mehr um 0,1 € teurer ist
                 let endZeit = null;
                 let teurerPreisWert = teuererPreisZeitpunkt.total;
                 for (let i = gefilterteDaten.indexOf(teuererPreisZeitpunkt) + 1; i < gefilterteDaten.length; i++) {
+                    //log(`gefilterteDaten[i].total = ${gefilterteDaten[i].total} teurerPreisWert = ${teurerPreisWert} `,'warn')
                     if (gefilterteDaten[i].total < teurerPreisWert - 0.1) {
                         endZeit = gefilterteDaten[i].startsAt;
                         break;
                     }
                 }
+                //log(`endZeit = ${endZeit} `,'warn')
                 if (endZeit) {
                     const startZeitDate = new Date(teuererPreisZeitpunkt.startsAt);
                     const endZeitDate = new Date(endZeit);
@@ -1507,6 +1552,7 @@ function preisUnterschiedPruefen(bisZeit) {
                 }
             }
         }
+        LogProgrammablauf += '15/3,';
         return {
             state:false,
             peakZeit: null,
@@ -1634,42 +1680,66 @@ on({id: sID_Notrom_Status, change: "ne"}, async function (obj){
 // Triggern wenn Netzleistung e3dc-rscp sich ändert
 on({id: sID_Power_Grid, change: "ne"}, async function (obj){
     // Absicherung das Netzleistung nicht 22000W (32A * 3 ) übersteigt
-    if (obj.state.val <= 20000) return;
-    const differenz = Math.abs(obj.state.val - 22000);
-    maxLadeleistungUser_W = Math.max(0, maxLadeleistungUser_W - differenz);
-    setStateAsync(sID_maxLadeleistungUser_W,maxLadeleistungUser_W)  
+    const maxObergrenze = await getStateAsync(sID_maxLadeleistungUser_W);
+    // Berechne die Differenz zwischen der aktuellen Netzleistung und dem Zielwert 20.000 W
+    const differenz = obj.state.val - 20000;
+    // Passen maxLadeleistungUser_W an
+    if (differenz > 0) {
+        // Netzleistung ist über 20.000 W, Ladeleistung reduzieren
+        maxLadeleistungUser_W = Math.max(0, maxLadeleistungUser_W - differenz);
+    } else if (differenz < 0) {
+        // Netzleistung ist unter 20.000 W, Ladeleistung erhöhen
+        const verfuegbareLeistung = Math.abs(differenz); // positive Differenz
+        maxLadeleistungUser_W = Math.min(maxLadeleistungUser_W + verfuegbareLeistung, maxObergrenze?.val || maxLadeleistungUser_W);
+    }
+    //setStateAsync(sID_maxLadeleistungUser_W,maxLadeleistungUser_W)  
 });
 
 // Triggern wenn Batterie SoC e3dc-rscp sich ändert
 on({id: sID_Batterie_SOC, change: "ne"}, async function (obj){	
     if(bStart){return};
     try {
-        let [batterieLaden] = await Promise.all([
-            getStateAsync(sID_Power_Bat_W),
+                
+        let [batterieLaden,power_Grid] = await Promise.all([
+            getStateAsync(sID_BatterieLaden),
+            getStateAsync(sID_Power_Grid)
         ]).then(states => states.map(state => state.val));
+        
         aktuelleBatterieSoC_Pro = obj.state.val
-    
-        // Entferne alle Einträge mit einem SoC-Wert, der über dem aktuellen SoC liegt
-        //batterieLadedaten = batterieLadedaten.filter(data => data.soc <= aktuelleBatterieSoC_Pro);
-        //await setStateAsync(sID_BatterieLadedaten,JSON.stringify(batterieLadedaten));
-        // Entferne überschüssige Einträge am Ende des Arrays
-        while (batterieLadedaten.length > aktuelleBatterieSoC_Pro) {
-            batterieLadedaten.pop(); // Entferne den letzten Eintrag
-        }
-        await setStateAsync(sID_BatterieLadedaten, JSON.stringify(batterieLadedaten));
-
+        
         // Laden stoppen, wenn max. SOC erreicht oder überschritten ist
         if(aktuelleBatterieSoC_Pro >= maxBatterieSoC){
             LogProgrammablauf += '28,';
             batterieLaden ? await setStateAsync(sID_BatterieLaden,false): null; 
             await loescheAlleTimer('Laden');
         }
+        // SOC gesunken: Durchschnittspreis ermitteln und Array neu setzen
+        if (aktuelleBatterieSoC_Pro < batterieSOC_alt && batterieLadedaten.length > 1) {
+            const allePreise = batterieLadedaten.map(data => data.price);
+            // Durchschnittspreis berechnen
+            const durchschnittspreis = batterieLadedaten.reduce((sum, data) => sum + data.price, 0) / batterieLadedaten.length;
+            // Array neu setzen mit dem Durchschnittspreis
+            batterieLadedaten = [{
+                soc: aktuelleBatterieSoC_Pro,
+                price: durchschnittspreis
+            }];
+
+            // Array speichern
+            await setStateAsync(sID_BatterieLadedaten, JSON.stringify(batterieLadedaten));
+        }
 
         // Neue Werte schreiben wenn der SOC ansteigt
-        if (aktuelleBatterieSoC_Pro > batterieSOC_alt) {    
+        if(power_Grid >= 500 && batterieLaden && aktuelleBatterieSoC_Pro > batterieSOC_alt){
             const neuerEintrag = {
                 soc: aktuelleBatterieSoC_Pro,
-                price: batterieLaden ? aktuellerPreisTibber : stromgestehungskosten,
+                price: aktuellerPreisTibber,
+            };
+            batterieLadedaten.push(neuerEintrag);
+            await setStateAsync(sID_BatterieLadedaten, JSON.stringify(batterieLadedaten));
+        }else if(aktuelleBatterieSoC_Pro > batterieSOC_alt){
+            const neuerEintrag = {
+                soc: aktuelleBatterieSoC_Pro,
+                price: stromgestehungskosten,
             };
             batterieLadedaten.push(neuerEintrag);
             await setStateAsync(sID_BatterieLadedaten, JSON.stringify(batterieLadedaten));
