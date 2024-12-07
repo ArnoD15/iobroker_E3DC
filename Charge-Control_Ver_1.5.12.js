@@ -10,15 +10,15 @@ const PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUN
 const idTibber = `${instanz}.TibberSkript`;                                                             // ObjektID Tibber Skript
 
 const sID_LeistungHeizstab_W = ``;                                                                      // Pfad zu den Leistungswerte Heizstab eintragen ansonsten leer lassen
-const sID_WallboxLadeLeistung_1_W = ``;                                                                 // Pfad zu den Leistungswerte Wallbox1 die nicht vom E3DC gesteuert wird eintragen ansonsten leer lassen
+const sID_WallboxLadeLeistung_1_W = ``;       															// Pfad zu den Leistungswerte Wallbox1 die nicht vom E3DC gesteuert wird eintragen ansonsten leer lassen
 const sID_WallboxLadeLeistung_2_W = ``;                                                                 // Pfad zu den Leistungswerte Wallbox2 die nicht vom E3DC gesteuert wirdeintragen ansonsten leer lassen
-const sID_LeistungLW_Pumpe_W = 'modbus.2.holdingRegisters.41013_WP_Aufnahmeleistung';                   // Pfad zu den Leistungswerte Wärmepumpe eintragen ansonsten leer lassen
+const sID_LeistungLW_Pumpe_W = '';                     													// Pfad zu den Leistungswerte Wärmepumpe eintragen ansonsten leer lassen
 const BUFFER_SIZE= 5;                                                                                   // Größe des Buffers für gleitenden Durchschnitt
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
 //------------------------------------------------------------------------------------------------------
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.5.11 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.5.12 ====- ${Logparser2}`);
 
 //******************************************************************************************************
 //****************************************** Objekt ID anlegen *****************************************
@@ -30,7 +30,7 @@ const sID_Power_Home_W =`${instanzE3DC_RSCP}.EMS.POWER_HOME`;                   
 const sID_Batterie_SOC =`${instanzE3DC_RSCP}.EMS.BAT_SOC`;                                              // aktueller Batterie_SOC
 const sID_PvLeistung_E3DC_W =`${instanzE3DC_RSCP}.EMS.POWER_PV`;                                        // aktuelle PV_Leistung
 const sID_PvLeistung_ADD_W =`${instanzE3DC_RSCP}.EMS.POWER_ADD`;                                        // Zusätzliche Einspeiser Leistung
-const sID_Power_Wallbox_W =`${instanzE3DC_RSCP}.EMS.POWER_WB_ALL`;                                      // aktuelle Wallbox Leistung
+const sID_Power_Wallbox_W =`${instanzE3DC_RSCP}.EMS.POWER_WB_ALL`;                                    	// aktuelle Wallbox Leistung
 const sID_Power_Bat_W = `${instanzE3DC_RSCP}.EMS.POWER_BAT`;                                            // aktuelle Batterie_Leistung'
 const sID_Installed_Peak_Power =`${instanzE3DC_RSCP}.EMS.INSTALLED_PEAK_POWER`;                         // Wp der installierten PV Module
 const sID_Bat_Discharge_Limit =`${instanzE3DC_RSCP}.EMS.SYS_SPECS.maxBatDischargPower`;                 // Batterie Entladelimit
@@ -434,22 +434,27 @@ async function Ladesteuerung()
 {
     let dAkt = new Date();
     const currentTime = Date.now();
-    const [netzLeistung_W,SET_POWER_MODE,PV_Leistung_E3DC_W, PV_Leistung_ADD_W, WallboxPower, UntererLadekorridor_W] = await Promise.all([
+    const [netzLeistung_W,SET_POWER_MODE,PV_Leistung_E3DC_W, PV_Leistung_ADD_W, WallboxPower, wb1Power, wb2Power, UntererLadekorridor_W] = await Promise.all([
         getStateAsync(sID_Power_GRID_W),
         getStateAsync(sID_SET_POWER_MODE),
         getStateAsync(sID_PvLeistung_E3DC_W),
         getStateAsync(sID_PvLeistung_ADD_W),
         getStateAsync(sID_Power_Wallbox_W),
+        getStateAsync(sID_WallboxLadeLeistung_1_W),
+        getStateAsync(sID_WallboxLadeLeistung_2_W),
         getStateAsync(sID_UntererLadekorridor_W[EinstellungAnwahl])
     ]).then(states => [
         states[0]?.val,
         states[1]?.val ?? 0, // Wenn SET_POWER_MODE null oder undefined ist, 0 eintragen
         states[2]?.val, 
         states[3]?.val, 
-        states[4]?.val, 
-        states[5]?.val 
+        states[4]?.val ?? 0, // Wenn WallboxPower null oder undefined ist, 0 eintragen, 
+        states[5]?.val ?? 0, // Wenn wb1Power null oder undefined ist, 0 eintragen, 
+        states[6]?.val ?? 0, // Wenn wb2Power null oder undefined ist, 0 eintragen, 
+        states[7]?.val 
     ]);
-    const Power_Home_W =toInt((await getStateAsync(sID_Power_Home_W)).val + WallboxPower);                          // Aktueller Hausverbrauch + Ladeleistung Wallbox E3DC 
+
+    const Power_Home_W =toInt((await getStateAsync(sID_Power_Home_W)).val + WallboxPower + wb1Power + wb2Power);        // Aktueller Hausverbrauch + Ladeleistung Wallbox E3DC 
     const PV_Leistung_Summe_W = toInt(PV_Leistung_E3DC_W + Math.abs(PV_Leistung_ADD_W));                            // Summe PV-Leistung  
     Notstrom_Status = (await getStateAsync(sID_Notrom_Status)).val;                                                 // aktueller Notstrom Status E3DC 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
     bNotstromVerwenden = await CheckPrognose();                                                                     // Prüfen ob Notstrom verwendet werden kann bei hoher PV Prognose für den nächsten Tag
@@ -492,7 +497,6 @@ async function Ladesteuerung()
         LogProgrammablauf += '6,';
         bStatus_Notstrom_SOC = await Notstrom_SOC_erreicht();
         // Wenn Notstrom SOC nicht erreicht ist oder Notstrom SOC erreicht wurde und mehr PV-Leistung als benötigt vorhanden ist (Überschuss) regelung starten
-        //log(`PV_Leistung_Summe_W = ${PV_Leistung_Summe_W} Power_Home_W = ${Power_Home_W} UntererLadekorridor_W = ${UntererLadekorridor_W}`,'warn')
         if((PV_Leistung_Summe_W - Power_Home_W) > toInt(UntererLadekorridor_W) && (bStatus_Notstrom_SOC || bTibberEntladesperre) || (!bStatus_Notstrom_SOC && !bTibberEntladesperre)){
             LogProgrammablauf += '7,';
             let Ladeschwelle_Proz = (await getStateAsync(sID_Ladeschwelle_Proz[EinstellungAnwahl])).val                 // Parameter Ladeschwelle
@@ -955,6 +959,7 @@ async function Einstellung(UeberschussPrognoseProzent)
 
 // Die Funktion ändert die Prognosewerte für das Diagramm und berechnet die Prognose in kWh je nach Auswahl 
 async function Prognosen_Berechnen() {
+   
     let Tag = [], PrognoseProplanta_kWh_Tag = [], PrognoseSolcast_kWh_Tag = [], PrognoseSolcast90_kWh_Tag = [], Prognose_kWh_Tag = [];
     let DatumAk = new Date();
     let TagHeute = DatumAk.getDate();
@@ -1543,7 +1548,7 @@ async function SheduleProplanta() {
         TimerProplanta = schedule({ hour: 3, minute: 0 }, SheduleProplanta);
         log(`${Logparser1}-==== Nächste Aktualisierung Wetterdaten 3:00 Uhr ====-${Logparser2}`);
     }
-    await WetterprognoseAktualisieren();
+    if (!bStart) await WetterprognoseAktualisieren();
 }
 
 function HTML_CleanUp(data) {
@@ -2274,7 +2279,8 @@ on({id: sID_NotstromAusNetz, change: "ne"}, async function (obj){
 
 // Triggern wenn State Automatik Prognose in VIS geändert wird
 on({id: sID_Automatik_Prognose, change: "ne"}, async function (obj){
-	bAutomatikAnwahl = (await getStateAsync(obj.id)).val;
+	if (bStart){return};
+    bAutomatikAnwahl = (await getStateAsync(obj.id)).val;
     if(bAutomatikAnwahl) {
         bStoppTriggerEinstellungAnwahl = true;
         await WetterprognoseAktualisieren()
@@ -2320,7 +2326,8 @@ on({id: sID_Automatik_Regelung, change: "ne"}, async function (obj){
 
 // Triggern bei Änderung Eigenverbrauch soll der Überschuss neu berechnet werden.
 on({id: sID_EigenverbrauchTag_kWh, change: "ne"}, async function (obj){
-	if (bLogAusgabe){log(`${Logparser1} -==== Wert Eigenverbrauch wurde auf  ${getState(obj.id).val} kWh geändert ====- ${Logparser2}`);}
+	if (bStart){return};
+    if (bLogAusgabe){log(`${Logparser1} -==== Wert Eigenverbrauch wurde auf  ${getState(obj.id).val} kWh geändert ====- ${Logparser2}`);}
     bStoppTriggerEinstellungAnwahl = true
     await WetterprognoseAktualisieren();
     bStoppTriggerEinstellungAnwahl = false
@@ -2362,6 +2369,7 @@ on({id: /\Charge_Control.USER_ANPASSUNGEN/, change: "ne"}, async function (obj){
 
 // Triggern bei Änderung der PrognoseAnwahl, Einstellung 0-5 in VIS, jeweilige Prognose abrufen
 on({id: sID_PrognoseAnwahl, change: "ne"},async function(obj) {
+    if (bStart){return};
     PrognoseAnwahl = (await getStateAsync(obj.id)).val
     if (PrognoseAnwahl <= 6){
         if(bLogAusgabe && PrognoseAnwahl == 0){log("-==== Proplanta u. Solcast angewählt, Berechnung nach min. Wert ====-")};
@@ -2388,6 +2396,7 @@ on({id: arrayID_Notstrom  , change: "ne"}, async function (obj) {
 // Triggern wenn sich die Einstellung 1-5 ändert.
 // Wenn die Änderung nicht über Script erfolgt wird Automatik Einstellung nach Prognose beendet
 on({ id: sID_EinstellungAnwahl, change: "ne", valGt: 0 }, async function (obj) {
+    if (bStart){return};
     const val = obj.state.val;
     
     if (bAutomatikAnwahl) {

@@ -77,6 +77,9 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.5.12
+* Fehler korrigiert das die Leistungswerte Wallbox, wenn diese nicht über E3DC gesteuert wird, bei der Berechnung nicht berücksichtigt wurden.
+
 ### Version: 1.5.11
 * Fehler behoben, dass die Autonomiezeit nicht auf 0:00 h gesetzt wurde, obwohl der Batterie SOC 0 % hatte.
 
