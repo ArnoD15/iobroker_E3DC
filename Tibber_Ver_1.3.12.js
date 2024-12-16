@@ -8,6 +8,7 @@ const instanzE3DC_RSCP = 'e3dc-rscp.0'
 const DebugAusgabeDetail = true;
 const hystereseReichweite_h = 0.5;                                                                              // Hysterese-Schwelle von ±30 Minuten
 const hystereseBatterie_pro = 2;                                                                                // Hysterese-Schwelle von ±2 %
+const hystereseKapazitaet = 2;                                                                                  // Hysterese-Schwelle von ±2 kWh
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
 //------------------------------------------------------------------------------------------------------
 
@@ -15,7 +16,7 @@ const hystereseBatterie_pro = 2;                                                
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.3.11'
+const scriptVersion = 'Version 1.3.12'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 // IDs Script Charge_Control
 const sID_Autonomiezeit =`${instanz}.Charge_Control.Allgemein.Autonomiezeit`;
@@ -67,13 +68,14 @@ const sID_PricesTomorrowJSON = `tibberlink.0.Homes.${tibberLinkId}.PricesTomorro
 const arrayID_TibberPrices =[sID_PricesTodayJSON,sID_PricesTomorrowJSON];    
 
 let maxBatterieSoC = 0, aktuelleBatterieSoC_Pro,aktuelleBatterieSoC_alt = 0, ladeZeit_h, maxLadeleistungUser_W, stromgestehungskosten;
+let benoetigteKapazitaetAktuell_kWh_alt = 0, benoetigteKapazitaetPrognose_kWh_alt = 0;
 let batterieKapazitaet_kWh = 0, minStrompreis_48h = 0, nReichweite_alt = 0, LogProgrammablauf = "";
 let batterieSOC_alt = null, aktuellerPreisTibber = null ;
 let hoherSchwellwert = 0, niedrigerSchwellwert = 0, peakSchwellwert = 0, systemwirkungsgrad = 0;
 let dateBesteReichweiteLadezeit_alt = new Date();
 let strompreisBatterie, bruttoPreisBatterie;
 
-let bLock = false, schneeBedeckt = false, autPreisanpassung = false, notstromAktiv = false, batteriepreisAktiv = false, bStart = true;;                                                                 
+let bNachladenPeak = false, bLock = false, schneeBedeckt = false, autPreisanpassung = false, notstromAktiv = false, batteriepreisAktiv = false, bStart = true;                                                                 
 let battLaden = false, autoLaden = false, battSperre = false, battSperrePrio = false, statusText = ``;
 let timerIds = [], timerTarget = [], timerObjektID = [],timerState =[], batterieLadedaten = [],datenHeute =[], datenMorgen = [], datenTibberLink48h = [];
 
@@ -294,10 +296,65 @@ async function tibberSteuerungHauskraftwerk() {
         if (aktivePhaseType === 'peak'){
             LogProgrammablauf += '10,';
             // Laden stoppen
-            await loescheAlleTimer('Laden');
-            battLaden ? await setStateAsync(sID_BatterieLaden,false): null;
-            let message = `Aktuell Strompreis zu hoch, es wird nicht geladen (aktive Phase: ${aktivePhase.type})`
-            statusText != message ? await setStateAsync(sID_status,message): null;
+            // Preisunterschied innerhalb der Peakphase prüfen und wenn Differenz > 0,3€, Reichweite Batterie prüfen
+            const ergebnisPreisvergleich = await preisUnterschiedPruefen(aktivePhase.end,0.3)
+            if(ergebnisPreisvergleich.state){
+                LogProgrammablauf += '10/1,';
+                // Preissteigerung > 0.3 € in der aktuellen Peak Phase.Prüfen ob Batteriereichweite ausreicht
+                const dauerEndePreissteigerung_h =  round(((ergebnisPreisvergleich.peakZeit.getTime() - new Date().getTime()) / (1000 * 60 * 60))+ ergebnisPreisvergleich.dauerInStunden,0)
+                if(Math.floor(reichweite_h) < dauerEndePreissteigerung_h){
+                    LogProgrammablauf += '10/2,';
+                    // Batterie reicht nicht aus.
+                    // Kann die Preissteigerung überbrückt werden wenn das entladen der Batterie bis zur Preissteigerung gesperrt wird
+                    const dauerBisPreissteigerung_h = dauerEndePreissteigerung_h - ergebnisPreisvergleich.dauerInStunden
+                    if(Math.floor(dauerBisPreissteigerung_h + reichweite_h) < dauerEndePreissteigerung_h && !bNachladenPeak){
+                        LogProgrammablauf += '10/3,';
+                        // Batteriesperre reicht nicht aus nachladen
+                        bNachladenPeak = true // weiteres Nachladen in der Peakphase verhindern.
+                        const vonTime = new Date()
+                        const bisTime = new Date(ergebnisPreisvergleich.peakZeit)
+                        // günstigste Startzeit zum Laden suchen
+                        const dateBesteStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h)
+                        await setStateAtSpecificTime(dateBesteStartLade.zeit, sID_BatterieLaden, true);
+                        await setStateAtSpecificTime(bisTime, sID_BatterieLaden, false);
+                        // Nach der Preissteigerung Merker zurücksetzen.
+                        const dauerEndePreissteigerung_ms = dauerEndePreissteigerung_h * 1000 * 60 * 60;
+                        setTimeout(() => {bNachladenPeak = false;}, dauerEndePreissteigerung_ms);
+                        const startTime = dateBesteStartLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
+                        const endeTime = bisTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
+                        let message = `Nachladen während Peakphase von ${startTime} bis ${endeTime} (aktive Phase: ${aktivePhase.type})`
+                        statusText != message ? await setStateAsync(sID_status,message): null;
+                        await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
+                        LogProgrammablauf = '';
+                        return;
+                    }else if(!bNachladenPeak){
+                        LogProgrammablauf += '10/4,';
+                        // Batteriesperre reicht aus, sofort entladen sperren.
+                        bNachladenPeak = true; // weiteres Nachladen in der Peakphase verhindern.
+                        const vonTime = new Date()
+                        const bisTime = new Date(ergebnisPreisvergleich.peakZeit)
+                        await loescheAlleTimer('Entladesperre')
+                        await setStateAtSpecificTime(vonTime, sID_BatterieEntladesperre, true);
+                        await setStateAtSpecificTime(bisTime, sID_BatterieEntladesperre, false);
+                        // Nach der Preissteigerung Merker zurücksetzen.
+                        const dauerEndePreissteigerung_ms = dauerEndePreissteigerung_h * 1000 * 60 * 60;
+                        setTimeout(() => {bNachladenPeak = false;}, dauerEndePreissteigerung_ms);
+                        const startTime = vonTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
+                        const endeTime = bisTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
+                        let message = `Batteriesperre während Peakphase von ${startTime} bis ${endeTime} (aktive Phase: ${aktivePhase.type})`
+                        statusText != message ? await setStateAsync(sID_status,message): null;
+                        await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
+                        LogProgrammablauf = '';
+                        return;
+                    }
+                }
+            }
+            if(!bNachladenPeak){
+                await loescheAlleTimer('Laden');
+                battLaden ? await setStateAsync(sID_BatterieLaden,false): null;
+                let message = `Aktuell Strompreis zu hoch, es wird nicht geladen (aktive Phase: ${aktivePhase.type})`
+                statusText != message ? await setStateAsync(sID_status,message): null;
+            }
             await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
             LogProgrammablauf = '';
             return;
@@ -391,7 +448,7 @@ async function tibberSteuerungHauskraftwerk() {
                         // Nur aus Netz laden Laden wenn Preis höher 0,1€ als aktueller Preis ist und nur soviel um diese phase zu überbrücken
                         // und nur Nachts wenn keine PV-Leistung möglich ist oder Module Schneebedeckt sind.(Absicherung wenn PV-Prognose falsch ist)
                         if (aktuelleZeit_ms < sunriseHeute_ms || aktuelleZeit_ms >= sunsetHeute_ms || schneeBedeckt) {
-                            const ergebnisPreisvergleich = await preisUnterschiedPruefen(naechstePhase0.end)
+                            const ergebnisPreisvergleich = await preisUnterschiedPruefen(naechstePhase0.end,0.1)
                             if(ergebnisPreisvergleich.state == true){
                                 const ladezeitBatt_h = await berechneLadezeitBatterie(dauerPeakPhase_h,null)
                                 const bisTime = new Date(ergebnisPreisvergleich.peakZeit)
@@ -649,18 +706,20 @@ function findeNaechstePhase(arrayPhases) {
 async function pruefePVLeistung(reichweiteStunden) {
     try {   
         LogProgrammablauf += '18,';
+        // Konvertiere und validiere die Reichweite in Stunden
         let nreichweiteStunden = parseFloat(reichweiteStunden);
-        nreichweiteStunden = Math.floor(nreichweiteStunden)
         // Prüfung: Ist reichweiteStunden eine gültige Zahl?
         if (isNaN(nreichweiteStunden)) {
             log(`function pruefePVLeistung(): reichweiteStunden ist keine gültige Zahl`, 'error');
-            return { reichweite: false, pvLeistung: false, state: false };
+            return {state: false};
         }
+        // auf die nächstkleinere Ganzzahl abrunden
+        nreichweiteStunden = Math.floor(nreichweiteStunden)
         
         // Wenn die PV-Module schneebedeckt sind, abbrechen
         if (schneeBedeckt) {
             LogProgrammablauf += '18/1,';
-            return { reichweite: false, pvLeistung: false, state: false };
+            return {state: false};
         }
 
         const heute = new Date();
@@ -668,70 +727,80 @@ async function pruefePVLeistung(reichweiteStunden) {
         const aktuelleZeit_ms = Date.now();
 
         // Sonnenaufgang und Sonnenuntergang heute und morgen
-        const sunriseHeute_ms = getAstroDate("sunrise", heute).getTime();
-        const sunsetHeute_ms = getAstroDate("sunset", heute).getTime() - 2 * 3600000;  // 2 Stunden Puffer
-        const sunriseMorgen_ms = getAstroDate("sunrise", morgen).getTime();
-
+        const sonnenaufgangHeute_ms = getAstroDate("sunrise", heute).getTime();                     // Sonnenaufgang
+        const sonnenuntergangHeute_ms = getAstroDate("sunset", heute).getTime() - 2 * 3600000;      // Sonnenuntergang - 2 Stunden Puffer
+        const sonnenaufgangMorgen_ms = getAstroDate("sunrise", morgen).getTime();                   // Sonnenaufgang nächster Tag
         // PV-Prognosen für heute und morgen in kWh
-        let arrayPrognoseAuto_kWh = await getStateAsync(sID_PrognoseAuto_kWh).then(state => state.val);
+        let arrayPrognoseAuto_kWh = (await getStateAsync(sID_PrognoseAuto_kWh)).val;
         let heuteErwartetePVLeistung_kWh = parseFloat(arrayPrognoseAuto_kWh[heute.getDate()]);
         let morgenErwartetePVLeistung_kWh = parseFloat(arrayPrognoseAuto_kWh[morgen.getDate()]);
-
         // Benötigte Kapazität, um die Batterie auf maximalen SOC zu laden
         const progBattSoC = await prognoseBatterieSOC(nreichweiteStunden);
-        const benoetigteKapazitaetPrognose_kWh = (100 - progBattSoC.soc) / 100 * batterieKapazitaet_kWh;
-        const benoetigteKapazitaet = (100 - aktuelleBatterieSoC_Pro) / 100 * batterieKapazitaet_kWh;
+        let benoetigteKapazitaetPrognose_kWh = (100 - progBattSoC.soc) / 100 * batterieKapazitaet_kWh;
+        let benoetigteKapazitaetAktuell_kWh = (100 - aktuelleBatterieSoC_Pro) / 100 * batterieKapazitaet_kWh;
+        
+        // Hysterese-Schwelle von ±2 kWh dass kleine Unterschiede nicht zu einem häufigen Wechsel führen
+        if(Math.abs(benoetigteKapazitaetPrognose_kWh-benoetigteKapazitaetPrognose_kWh_alt) >= hystereseKapazitaet){
+            benoetigteKapazitaetPrognose_kWh_alt = benoetigteKapazitaetPrognose_kWh    
+        }else{
+            benoetigteKapazitaetPrognose_kWh = benoetigteKapazitaetPrognose_kWh_alt
+        }
+        if(Math.abs(benoetigteKapazitaetAktuell_kWh-benoetigteKapazitaetAktuell_kWh_alt) >= hystereseKapazitaet){
+            benoetigteKapazitaetAktuell_kWh_alt = benoetigteKapazitaetAktuell_kWh    
+        }else{
+            benoetigteKapazitaetAktuell_kWh = benoetigteKapazitaetAktuell_kWh_alt
+        }
+                
         // Berechnung der Zeit bis zum nächsten Sonnenaufgang
-        let stundenBisSunrise;
-        if (aktuelleZeit_ms < sunriseHeute_ms) {
-            // Vor Sonnenuntergang heute
-            stundenBisSunrise = (sunriseHeute_ms - aktuelleZeit_ms) / (1000 * 60 * 60);
-        } else if (aktuelleZeit_ms >= sunsetHeute_ms) {
+        let stundenBisSunrise = 0;
+        if (aktuelleZeit_ms < sonnenaufgangHeute_ms) {
+            // Vor Sonnenaufgang heute
+            stundenBisSunrise = round((sonnenaufgangHeute_ms - aktuelleZeit_ms) / (1000 * 60 * 60),0);
+        } else if (aktuelleZeit_ms >= sonnenuntergangHeute_ms) {
             // Nach Sonnenuntergang -> Nächster Sonnenaufgang ist morgen
-            stundenBisSunrise = (sunriseMorgen_ms - aktuelleZeit_ms) / (1000 * 60 * 60);
+            stundenBisSunrise = round((sonnenaufgangMorgen_ms - aktuelleZeit_ms) / (1000 * 60 * 60),0);
         } else {
             // Zwischen Sonnenaufgang und Sonnenuntergang heute
-            const verbleibendeSonnenstunden = (sunsetHeute_ms - aktuelleZeit_ms) / (1000 * 60 * 60);
-            const gesamteSonnenstunden = (sunsetHeute_ms - sunriseHeute_ms) / (1000 * 60 * 60);
+            const verbleibendeSonnenstunden = (sonnenuntergangHeute_ms - aktuelleZeit_ms) / (1000 * 60 * 60);
+            const gesamteSonnenstunden = (sonnenuntergangHeute_ms - sonnenaufgangHeute_ms) / (1000 * 60 * 60);
 
             // Berechne die PV-Leistung bis zum Sonnenuntergang
             const PVLeistungBisSonnenuntergang = (heuteErwartetePVLeistung_kWh / gesamteSonnenstunden)* verbleibendeSonnenstunden; 
             // Prüfen, ob die PV-Leistung bis Sonnenuntergang ausreicht
-            if (PVLeistungBisSonnenuntergang >= benoetigteKapazitaet) {
-                const reichweite = nreichweiteStunden >= verbleibendeSonnenstunden;
-                const state = reichweite && true;  // Beide Bedingungen sind erfüllt, also state = true
+            if (PVLeistungBisSonnenuntergang >= benoetigteKapazitaetAktuell_kWh) {
+                const state = nreichweiteStunden >= verbleibendeSonnenstunden;
                 LogProgrammablauf += '18/2,';
-                return { reichweite, pvLeistung: true, state };
+                return {state};
             } else {
                 LogProgrammablauf += '18/3,';
-                return { reichweite: false, pvLeistung: false, state: false };
+                return {state: false};
             }
         }
 
         // Prüfung, ob die Reichweite bis zum Sonnenaufgang ausreicht
         if (nreichweiteStunden < stundenBisSunrise) {
             LogProgrammablauf += '18/4,';
-            return { reichweite: false, pvLeistung: false, state: false };
+            return {state: false};
         }
 
         // Prüfung der PV-Prognose für morgen
-        if (aktuelleZeit_ms >= sunsetHeute_ms) {
+        if (aktuelleZeit_ms >= sonnenuntergangHeute_ms) {
             const prognoseBattSOCMorgen = await prognoseBatterieSOC(stundenBisSunrise);
             const benoetigteKapazitaetMorgen_kWh = (100 - prognoseBattSOCMorgen.soc) / 100 * batterieKapazitaet_kWh;
             if (morgenErwartetePVLeistung_kWh >= benoetigteKapazitaetMorgen_kWh) {
                 LogProgrammablauf += '18/5,';
-                return { reichweite: true, pvLeistung: true, state: true };
+                return {state: true};
             }
         } else {
             // Prüfung der PV-Leistung für heute
             if (heuteErwartetePVLeistung_kWh >= benoetigteKapazitaetPrognose_kWh) {
                 LogProgrammablauf += '18/6,';
-                return { reichweite: true, pvLeistung: true, state: true };
+                return {state: true};
             }
         }
 
         LogProgrammablauf += '18/7,';
-        return { reichweite: false, pvLeistung: false, state: false };
+        return {state: false};
     } catch (error) {
         log(`Fehler in Funktion pruefePVLeistung(): ${error.message}`, 'error');
     }
@@ -740,27 +809,25 @@ async function pruefePVLeistung(reichweiteStunden) {
 // Funktion berechnet den Batterie SOC nach einer variablen Zeit in h bei einem berechnetem Durchschnittsverbrauch.
 async function prognoseBatterieSOC(entladezeitStunden) {
     try {
-        entladezeitStunden = +entladezeitStunden || null;
-		let hausverbrauch_day_kWh
+        entladezeitStunden = round(+entladezeitStunden,0) || 0;
+		
+        let hausverbrauch_day_kWh
         let hausverbrauch_night_kWh
         // Leistungsdaten vom aktuellen Tag abrufen
         const hausverbrauch = JSON.parse((await getStateAsync(sID_arrayHausverbrauch)).val);
-        
         // Aktuellen Wochentag und Zeitintervall (Tag/Nacht) bestimmen
         const now = new Date();
         const currentDay = now.toLocaleDateString('de-DE', { weekday: 'long' });
-        
         hausverbrauch_day_kWh = hausverbrauch[currentDay]['day'] / 1000;
         hausverbrauch_night_kWh = hausverbrauch[currentDay]['night'] / 1000;
-        
         const entladeneEnergie_kWh = round(((hausverbrauch_day_kWh + hausverbrauch_night_kWh)/2)*entladezeitStunden,2);
         await setStateAsync(sID_aktuellerEigenverbrauch,`${round(hausverbrauch_day_kWh*1000,0)} W / ${round(hausverbrauch_night_kWh*1000,0)} W`);
         // Neuen Batterie-SOC berechnen
-        const neueSoC = aktuelleBatterieSoC_Pro - (entladeneEnergie_kWh / batterieKapazitaet_kWh) * 100;
-        //log(`Batterie-SOC nach Reichweite: ${neueSoC.toFixed(2)}% aktuelleSoC =${aktuelleBatterieSoC_Pro}  entladeneEnergie_kWh = ${entladeneEnergie_kWh} batterieKapazitaet_kWh = ${batterieKapazitaet_kWh}  `,'warn');
-        const state = neueSoC > 0 ? true:false
-        return {// Keine Daten im angegebenen Zeitraum
-            state:state,
+        let neueSoC = Math.floor(aktuelleBatterieSoC_Pro - (entladeneEnergie_kWh / batterieKapazitaet_kWh) * 100);
+        //log(`Batterie-SOC nach Reichweite: ${neueSoC}% aktuelleSoC =${aktuelleBatterieSoC_Pro}  entladeneEnergie_kWh = ${entladeneEnergie_kWh} batterieKapazitaet_kWh = ${batterieKapazitaet_kWh}  `,'warn');
+        neueSoC = Math.max(neueSoC, 0);
+        return {
+            state:true,
             soc: neueSoC
         };
     
@@ -1137,10 +1204,23 @@ async function berechneBattPrice() {
     if (batterieLadedaten.length > 0 ) {
         LogProgrammablauf += '27,';
         //Durchschnittspreis berechnen
-        const gesamt = batterieLadedaten.reduce((summe, eintrag) => summe + eintrag.price, 0);
-        strompreisBatterie = round(gesamt / batterieLadedaten.length,4);
-        bruttoPreisBatterie = strompreisBatterie != stromgestehungskosten ? round(strompreisBatterie * (1 / (systemwirkungsgrad / 100)),4) : stromgestehungskosten;
-        await setStateAsync(sID_StrompreisBatterie, bruttoPreisBatterie);
+        const ersteGewichtung = batterieLadedaten[0].soc; // Gewichtung des ersten Eintrags
+        let gewichteteSumme = 0;
+        let gesamtGewichtung = 0;
+        // Gewichtete Summe und Gesamtgewichtung berechnen
+        batterieLadedaten.forEach((data, index) => {
+            const gewicht = index === 0 ? ersteGewichtung : 1; // Erste Gewichtung oder 1
+            gewichteteSumme += data.price * gewicht;
+            gesamtGewichtung += gewicht;
+        });
+
+        strompreisBatterie = round(gewichteteSumme / gesamtGewichtung, 4);
+        bruttoPreisBatterie = round(strompreisBatterie * (1 / (systemwirkungsgrad / 100)),4);
+        if(batteriepreisAktiv){
+            await setStateAsync(sID_StrompreisBatterie, bruttoPreisBatterie);
+        }else{
+            await setStateAsync(sID_StrompreisBatterie, strompreisBatterie);
+        }    
     } else {
         // Wenn keine Daten gespeichert sind, dann null
         await setStateAsync(sID_StrompreisBatterie, null);
@@ -1440,45 +1520,59 @@ async function findeergebnisphasen(data, highThreshold, lowThreshold) {
 // Funktion prüft alle Daten im Array datenTibberLink48h, beginnend mit der aktuellen Uhrzeit bis zu der übergebenen Zeit,
 // und ermittelt den günstigsten und teuersten Preis. Wenn der Preisunterschied größer als 0,1 € ist, gibt sie die Zeit zurück,
 // ab der der Preis um 0,1 € teurer ist.
-function preisUnterschiedPruefen(bisZeit) {
+function preisUnterschiedPruefen(bisZeit,preisDiff) {
     try {    
         LogProgrammablauf += '15,';
         let aktuelleZeit = new Date();
-        let bisZeitDate = new Date(bisZeit.getTime() + 1 * 60 * 60 * 1000); 
+        let bisZeitDate = new Date(bisZeit); 
         
-        // Ermittlung der Zeitgrenzen
+        // Validierung von preisDiff
+        preisDiff = parseFloat(preisDiff.toFixed(4))
+        if (isNaN(preisDiff)) {
+            log(`function preisUnterschiedPruefen: preisDiff ist keine gültige Zahl`, 'error');
+            return {
+                state:false,
+                peakZeit: null,
+                dauerInStunden: null
+            }; 
+        }
+
+        // Validierung von dateStartTime und dateEndTime und Ermittlung der Zeitgrenzen
         const validStartTime = new Date(datenTibberLink48h[0].startsAt);
         const validEndTime = new Date(datenTibberLink48h[datenTibberLink48h.length - 1].startsAt);
         validEndTime.setHours(validEndTime.getHours() + 1);
-
-        // Validierung von dateStartTime und dateEndTime
         if (aktuelleZeit < validStartTime) {
             log(`dateStartTime liegt vor dem gültigen Zeitraum. Anpassung auf ${validStartTime}`, 'warn');
             aktuelleZeit = validStartTime;
         }
-
         if (bisZeitDate > validEndTime) {
             log(`dateEndTime liegt nach dem gültigen Zeitraum. Anpassung auf ${validEndTime}`, 'warn');
             bisZeitDate = validEndTime;
         }
 
+        // Auf volle Stunden runden
+        aktuelleZeit.setMinutes(0, 0, 0);
+        if (bisZeitDate.getMinutes() > 0 || bisZeitDate.getSeconds() > 0 || bisZeitDate.getMilliseconds() > 0) {
+            // Eine Stunde hinzufügen, wenn nicht schon exakt eine volle Stunde
+            bisZeitDate.setHours(bisZeitDate.getHours() + 1);
+        }
+        bisZeitDate.setMinutes(0, 0, 0);
+        
         // Filtere die Daten basierend auf der aktuellen Uhrzeit und der angegebenen Uhrzeit
         const gefilterteDaten = datenTibberLink48h.filter(d => {
             const startZeit = new Date(d.startsAt);
             return startZeit >= aktuelleZeit && startZeit <= bisZeitDate;
         });
-        
         if (gefilterteDaten.length === 0) {
             LogProgrammablauf += '15/1,';
-            return {// Keine Daten im angegebenen Zeitraum
+            return {// Startzeit und ende Zeit sind gleich
                 state:false,
                 peakZeit: null,
                 dauerInStunden: null
             }; 
         }
         // Ermittle den günstigsten und teuersten Preis
-        let guenstigsterPreis = Infinity;
-        let teuersterPreis = -Infinity;
+        let guenstigsterPreis = Infinity, teuersterPreis = -Infinity;
         gefilterteDaten.forEach(d => {
             const preis = d.total;
             if (preis < guenstigsterPreis) {
@@ -1488,9 +1582,10 @@ function preisUnterschiedPruefen(bisZeit) {
                 teuersterPreis = preis;
             }
         });
-        // Wenn der aktuelle Preis höher ist als der teuerste Preis dann beenden.
-        if(aktuellerPreisTibber > teuersterPreis){
-            //Peak überschritten 
+        
+        // Wenn der teuerste Preis gleich dem aktuellen Preis ist dann wurde Peak bereits erreicht.Nicht mehr laden.
+        if(aktuellerPreisTibber >= teuersterPreis){
+            //Peak erreicht
             LogProgrammablauf += '15/2,';
             return {
                 state:false,
@@ -1498,25 +1593,30 @@ function preisUnterschiedPruefen(bisZeit) {
                 dauerInStunden: null
             };
         }
-        // Preisunterschied prüfen
-        const preisDifferenz = teuersterPreis - guenstigsterPreis;
         
-        if (preisDifferenz > 0.1) {
-            // Finde den Zeitpunkt, ab dem der Preis um 0,1 € teurer ist
-            const teuererPreisZeitpunkt = gefilterteDaten.find(d => d.total >= guenstigsterPreis + 0.1);
-            
+        // Preisunterschied prüfen
+        const preisDifferenz = parseFloat((teuersterPreis - guenstigsterPreis).toFixed(4));
+        //log(`preisDifferenz = ${preisDifferenz} teuersterPreis = ${teuersterPreis} guenstigsterPreis = ${guenstigsterPreis}`,'warn')
+        if (preisDifferenz >= preisDiff) {
+            LogProgrammablauf += '15/3,';
+            // Finde den Zeitpunkt, ab dem der Preis um preisDiff € teurer ist
+            const teuererPreisZeitpunkt = gefilterteDaten.find(d => d.total >= parseFloat((guenstigsterPreis + preisDiff).toFixed(4)));
             if (teuererPreisZeitpunkt) {
-                // Berechne die Dauer, bis der Preis nicht mehr um 0,1 € teurer ist
+                LogProgrammablauf += '15/4,';
+                // Berechne die Dauer, bis der Preis nicht mehr um preisDiff € teurer ist
                 let endZeit = null;
                 let teurerPreisWert = teuererPreisZeitpunkt.total;
                 for (let i = gefilterteDaten.indexOf(teuererPreisZeitpunkt) + 1; i < gefilterteDaten.length; i++) {
-                    //log(`gefilterteDaten[i].total = ${gefilterteDaten[i].total} teurerPreisWert = ${teurerPreisWert} `,'warn')
-                    if (gefilterteDaten[i].total < teurerPreisWert - 0.1) {
+                    if (gefilterteDaten[i].total <= parseFloat((teurerPreisWert - preisDiff).toFixed(4))) {
                         endZeit = gefilterteDaten[i].startsAt;
                         break;
                     }
+                    if(gefilterteDaten.length == i+1 && endZeit == null){
+                        // Preis bleibt bis 0:00 Uhr preisDiff über günstigsten Preis 
+                        endZeit = gefilterteDaten[i].startsAt;
+                    }
                 }
-                //log(`endZeit = ${endZeit} `,'warn')
+                
                 if (endZeit) {
                     const startZeitDate = new Date(teuererPreisZeitpunkt.startsAt);
                     const endZeitDate = new Date(endZeit);
@@ -1530,7 +1630,8 @@ function preisUnterschiedPruefen(bisZeit) {
                 }
             }
         }
-        LogProgrammablauf += '15/3,';
+        
+        LogProgrammablauf += '15/5,';
         return {
             state:false,
             peakZeit: null,
@@ -1541,7 +1642,6 @@ function preisUnterschiedPruefen(bisZeit) {
     }
 
 }
-
 
 async function loescheAlleTimer(timerID) {
     if(timerID == 'all'){
@@ -1630,6 +1730,7 @@ on({id: regexPatternTibber, change: "ne"}, async function (obj){
     // Setze die zugehörige Variable, falls die ID im Mapping existiert
     if (idMapping[obj.id]) idMapping[obj.id](obj.state.val);
     if (obj.id.split('.')[4] == 'automPreisanpassung' && obj.state.val == true){await autoPreisanpassung(minStrompreis_48h)}
+    if (obj.id.split('.')[4] == 'BatteriepreisAktiv'){await berechneBattPrice();}
     
     await Promise.all([
         tibberSteuerungHauskraftwerk(),
