@@ -10,15 +10,15 @@ const PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUN
 const idTibber = `${instanz}.TibberSkript`;                                                             // ObjektID Tibber Skript
 
 const sID_LeistungHeizstab_W = ``;                                                                      // Pfad zu den Leistungswerte Heizstab eintragen ansonsten leer lassen
-const sID_WallboxLadeLeistung_1_W = ``;       															// Pfad zu den Leistungswerte Wallbox1 die nicht vom E3DC gesteuert wird eintragen ansonsten leer lassen
+const sID_WallboxLadeLeistung_1_W = `0_userdata.0.E3DC_Wallbox.Allgemein.WallboxLeistungAktuell`;       // Pfad zu den Leistungswerte Wallbox1 die nicht vom E3DC gesteuert wird eintragen ansonsten leer lassen
 const sID_WallboxLadeLeistung_2_W = ``;                                                                 // Pfad zu den Leistungswerte Wallbox2 die nicht vom E3DC gesteuert wirdeintragen ansonsten leer lassen
-const sID_LeistungLW_Pumpe_W = '';                     													// Pfad zu den Leistungswerte Wärmepumpe eintragen ansonsten leer lassen
+const sID_LeistungLW_Pumpe_W = 'modbus.2.holdingRegisters.40104_Leistung_aller_WP';                     // Pfad zu den Leistungswerte Wärmepumpe eintragen ansonsten leer lassen
 const BUFFER_SIZE= 5;                                                                                   // Größe des Buffers für gleitenden Durchschnitt
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
 //------------------------------------------------------------------------------------------------------
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.5.12 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.5.13 ====- ${Logparser2}`);
 
 //******************************************************************************************************
 //****************************************** Objekt ID anlegen *****************************************
@@ -30,7 +30,7 @@ const sID_Power_Home_W =`${instanzE3DC_RSCP}.EMS.POWER_HOME`;                   
 const sID_Batterie_SOC =`${instanzE3DC_RSCP}.EMS.BAT_SOC`;                                              // aktueller Batterie_SOC
 const sID_PvLeistung_E3DC_W =`${instanzE3DC_RSCP}.EMS.POWER_PV`;                                        // aktuelle PV_Leistung
 const sID_PvLeistung_ADD_W =`${instanzE3DC_RSCP}.EMS.POWER_ADD`;                                        // Zusätzliche Einspeiser Leistung
-const sID_Power_Wallbox_W =`${instanzE3DC_RSCP}.EMS.POWER_WB_ALL`;                                    	// aktuelle Wallbox Leistung
+const sID_Power_Wallbox_W =`${instanzE3DC_RSCP}.EMS.POWER_WB_ALL`;                                      // aktuelle Wallbox Leistung
 const sID_Power_Bat_W = `${instanzE3DC_RSCP}.EMS.POWER_BAT`;                                            // aktuelle Batterie_Leistung'
 const sID_Installed_Peak_Power =`${instanzE3DC_RSCP}.EMS.INSTALLED_PEAK_POWER`;                         // Wp der installierten PV Module
 const sID_Bat_Discharge_Limit =`${instanzE3DC_RSCP}.EMS.SYS_SPECS.maxBatDischargPower`;                 // Batterie Entladelimit
@@ -51,6 +51,7 @@ const sID_Max_Discharge_Power_W =`${instanzE3DC_RSCP}.EMS.MAX_DISCHARGE_POWER`; 
 const sID_Max_Charge_Power_W =`${instanzE3DC_RSCP}.EMS.MAX_CHARGE_POWER`;                               // Eingestellte maximale Batterie-Ladeleistung. (Variable Einstellung E3DC)
 const sID_DISCHARGE_START_POWER =`${instanzE3DC_RSCP}.EMS.DISCHARGE_START_POWER`;                       // Anfängliche Batterie-Entladeleistung
 const sID_PARAM_EP_RESERVE_W =`${instanzE3DC_RSCP}.EP.PARAM_0.PARAM_EP_RESERVE_ENERGY`;                 // Eingestellte Notstrom Reserve E3DC
+const sID_Powersave =`${instanzE3DC_RSCP}.EMS.POWERSAVE_ENABLED`;                                       // Powersave Modus
 
 //************************************* ID's Skript ChargeControl *************************************
 const sID_Saved_Power_W =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Saved_Power_W`;                                                     // Leistung die mit Charge-Control gerettet wurde
@@ -814,7 +815,7 @@ async function DebugLog()
 // Prüfen ob Notstrom SOC erreicht wurde um das entladen der Batterie zu verhindern.
 async function Notstrom_SOC_erreicht()
 {   
-    if (Notstrom_Status == 1 || Notstrom_Status == 4 || Batterie_SOC_Proz > Notstrom_SOC_Proz || bNotstromVerwenden){
+    if (Notstrom_Status == 1 || Notstrom_Status == 4 || Batterie_SOC_Proz > Notstrom_SOC_Proz || bNotstromVerwenden || Batterie_SOC_Proz == 0){
         // Entladen einschalten
         Notstrom_SOC_Proz = (await getStateAsync(sID_Notstrom_akt)).val
         LogProgrammablauf += '4,';
@@ -841,18 +842,23 @@ async function EMS(bState)
 
     // EMS einschalten
     if(bState && (Akk_max_Discharge_Power_W == 0 || Akk_max_Charge_Power_W == 0)){
-        await setStateAsync(sID_POWER_LIMITS_USED,true);
-        await setStateAsync(sID_Max_Discharge_Power_W, Bat_Discharge_Limit_W);
-        await setStateAsync(sID_DISCHARGE_START_POWER, startDischargeDefault);
-        await setStateAsync(sID_Max_Charge_Power_W, maximumLadeleistung_W);
+        await Promise.all([
+            setStateAsync(sID_POWER_LIMITS_USED,true),
+            setStateAsync(sID_Max_Discharge_Power_W, Bat_Discharge_Limit_W),
+            setStateAsync(sID_DISCHARGE_START_POWER, startDischargeDefault),
+            setStateAsync(sID_Max_Charge_Power_W, maximumLadeleistung_W)
+        ]);    
         log(`${Logparser1} -==== EMS Laden/Entladen der Batterie ist eingeschaltet ====- ${Logparser2}`,'warn')
     }
     // EMS ausschalten
     if(!bState && Batterie_SOC_Proz !=0 && (Akk_max_Discharge_Power_W != 0 || Akk_max_Charge_Power_W != 0)){
-        await setStateAsync(sID_POWER_LIMITS_USED,true);
-        await setStateAsync(sID_DISCHARGE_START_POWER, 0)
-        await setStateAsync(sID_Max_Discharge_Power_W, 0)
-        await setStateAsync(sID_Max_Charge_Power_W, 0)
+        await Promise.all([
+            setStateAsync(sID_POWER_LIMITS_USED, true),
+            setStateAsync(sID_DISCHARGE_START_POWER, 0),
+            setStateAsync(sID_Max_Discharge_Power_W, 0),
+            setStateAsync(sID_Max_Charge_Power_W, 0),
+            setStateAsync(sID_Powersave, true)
+        ]);
         log(`${Logparser1} -==== Notstrom Reserve erreicht, Laden/Entladen der Batterie ist ausgeschaltet ====- ${Logparser2}`,'warn')
     }
 }
