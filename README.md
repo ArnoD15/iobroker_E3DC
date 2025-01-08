@@ -77,6 +77,10 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.5.14
+* Zusätzliche Absicherung Tibber Skript, das ein Netzbezug über 3 x 32A (22000W) nicht möglich ist.
+* Fehler korrigiert, dass die Leistung einer externen Wallbox zum Hausverbrauch addiert wurde, obwohl diese bereits im Hausverbrauch enthalten ist.
+
 ### Version: 1.5.13
 * Fehler korrigiert, dass bei Batterie SoC = 0 und Einstellung Notstromreserve =0 die Regelung versucht hat, das Entladen zu verhindern und deswegen ständig auf die E3DC RSCP Schnittstelle zugegriffen wurde.
 

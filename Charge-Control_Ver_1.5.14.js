@@ -18,7 +18,7 @@ const BUFFER_SIZE= 5;                                                           
 //------------------------------------------------------------------------------------------------------
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.5.13 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.5.14 ====- ${Logparser2}`);
 
 //******************************************************************************************************
 //****************************************** Objekt ID anlegen *****************************************
@@ -138,7 +138,7 @@ let arrayPrognoseSolcast90_kWh = new Array(32), arrayPrognoseSolcast_kWh = new A
 let logflag,sLogPath,bLogAusgabe,bDebugAusgabe,bDebugAusgabeDetail,Offset_sunriseEnd_min,minWertPrognose_kWh,Entladetiefe_Pro;
 let Systemwirkungsgrad_Pro,bScriptTibber,country,ProplantaOrt,ProplantaPlz,BewoelkungsgradGrenzwert,bSolcast;
 let nModulFlaeche,nWirkungsgradModule,nKorrFaktor,nMinPvLeistungTag_kWh,nMaxPvLeistungTag_kWh;
-let SolcastDachflaechen,Resource_Id_Dach=[],SolcastAPI_key,tibberMaxLadeleistung_W;
+let SolcastDachflaechen,Resource_Id_Dach=[],SolcastAPI_key,tibberMaxLadeleistungUser_W;
      
 //******************************* Globale Variable Time Counter *******************************
 let lastDebugLogTime = 0,lastExecutionTime = 0, count0 = 0, count1 = 0, count2 = 0, count3 = 0;
@@ -155,7 +155,7 @@ let bNotstromAusNetz, bAutomatikAnwahl, bAutomatikRegelung, bManuelleLadungBatt,
 //*********************************** Globale Variable ***********************************
 let LogProgrammablauf = "", Notstrom_Status, startDischargeDefault, Batterie_SOC_Proz, Speichergroesse_kWh
 let Max_wrleistung_W ,InstalliertPeakLeistung, Einspeiselimit_Pro, Einspeiselimit_kWh, maximumLadeleistung_W, Bat_Discharge_Limit_W
-let EinstellungAnwahl,PrognoseAnwahl, M_Power=0,M_Power_alt=0,Set_Power_Value_W=0;
+let EinstellungAnwahl,PrognoseAnwahl, M_Power=0,M_Power_alt=0,Set_Power_Value_W=0,tibberMaxLadeleistung_W= null;
 let Batterie_SOC_alt_Proz=0, Notstrom_SOC_Proz = 0, Summe0 = 0, Summe1 = 0, Summe2 = 0, Summe3 = 0, baseurl, TibberSubscribeID;
 
 //***************************************************************************************************
@@ -339,7 +339,7 @@ async function CheckState() {
     const objekteTibber = [
         { id: 'BatterieEntladesperre', varName: 'bTibberEntladesperre', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
         { id: 'BatterieLaden', varName: 'bTibberLaden', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
-        { id: 'maxLadeleistung', varName: 'tibberMaxLadeleistung_W', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: 'maxLadeleistung', varName: 'tibberMaxLadeleistungUser_W', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
     ];
 
     for (const obj of objekte) {
@@ -376,7 +376,7 @@ async function CheckState() {
             const logTxT = `-==== Tibber output signal ${obj.id.split('.')[4]} wurde in ${obj.state.val} geändert ====-`
             if (obj.id.split('.')[4] == 'BatterieEntladesperre' ){bTibberEntladesperre = obj.state.val;log(logTxT,'warn')}
             if (obj.id.split('.')[4] == 'BatterieLaden' ){bTibberLaden = obj.state.val;log(logTxT,'warn')}
-            if (obj.id.split('.')[4] == 'maxLadeleistung' ){tibberMaxLadeleistung_W = obj.state.val;log(logTxT,'warn')}
+            if (obj.id.split('.')[4] == 'maxLadeleistung' ){tibberMaxLadeleistungUser_W = obj.state.val;log(logTxT,'warn')}
         });
         
     }else{
@@ -455,7 +455,7 @@ async function Ladesteuerung()
         states[7]?.val 
     ]);
 
-    const Power_Home_W =toInt((await getStateAsync(sID_Power_Home_W)).val + WallboxPower + wb1Power + wb2Power);        // Aktueller Hausverbrauch + Ladeleistung Wallbox E3DC 
+    const Power_Home_W =toInt((await getStateAsync(sID_Power_Home_W)).val + WallboxPower);                          // Aktueller Hausverbrauch + Ladeleistung Wallbox E3DC externe Wallbox ist bereits im Hausverbrauch enthalten. 
     const PV_Leistung_Summe_W = toInt(PV_Leistung_E3DC_W + Math.abs(PV_Leistung_ADD_W));                            // Summe PV-Leistung  
     Notstrom_Status = (await getStateAsync(sID_Notrom_Status)).val;                                                 // aktueller Notstrom Status E3DC 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
     bNotstromVerwenden = await CheckPrognose();                                                                     // Prüfen ob Notstrom verwendet werden kann bei hoher PV Prognose für den nächsten Tag
@@ -677,20 +677,6 @@ async function Ladesteuerung()
             // Notstrom SOC erreicht oder Tibber Entladesperre aktiv und nicht ausreichend PV-Leistung vorhanden 
             // Entladen der Batterie stoppen
             bLadenEntladenStoppen = true
-            
-            /*
-            // Notstrom SOC erreicht oder Tibber Entladesperre aktiv und nicht ausreichend PV-Leistung vorhanden
-            if(bTibberEntladesperre && !bStatus_Notstrom_SOC){
-                LogProgrammablauf += '37,';
-                // wenn mehr als 500 W ins Netz eingespeist wird, dann Laden/Entladen der Batterie nicht sperren.
-                if(netzLeistung_W > -500){
-                    bLadenEntladenStoppen = true    
-                }
-            }else{
-                LogProgrammablauf += '8,';
-                bLadenEntladenStoppen = true
-            }
-            */
         }
         
         // Leerlauf beibehalten bis sich der Wert M_Power ändert oder LadenEntladenStoppen true ist
@@ -757,6 +743,20 @@ async function Ladesteuerung()
         
     }else if(bScriptTibber && bTibberLaden){
         LogProgrammablauf += '36,';
+        // Absicherung das Netzleistung nicht 22000W (32A * 3 ) übersteigt 
+        const steigungsrate = 10;
+        if(tibberMaxLadeleistung_W === null){tibberMaxLadeleistung_W = tibberMaxLadeleistungUser_W}
+        if(Power_Home_W + tibberMaxLadeleistung_W > 20000){
+            tibberMaxLadeleistung_W = tibberMaxLadeleistung_W - (Power_Home_W + tibberMaxLadeleistung_W -20000);    
+        }else{
+            if (tibberMaxLadeleistung_W < tibberMaxLadeleistungUser_W && (tibberMaxLadeleistung_W + Power_Home_W + steigungsrate) <= 20000) {
+                tibberMaxLadeleistung_W = tibberMaxLadeleistung_W + steigungsrate;  // Erhöhe schrittweise
+                if (tibberMaxLadeleistung_W > tibberMaxLadeleistungUser_W) {
+                    tibberMaxLadeleistung_W = tibberMaxLadeleistungUser_W;  
+                }
+            }
+        }
+        if (tibberMaxLadeleistung_W < 0){tibberMaxLadeleistung_W = 0}
         await setStateAsync(sID_SET_POWER_MODE,4); // Laden
         await setStateAsync(sID_SET_POWER_VALUE_W,tibberMaxLadeleistung_W) // E3DC bleib beim Laden im Schnitt um ca 82 W unter der eingestellten Ladeleistung
     }
