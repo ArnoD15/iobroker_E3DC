@@ -16,7 +16,7 @@ const hystereseKapazitaet = 2;                                                  
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.3.14'
+const scriptVersion = 'Version 1.3.15'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 // IDs Script Charge_Control
 const sID_Autonomiezeit =`${instanz}.Charge_Control.Allgemein.Autonomiezeit`;
@@ -764,9 +764,9 @@ async function pruefePVLeistung(reichweiteStunden) {
             const PVLeistungBisSonnenuntergang = (heuteErwartetePVLeistung_kWh / gesamteSonnenstunden)* verbleibendeSonnenstunden; 
             // Prüfen, ob die PV-Leistung bis Sonnenuntergang ausreicht
             if (PVLeistungBisSonnenuntergang >= benoetigteKapazitaetAktuell_kWh) {
-                const state = nreichweiteStunden >= verbleibendeSonnenstunden;
+                //const state = nreichweiteStunden >= verbleibendeSonnenstunden;
                 LogProgrammablauf += '18/2,';
-                return {state};
+                return {state: true};
             } else {
                 LogProgrammablauf += '18/3,';
                 return {state: false};
@@ -1258,13 +1258,14 @@ async function getCurrentPrice() {
             }
         }
         // Durch das Array datenMorgen loopen um den günstigsten Preis 48h zu finden
-        for (let entry of datenMorgen) {
-            // Setze den niedrigsten Preis, wenn noch keiner definiert ist oder der aktuelle Preis niedriger ist
-            if (minStrompreis_48h === null || entry.total < minStrompreis_48h) {
-                minStrompreis_48h = entry.total;
+        if (Array.isArray(datenMorgen)) {
+            for (let entry of datenMorgen) {
+                // Setze den niedrigsten Preis, wenn noch keiner definiert ist oder der aktuelle Preis niedriger ist
+                if (minStrompreis_48h === null || entry.total < minStrompreis_48h) {
+                    minStrompreis_48h = entry.total;
+                }
             }
         }
-    
         // Gib den aktuellen Preis zurück
         return aktuellerPreisTibber;
     } catch (error) {
