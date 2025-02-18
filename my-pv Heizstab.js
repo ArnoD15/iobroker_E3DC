@@ -1,3 +1,4 @@
+// Script my-pv Heizstab Version 1.0.1 
 // defintion which instances has to be used 
 const instanzE3DC_RSCP       = 'e3dc-rscp.0' 
 const instanzHeizstab_Modbus = 'modbus.1'
@@ -14,7 +15,7 @@ const sID_Bat_Charge_Limit  = `${instanzE3DC_RSCP}.EMS.SYS_SPECS.maxBatChargePow
 // selbst definierte Variablen
 const sID_Eigenverbrauch    = '0_userdata.0.Charge_Control.Allgemein.Hausverbrauch'; 					// Household consumption power
 const sID_M_Power_W         = '0_userdata.0.Charge_Control.Allgemein.Akt_Berechnete_Ladeleistung_W'; 	// Calculated required charging power
-const sID_LeistungLW_Pumpe_W = 'modbus.2.holdingRegisters.41013_WP_Aufnahmeleistung';                   // Pfad zu den Leistungswerte Wärmepumpe eintragen ansonsten leer lassen
+const sID_LeistungLW_Pumpe_W = 'modbus.2.holdingRegisters.40104_Leistung_aller_WP';                     // Pfad zu den Leistungswerte Wärmepumpe eintragen ansonsten leer lassen
 
 // Heistab Modbus Variablen 
 const sID_LeistungHeizstab_W        = `${instanzHeizstab_Modbus}.holdingRegisters.1000_Power`; // Current power consumption of heating element in W
@@ -53,7 +54,7 @@ async function fetchAndUpdateHeizstabLeistung() {
             getStateAsync(sID_Power_Mode),
             getStateAsync(sID_Batterie_Status),
             getStateAsync(sID_Bat_Charge_Limit),
-			getStateAsync(sID_LeistungLW_Pumpe_W)
+			sID_LeistungLW_Pumpe_W ? getStateAsync(sID_LeistungLW_Pumpe_W) : Promise.resolve({ val: 0 })
         ]);
 
         const [
