@@ -1,4 +1,4 @@
-// Script my-pv Heizstab Version 1.0.1 
+// Script my-pv Heizstab Version 1.0.2 
 // defintion which instances has to be used 
 const instanzE3DC_RSCP       = 'e3dc-rscp.0' 
 const instanzHeizstab_Modbus = 'modbus.1'
@@ -6,7 +6,7 @@ const instanzHeizstab_Modbus = 'modbus.1'
 // E3DC Komponenten Definition 
 const sID_PV_Leistung       = `${instanzE3DC_RSCP}.EMS.POWER_PV`; // PV power
 const sID_Netz_Leistung     = `${instanzE3DC_RSCP}.EMS.POWER_GRID`; // Grid power
-const sID_Wallbox_Leistung  = `${instanzE3DC_RSCP}.EMS.POWER_WB_ALL`; // Wallbox power
+const sID_Wallbox_Leistung  = `modbus.1.inputRegisters.120_Leistung_aktuell`; // Wallbox power
 const sID_Batterie_Leistung = `${instanzE3DC_RSCP}.EMS.POWER_BAT`; // Battery power
 const sID_Power_Mode        = `${instanzE3DC_RSCP}.EMS.MODE`; // Power mode state
 const sID_Batterie_Status   = `${instanzE3DC_RSCP}.EMS.BAT_SOC`; // Battery status state
@@ -101,6 +101,10 @@ async function fetchAndUpdateHeizstabLeistung() {
         // Verfügbaren Überschuss berechnen
         let verfuegbarerUeberschuss_W = PV_Leistung_W - Hausverbrauch_W - M_Power_W- Wallbox_Leistung_W - LeistungWP_W - sicherheitspuffer; // Verfügbarer Überschuss unter Berücksichtigung von PV-Leistung, Hausverbrauch, Wärmepumpe, Soll-Ladeleistung und Sicherheitspuffer
         verfuegbarerUeberschuss_W = Math.max(verfuegbarerUeberschuss_W, 0); // Stellen Sie sicher, dass der Wert nicht negativ wird
+
+        if (M_Power_W !== 0) {
+            verfuegbarerUeberschuss_W -= sicherheitspuffer;
+        }
 
         // Heizstab-Leistung bestimmen
         let HeizstabLadeleistung_W = 0;
