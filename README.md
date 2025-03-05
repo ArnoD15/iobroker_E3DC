@@ -77,6 +77,9 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.5.15
+* Anpassung an e3dc-rscp Adapter ab Version 1.4.1 : Der Pfad zu PARAM_EP_RESERVE_ENERGY wurde geändert.
+
 ### Version: 1.5.14
 * Zusätzliche Absicherung Tibber Skript, das ein Netzbezug über 3 x 32A (22000W) nicht möglich ist.
 * Fehler korrigiert, dass die Leistung einer externen Wallbox zum Hausverbrauch addiert wurde, obwohl diese bereits im Hausverbrauch enthalten ist.
