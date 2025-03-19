@@ -4993,7 +4993,7 @@
         "e00065": {
             "tpl": "tplValueString",
             "data": {
-                "oid": "0_userdata.0.Charge_Control.Allgemein.Autonomiezeit",
+                "oid": "",
                 "g_fixed": false,
                 "g_visibility": true,
                 "g_css_font_text": true,
@@ -5048,7 +5048,7 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "html_prepend": "Autonomiezeit<br>",
+                "html_prepend": "Autonomiezeit<br>Autonomiezeit<br>{0_userdata.0.Charge_Control.Allgemein.Autonomiezeit} / {0_userdata.0.Charge_Control.Allgemein.AutonomiezeitDurchschnitt}",
                 "visibility-oid": "e3dc-rscp.0.EMS.POWER_BAT"
             },
             "style": {
