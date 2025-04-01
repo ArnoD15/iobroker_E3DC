@@ -5,7 +5,7 @@ const instanz = '0_userdata.0';                                                 
 const PfadEbene1 = 'TibberSkript';                                                                     	        // Pfad innerhalb der Instanz
 const PfadEbene2 = ['Anzeige_VIS','OutputSignal','History','USER_ANPASSUNGEN']                		            // Pfad innerhalb PfadEbene1
 const instanzE3DC_RSCP = 'e3dc-rscp.0'
-const DebugAusgabeDetail = true;
+const DebugAusgabeDetail = false;
 const hystereseReichweite_h = 0.5;                                                                              // Hysterese-Schwelle von ±30 Minuten
 const hystereseBatterie_pro = 2;                                                                                // Hysterese-Schwelle von ±2 %
 const hystereseKapazitaet = 2;                                                                                  // Hysterese-Schwelle von ±2 kWh
@@ -16,10 +16,10 @@ const hystereseKapazitaet = 2;                                                  
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.3.15'
+const scriptVersion = 'Version 1.3.16'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 // IDs Script Charge_Control
-const sID_Autonomiezeit =`${instanz}.Charge_Control.Allgemein.Autonomiezeit`;
+const sID_Autonomiezeit =`${instanz}.Charge_Control.Allgemein.AutonomiezeitDurchschnitt`;
 const sID_arrayHausverbrauch =`${instanz}.Charge_Control.Allgemein.arrayHausverbrauchDurchschnitt`;
 const sID_maxEntladetiefeBatterie =`${instanz}.Charge_Control.USER_ANPASSUNGEN.10_maxEntladetiefeBatterie`
 const sID_PrognoseAuto_kWh =`${instanz}.Charge_Control.History.PrognoseAuto_kWh`
@@ -60,6 +60,7 @@ const sID_Systemwirkungsgrad = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.System
 const sID_BatteriepreisAktiv = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.BatteriepreisAktiv`                   // Auswahl in VIS ob aktueller Strompreis Batterie brücksichtigt werden soll
 const sID_Stromgestehungskosten = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.stromgestehungskosten`
 const sID_TibberLinkID = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.tibberLinkId`
+const sID_ScriptAktiv = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.ScriptAktiv`
 
 // IDs des Adapters TibberLink, Zuweisung in Funktion ScriptStart() wegen persönlicher ID
 let tibberLinkId = getState(sID_TibberLinkID).val                                                               // TibberLink ID auslesen
@@ -76,7 +77,7 @@ let dateBesteReichweiteLadezeit_alt = new Date();
 let strompreisBatterie, bruttoPreisBatterie;
 
 let bNachladenPeak = false, bLock = false, bSchneeBedeckt = false, bAutPreisanpassung = false, bNotstromAktiv = false, bBatteriepreisAktiv = false, bStart = true;                                                                 
-let bBattLaden = false, bAutoLaden = false, bBattSperre = false, bBattSperrePrio = false, bReichweiteSunrise = false, statusText = ``;
+let bBattLaden = false, bAutoLaden = false, bBattSperre = false, bBattSperrePrio = false, bReichweiteSunrise = false, bScriptAktiv = true, statusText = ``;
 let timerIds = [], timerTarget = [], timerObjektID = [],timerState =[], batterieLadedaten = [],datenHeute =[], datenMorgen = [], datenTibberLink48h = [];
 
 //***************************************************************************************************
@@ -107,6 +108,7 @@ async function createState(){
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.BatteriepreisAktiv`, { 'def': false, 'name': 'Anwahl in VIS ob Batteriepreis berücksichtigt wird', 'type': 'boolean' }),
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.tibberLinkId`, { 'def': '', 'name': 'Persönliche ID TibberLink Adapter', 'type': 'string' }),
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.stromgestehungskosten`, { 'def': 0.1057, 'name': 'alle Kosten, die innerhalb der vorgesehenen Laufzeit (20 Jahre) entstehen addiert, dividiert durch den Ertrag an Solarstrom', 'type': 'number' }),
+        createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.ScriptAktiv`, { 'def': true, 'name': 'Steuerung Tibber Script stoppen', 'type': 'boolean' }),
     ];
     await Promise.all(createStatePromises);
 }
@@ -177,7 +179,8 @@ async function CheckState() {
         { id: 'maxSOC_Batterie', varName: 'maxBatterieSoC', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen', min: 0, max: 100, errorMsg: 'max Batterie SoC muss zwischen 0% und 100% sein' },
         { id: 'Systemwirkungsgrad', varName: 'systemwirkungsgrad', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen', min: 0, max: 100, errorMsg: 'Systemwirkungsgrad muss zwischen 0% und 100% sein' },
         { id: 'BatteriepreisAktiv', varName: 'bBatteriepreisAktiv', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen', min: false, max: true, errorMsg: 'BatteriepreisAktiv kann nur true oder false sein' },
-        { id: 'stromgestehungskosten', varName: 'stromgestehungskosten', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen'}
+        { id: 'stromgestehungskosten', varName: 'stromgestehungskosten', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen'},
+        { id: 'ScriptAktiv', varName: 'bScriptAktiv', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' , min: false, max: true, errorMsg: 'ScriptAktiv kann nur true oder false sein'}
     ];
 
     for (const obj of objekte) {
@@ -208,6 +211,7 @@ async function CheckState() {
 // Ablaufsteuerung zum regeln der Batterieladung bei günstigen Tibber Preise
 async function tibberSteuerungHauskraftwerk() {
     try {    
+        if (!bScriptAktiv){return;}
         LogProgrammablauf += '1,';
         [bBattLaden,bAutoLaden,statusText,bBattSperre,peakSchwellwert] = await Promise.all([
             getStateAsync(sID_BatterieLaden),
@@ -217,7 +221,12 @@ async function tibberSteuerungHauskraftwerk() {
             getStateAsync(sID_Spitzenstrompreis)
         ]).then(states => states.map(state => state.val));
         
-        const [stunden, minuten] = (await getStateAsync(sID_Autonomiezeit)).val.split(' / ')[1].split(' ')[0].split(':').map(Number);
+        const value = (await getStateAsync(sID_Autonomiezeit)).val;
+        // überprüft, ob value einen / enthält, und wählt dann die entsprechende split-Methode.
+        const [stunden, minuten] = value.includes('/')
+            ? value.split(' / ')[1].split(' ')[0].split(':').map(Number)
+            : value.split(' ')[0].split(':').map(Number);
+        
         let reichweite_h = round(stunden + (minuten /60),2)
         const datejetzt = new Date();
         // Hysterese-Schwelle von ±30 Minuten dass kleine zeitliche Unterschiede nicht zu einem häufigen Wechsel führen
@@ -544,7 +553,7 @@ async function tibberSteuerungHauskraftwerk() {
                 const dateReichweiteEndeLadezeit = new Date(dateBesteReichweiteLade.zeit.getTime() + ladeZeit_h * 60 * 60 * 1000);
                 await setStateAtSpecificTime(dateBesteReichweiteLade.zeit, sID_BatterieLaden, true);
                 await setStateAtSpecificTime(dateReichweiteEndeLadezeit, sID_BatterieLaden, false);
-                const startTime = dateBestePhaseStartLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
+                const startTime = dateBesteReichweiteLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                 const endeTime = dateReichweiteEndeLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                 let message = `Laden von ${startTime} bis ${endeTime} (aktive Phase: ${aktivePhase.type})`    
                 statusText != message ? await setStateAsync(sID_status,message): null;
@@ -634,6 +643,7 @@ async function tibberSteuerungHauskraftwerk() {
         statusText != message ? await setStateAsync(sID_status,message): null;
         await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
         LogProgrammablauf = '';
+        return;
     } catch (error) {
         log(`Fehler in Funktion tibberSteuerungHauskraftwerk: ${error.message}`, 'error');
     }
@@ -747,14 +757,14 @@ async function pruefePVLeistung(reichweiteStunden) {
         }else{
             benoetigteKapazitaetAktuell_kWh = benoetigteKapazitaetAktuell_kWh_alt
         }
-        // Berechnung der Zeit bis zum nächsten Sonnenaufgang
+        // Berechnung der Zeit bis zum nächsten Sonnenaufgang plus 3h
         let stundenBisSunrise = 0;
         if (aktuelleZeit_ms < sonnenaufgangHeute_ms) {
             // Vor Sonnenaufgang heute
-            stundenBisSunrise = round((sonnenaufgangHeute_ms - aktuelleZeit_ms) / (1000 * 60 * 60),0);
+            stundenBisSunrise = round((sonnenaufgangHeute_ms - aktuelleZeit_ms) / (1000 * 60 * 60)+3,0);
         } else if (aktuelleZeit_ms >= sonnenuntergangHeute_ms) {
             // Nach Sonnenuntergang -> Nächster Sonnenaufgang ist morgen
-            stundenBisSunrise = round((sonnenaufgangMorgen_ms - aktuelleZeit_ms) / (1000 * 60 * 60),0);
+            stundenBisSunrise = round((sonnenaufgangMorgen_ms - aktuelleZeit_ms) / (1000 * 60 * 60)+3,0);
         } else {
             // Zwischen Sonnenaufgang und Sonnenuntergang heute
             const verbleibendeSonnenstunden = (sonnenuntergangHeute_ms - aktuelleZeit_ms) / (1000 * 60 * 60);
@@ -772,7 +782,7 @@ async function pruefePVLeistung(reichweiteStunden) {
                 return {state: false};
             }
         }
-
+        
         // Prüfung, ob die Reichweite bis zum Sonnenaufgang ausreicht
         if (nreichweiteStunden < stundenBisSunrise && !bReichweiteSunrise) {
             LogProgrammablauf += '18/4,';
@@ -1093,7 +1103,12 @@ function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h) {
         
 async function createDiagramm(){
     // JSON-Daten parsen
-    const [stunden, minuten] = (await getStateAsync(sID_Autonomiezeit)).val.split(' / ')[1].split(' ')[0].split(':').map(Number);
+    const value = (await getStateAsync(sID_Autonomiezeit)).val;
+    // überprüft, ob value einen / enthält, und wählt dann die entsprechende split-Methode.
+    const [stunden, minuten] = value.includes('/')
+        ? value.split(' / ')[1].split(' ')[0].split(':').map(Number)
+        : value.split(' ')[0].split(':').map(Number);
+    
     let reichweite_h = round(stunden + (minuten /60),0)
     // Listen für axisLabels und data initialisieren
     const axisLabels = [];
@@ -1734,6 +1749,7 @@ on({id: regexPatternTibber, change: "ne"}, async function (obj){
         [sID_Systemwirkungsgrad]: val => (systemwirkungsgrad = val),
         [sID_BatteriepreisAktiv]: val => (bBatteriepreisAktiv = val),
         [sID_Stromgestehungskosten]: val => (stromgestehungskosten = val),
+        [sID_ScriptAktiv]: val => (bScriptAktiv = val),
     };
     // Setze die zugehörige Variable, falls die ID im Mapping existiert
     if (idMapping[obj.id]) idMapping[obj.id](obj.state.val);
