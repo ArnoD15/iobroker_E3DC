@@ -18,7 +18,7 @@ const BUFFER_SIZE= 5;                                                           
 //------------------------------------------------------------------------------------------------------
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.5.16 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.5.17 ====- ${Logparser2}`);
 
 //******************************************************************************************************
 //****************************************** Objekt ID anlegen *****************************************
@@ -119,6 +119,7 @@ const axios = require('axios');
 const MAX_ENTRIES = 480; // 8 Stunden x 3600 Sekunden pro Tag /60 executionInterval
 
 //******************** Globale Variable Array ********************
+const idCache = {}
 let hausverbrauchBuffer = []; // Buffer für Hausverbrauchswerte
 let homeConsumption ={Montag: { night: [], day: [] },Dienstag: { night: [], day: [] },Mittwoch: { night: [], day: [] },
         Donnerstag: { night: [], day: [] },Freitag: { night: [], day: [] },Samstag: { night: [], day: [] },Sonntag: { night: [], day: [] }
@@ -437,25 +438,35 @@ async function Ladesteuerung()
 {
     let dAkt = new Date();
     const currentTime = Date.now();
-    const [netzLeistung_W,SET_POWER_MODE,PV_Leistung_E3DC_W, PV_Leistung_ADD_W, WallboxPower, wb1Power, wb2Power, UntererLadekorridor_W] = await Promise.all([
+    
+    const [
+        stateNetzLeistung,
+        stateSetPowerMode,
+        statePvLeistungE3DC,
+        statePvLeistungADD,
+        stateWallboxPower,
+        stateWb1Power,
+        stateWb2Power,
+        stateUntererLadekorridor
+    ] = await Promise.all([
         getStateAsync(sID_Power_GRID_W),
         getStateAsync(sID_SET_POWER_MODE),
         getStateAsync(sID_PvLeistung_E3DC_W),
         getStateAsync(sID_PvLeistung_ADD_W),
         getStateAsync(sID_Power_Wallbox_W),
-        getStateAsync(sID_WallboxLadeLeistung_1_W),
-        getStateAsync(sID_WallboxLadeLeistung_2_W),
+        safeGetState(sID_WallboxLadeLeistung_1_W), 
+        safeGetState(sID_WallboxLadeLeistung_2_W),
         getStateAsync(sID_UntererLadekorridor_W[EinstellungAnwahl])
-    ]).then(states => [
-        states[0]?.val,
-        states[1]?.val ?? 0, // Wenn SET_POWER_MODE null oder undefined ist, 0 eintragen
-        states[2]?.val, 
-        states[3]?.val, 
-        states[4]?.val ?? 0, // Wenn WallboxPower null oder undefined ist, 0 eintragen, 
-        states[5]?.val ?? 0, // Wenn wb1Power null oder undefined ist, 0 eintragen, 
-        states[6]?.val ?? 0, // Wenn wb2Power null oder undefined ist, 0 eintragen, 
-        states[7]?.val 
     ]);
+
+    const netzLeistung_W        = stateNetzLeistung?.val;
+    const SET_POWER_MODE        = stateSetPowerMode?.val ?? 0;
+    const PV_Leistung_E3DC_W    = statePvLeistungE3DC?.val;
+    const PV_Leistung_ADD_W     = statePvLeistungADD?.val;
+    const WallboxPower          = stateWallboxPower?.val ?? 0;
+    const wb1Power              = stateWb1Power?.val ?? 0; 
+    const wb2Power              = stateWb2Power?.val ?? 0; 
+    const UntererLadekorridor_W = stateUntererLadekorridor?.val;
 
     const Power_Home_W =toInt((await getStateAsync(sID_Power_Home_W)).val + WallboxPower);                          // Aktueller Hausverbrauch + Ladeleistung Wallbox E3DC externe Wallbox ist bereits im Hausverbrauch enthalten. 
     const PV_Leistung_Summe_W = toInt(PV_Leistung_E3DC_W + Math.abs(PV_Leistung_ADD_W));                            // Summe PV-Leistung  
@@ -1850,17 +1861,21 @@ async function LadeNotstromSOC(){
 async function berechneReinenHausverbrauch(powerHome) {
     try {
         const currentTime = Date.now();
-        const [wallboxLeistung1, wallboxLeistung2, leistungHeizstab, leistungWaermepumpe] = await Promise.all([
-            sID_WallboxLadeLeistung_1_W ? getStateAsync(sID_WallboxLadeLeistung_1_W) : { val: 0 },
-            sID_WallboxLadeLeistung_2_W ? getStateAsync(sID_WallboxLadeLeistung_2_W) : { val: 0 },
-            sID_LeistungHeizstab_W ? getStateAsync(sID_LeistungHeizstab_W) : { val: 0 },
-            sID_LeistungLW_Pumpe_W ? getStateAsync(sID_LeistungLW_Pumpe_W) : { val: 0 }
+        const [
+            wallboxLeistung1,
+            wallboxLeistung2,
+            leistungHeizstab,
+            leistungWaermepumpe
+        ] = await Promise.all([
+            safeGetState(sID_WallboxLadeLeistung_1_W),
+            safeGetState(sID_WallboxLadeLeistung_2_W),
+            safeGetState(sID_LeistungHeizstab_W),
+            safeGetState(sID_LeistungLW_Pumpe_W)
         ]);
         const wb1Power = wallboxLeistung1.val;
         const wb2Power = wallboxLeistung2.val;
         const heizstabPower = leistungHeizstab.val;
         const waermepumpePower = leistungWaermepumpe.val;
-
         // Berechne die reine Hausverbrauchsleistung
         let reinerHausverbrauch_W = round(powerHome - heizstabPower - waermepumpePower - wb1Power - wb2Power, 0);
         // Sicherstellen, dass der Hausverbrauch ohne Heizstab nicht negativ ist
@@ -1926,6 +1941,33 @@ async function berechneReinenHausverbrauch(powerHome) {
     }
 }
 
+// Prüft IDs vorab auf Gültigkeit
+async function safeGetState(id) {
+    if (!id) return { val: 0 };
+
+    if (!(id in idCache)) {
+        try {
+            const obj = existsObject(id);
+            idCache[id] = !!obj;
+            if (!obj) {
+                log(`Ungültige State-ID: ${id}`,'warn');
+            }
+        } catch (err) {
+            log(`Fehler beim Prüfen von State-ID ${id}:${err.message}`, 'warn');
+            idCache[id] = false;
+        }
+    }
+
+    if (!idCache[id]) return { val: 0 };
+
+    try {
+        const state = await getStateAsync(id);
+        return state && typeof state.val !== 'undefined' ? state : { val: 0 };
+    } catch (err) {
+        log(`Fehler beim Lesen von State ${id}:${err.message}`, 'warn');
+        return { val: 0 };
+    }
+}
 
 // Funktion gibt den Hausverbrauch vom aktuellen Tag oder Nacht zurück
 async function Hausverbrauch(timeInterval) {

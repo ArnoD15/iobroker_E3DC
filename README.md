@@ -77,6 +77,9 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.5.17
+* Es wird bei den User Anpassungen geprüft ob Objekt-ID's existieren und wenn nicht wird eine Warnung im LOG ausgegeben.
+
 ### Version: 1.5.16
 * (Issues #17)Die Objekt ID 0_userdata.0.Charge_Control.Allgemein.Autonomiezeit wurde aufgeteilt in Autonomiezeit und AutonomiezeitDurchschnitt und dafür eine neue Objekt ID 0_userdata.0.Charge_Control.Allgemein.AutonomiezeitDurchschnitt angelegt.
 
