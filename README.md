@@ -77,6 +77,9 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.5.18
+* Fehler korrigiert, dass die Ladeleistung Tibber Script beim Laden aus dem Netz nur erhöht aber nicht mehr gesenkt wurde.
+
 ### Version: 1.5.17
 * Es wird bei den User Anpassungen geprüft ob Objekt-ID's existieren und wenn nicht wird eine Warnung im LOG ausgegeben.
 
