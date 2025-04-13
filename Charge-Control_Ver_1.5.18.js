@@ -18,7 +18,7 @@ const BUFFER_SIZE= 5;                                                           
 //------------------------------------------------------------------------------------------------------
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.5.17 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.5.18 ====- ${Logparser2}`);
 
 //******************************************************************************************************
 //****************************************** Objekt ID anlegen *****************************************
@@ -757,16 +757,21 @@ async function Ladesteuerung()
     }else if(bScriptTibber && bTibberLaden){
         LogProgrammablauf += '36,';
         // Absicherung das Netzleistung nicht 22000W (32A * 3 ) übersteigt 
-        const steigungsrate = 10;
+        const steigungsrate = 100;
+        const maxGesamtleistung = 20000;
         if(tibberMaxLadeleistung_W === null){tibberMaxLadeleistung_W = tibberMaxLadeleistungUser_W}
-        if(Power_Home_W + tibberMaxLadeleistung_W > 20000){
-            tibberMaxLadeleistung_W = tibberMaxLadeleistung_W - (Power_Home_W + tibberMaxLadeleistung_W -20000);    
+        const gesamtleistung = Power_Home_W + tibberMaxLadeleistung_W;
+        
+        if (gesamtleistung > maxGesamtleistung) {
+            tibberMaxLadeleistung_W -= gesamtleistung - maxGesamtleistung;    
         }else{
-            if (tibberMaxLadeleistung_W < tibberMaxLadeleistungUser_W && (tibberMaxLadeleistung_W + Power_Home_W + steigungsrate) <= 20000) {
-                tibberMaxLadeleistung_W = tibberMaxLadeleistung_W + steigungsrate;  // Erhöhe schrittweise
-                if (tibberMaxLadeleistung_W > tibberMaxLadeleistungUser_W) {
-                    tibberMaxLadeleistung_W = tibberMaxLadeleistungUser_W;  
-                }
+            const differenz = tibberMaxLadeleistungUser_W - tibberMaxLadeleistung_W;
+            // Annäherung in beide Richtungen mit Wert steigungsrate
+            if (Math.abs(differenz) >= steigungsrate && 
+                Power_Home_W + tibberMaxLadeleistung_W + Math.sign(differenz) * steigungsrate <= maxGesamtleistung) {
+                tibberMaxLadeleistung_W += Math.sign(differenz) * steigungsrate;
+            } else {
+                tibberMaxLadeleistung_W = tibberMaxLadeleistungUser_W;
             }
         }
         if (tibberMaxLadeleistung_W < 0){tibberMaxLadeleistung_W = 0}
