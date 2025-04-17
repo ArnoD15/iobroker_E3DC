@@ -9,16 +9,12 @@ const PfadEbene1 = 'Charge_Control';                                            
 const PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUNGEN']                	// Pfad innerhalb PfadEbene1
 const idTibber = `${instanz}.TibberSkript`;                                                             // ObjektID Tibber Skript
 
-const sID_LeistungHeizstab_W = ``;                                                                      // Pfad zu den Leistungswerte Heizstab eintragen ansonsten leer lassen
-const sID_WallboxLadeLeistung_1_W = `0_userdata.0.E3DC_Wallbox.Allgemein.WallboxLeistungAktuell`;       // Pfad zu den Leistungswerte Wallbox1 die nicht vom E3DC gesteuert wird eintragen ansonsten leer lassen
-const sID_WallboxLadeLeistung_2_W = ``;                                                                 // Pfad zu den Leistungswerte Wallbox2 die nicht vom E3DC gesteuert wirdeintragen ansonsten leer lassen
-const sID_LeistungLW_Pumpe_W = 'modbus.2.holdingRegisters.40104_Leistung_aller_WP';                     // Pfad zu den Leistungswerte Wärmepumpe eintragen ansonsten leer lassen
 const BUFFER_SIZE= 5;                                                                                   // Größe des Buffers für gleitenden Durchschnitt
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
 //------------------------------------------------------------------------------------------------------
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.5.18 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.5.19 ====- ${Logparser2}`);
 
 //******************************************************************************************************
 //****************************************** Objekt ID anlegen *****************************************
@@ -50,7 +46,7 @@ const sID_BAT0_Alterungszustand =`${instanzE3DC_RSCP}.BAT.BAT_0.ASOC`;          
 const sID_Max_Discharge_Power_W =`${instanzE3DC_RSCP}.EMS.MAX_DISCHARGE_POWER`;                         // Eingestellte maximale Batterie-Entladeleistung. (Variable Einstellung E3DC)
 const sID_Max_Charge_Power_W =`${instanzE3DC_RSCP}.EMS.MAX_CHARGE_POWER`;                               // Eingestellte maximale Batterie-Ladeleistung. (Variable Einstellung E3DC)
 const sID_DISCHARGE_START_POWER =`${instanzE3DC_RSCP}.EMS.DISCHARGE_START_POWER`;                       // Anfängliche Batterie-Entladeleistung
-const sID_PARAM_EP_RESERVE_W =`${instanzE3DC_RSCP}.EP.PARAM_EP_RESERVE_ENERGY`;                         // Eingestellte Notstrom Reserve E3DC
+let sID_PARAM_EP_RESERVE_W =`${instanzE3DC_RSCP}.EP.PARAM_0.PARAM_EP_RESERVE_ENERGY`;                   // Eingestellte Notstrom Reserve E3DC
 const sID_Powersave =`${instanzE3DC_RSCP}.EMS.POWERSAVE_ENABLED`;                                       // Powersave Modus
 
 //************************************* ID's Skript ChargeControl *************************************
@@ -141,7 +137,8 @@ let logflag,sLogPath,bLogAusgabe,bDebugAusgabe,bDebugAusgabeDetail,Offset_sunris
 let Systemwirkungsgrad_Pro,bScriptTibber,country,ProplantaOrt,ProplantaPlz,BewoelkungsgradGrenzwert,bSolcast;
 let nModulFlaeche,nWirkungsgradModule,nKorrFaktor,nMinPvLeistungTag_kWh,nMaxPvLeistungTag_kWh;
 let SolcastDachflaechen,Resource_Id_Dach=[],SolcastAPI_key,tibberMaxLadeleistungUser_W;
-     
+let sID_LeistungHeizstab_W, sID_WallboxLadeLeistung_1_W,sID_WallboxLadeLeistung_2_W,sID_LeistungLW_Pumpe_W 
+
 //******************************* Globale Variable Time Counter *******************************
 let lastDebugLogTime = 0,lastExecutionTime = 0, count0 = 0, count1 = 0, count2 = 0, count3 = 0;
 let Timer0 = null, Timer1 = null,Timer2 = null,TimerProplanta= null;
@@ -264,6 +261,10 @@ async function CreateState(){
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_3`, {'def':0, 'name':'Min Temperatur in vier Tagen' ,'type':'number', 'unit':'°C'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_LogHistoryLokal`, {'def':false,'name':'History Daten in Lokaler Datei speichern' ,'type':'boolean', 'unit':'','role':'state'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_LogHistoryPath`, {'def':'','name':'Pfad zur Sicherungsdatei History ' ,'type':'string', 'unit':'','role':'state'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Path_LeistungHeizstab`, {'def':'','name':'Pfad zu den Leistungswerte Heizstab eintragen ansonsten leer lassen ' ,'type':'string', 'unit':'','role':'state'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Path_WallboxLadeLeistung_1`, {'def':'','name':'Pfad zu den Leistungswerte Wallbox1 die nicht vom E3DC gesteuert wird eintragen ansonsten leer lassen ' ,'type':'string', 'unit':'','role':'state'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Path_WallboxLadeLeistung_2`, {'def':'','name':'Pfad zu den Leistungswerte Wallbox2 die nicht vom E3DC gesteuert wird eintragen ansonsten leer lassen ' ,'type':'string', 'unit':'','role':'state'});
+    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Path_LeistungLW_Pumpe`, {'def':'','name':'Pfad zu den Leistungswerte Wärmepumpe eintragen ansonsten leer lassen ' ,'type':'string', 'unit':'','role':'state'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_LogAusgabe`, {'def':false,'name':'Zusätzliche allgemeine LOG Ausgaben' ,'type':'boolean', 'unit':'','role':'state'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_DebugAusgabe`, {'def':false,'name':'Debug Ausgabe im LOG zur Fehlersuche' ,'type':'boolean', 'unit':'','role':'State'});
     createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_DebugAusgabeDetail`, {'def':false,'name':'Zusätzliche LOG Ausgaben der Lade-Regelung' ,'type':'boolean', 'unit':'','role':'state'});
@@ -314,6 +315,10 @@ async function CheckState() {
     const objekte = [
         { id: '10_LogHistoryLokal', varName: 'logflag', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
         { id: '10_LogHistoryPath', varName: 'sLogPath', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '10_Path_LeistungHeizstab', varName: 'sID_LeistungHeizstab_W', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '10_Path_WallboxLadeLeistung_1', varName: 'sID_WallboxLadeLeistung_1_W', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '10_Path_WallboxLadeLeistung_2', varName: 'sID_WallboxLadeLeistung_2_W', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: '10_Path_LeistungLW_Pumpe', varName: 'sID_LeistungLW_Pumpe_W', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
         { id: '10_LogAusgabe', varName: 'bLogAusgabe', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
         { id: '10_DebugAusgabe', varName: 'bDebugAusgabe', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
         { id: '10_DebugAusgabeDetail', varName: 'bDebugAusgabeDetail', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
@@ -2221,7 +2226,17 @@ async function calculateBatteryRange(currentConsumptionW) {
 async function pruefeAdapterEinstellungen() {
     // Verwende 'await' für asynchrone Funktion
     const e3dc_rscp_Adapter = await getObject(`system.adapter.${instanzE3DC_RSCP}`);
-
+    // @ts-ignore
+    const adapterVersion = e3dc_rscp_Adapter.common.version;
+        
+    // Fehler in der Version 1.4.1 abfangen "PARAM_EP_RESERVE_ENERGY" nicht mehr unter PARAM_0
+    if (adapterVersion == "1.4.1"){
+        sID_PARAM_EP_RESERVE_W =`${instanzE3DC_RSCP}.EP.PARAM_EP_RESERVE_ENERGY`;                 // Eingestellte Notstrom Reserve E3DC
+        log(`Bitte die e3dc-rscp Adapter Version 1.4.1 updaten `,'warn');
+    }
+    
+    
+    
     // Tags, die geprüft werden sollen
     const tagsToCheckChargeControl = [
         { tag: "TAG_EMS_REQ_POWER_PV"},
