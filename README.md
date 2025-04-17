@@ -77,6 +77,10 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.5.19
+* (Issues #18)Anpassung an e3dc-rscp Adapter ab Version 1.4.2 : Der Pfad zu PARAM_EP_RESERVE_ENERGY wurde geändert.
+* (Issues #19)Benutzerdatenpunkte für Verbraucher Heizstab, Wärmepumpe, Wallbox 1 und 2 können jetzt unter 0_userdata.0.Charge_Control.USER_ANPASSUNGEN (10_Path_LeistungHeizstab,10_Path_WallboxLadeLeistung_1,10_Path_WallboxLadeLeistung_2,10_Path_LeistungLW_Pumpe) eingetragen werden und müssen nicht mehr im Skript eingetragen werden.
+
 ### Version: 1.5.18
 * Fehler korrigiert, dass die Ladeleistung Tibber Script beim Laden aus dem Netz nur erhöht aber nicht mehr gesenkt wurde.
 
