@@ -625,7 +625,7 @@
         "e00009": {
             "tpl": "tplValueFloat",
             "data": {
-                "oid": "e3dc-rscp.0.PVI.PVI_0.VOLTAGE_MONITORING_THRESHOLD_TOP",
+                "oid": "e3dc-rscp.0.PVI.PVI_0.AC_MAX_PHASE_COUNT",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -683,7 +683,7 @@
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
                 "html_append_singular": "",
-                "html_append_plural": " V"
+                "html_append_plural": ""
             },
             "style": {
                 "left": "227px",
@@ -835,7 +835,7 @@
                 "lc-border-color": "",
                 "lc-border-radius": 10,
                 "lc-zindex": 0,
-                "html": "Seriennummer<br>\nWechselrichtertyp<br>\nVersion Main<br>\nVersion PIC<br>\nTemperatur Max<br>\nTemperatur Min.<br>\nletzter Fehler<br>\nSpannung obere Schwelle<br>\nSpannung untere Schwelle<br>\nSpannung ansteigend<br>\nSpannung abfallend<br>\nMax. AC Scheinleistung<br>\nMaximale Frequenz<br>\nMinimale Frequenz<br>\nSystem-Modus<br>\nPower-Modus<br>\nStatus<br>\nGerät angeschlossen<br>\nGerät im Service<br>\nGerät in Betrieb<br>\nAm Netz\n\n"
+                "html": "Seriennummer<br>\nWechselrichtertyp<br>\nVersion Main<br>\nVersion PIC<br>\nTemperatur Max<br>\nTemperatur Min.<br>\nletzter Fehler<br>\nAnzahl der AC-Phasen<br>\nAnzahl der DC-Strings<br>\nAnzahl der Temperaturwerte<br>\n-<br>\nMax. AC Scheinleistung<br>\n-<br>\n-<br>\nSystem-Modus<br>\nPower-Modus<br>\nStatus<br>\nGerät angeschlossen<br>\nGerät im Service<br>\nGerät in Betrieb<br>\nAm Netz\n\n"
             },
             "style": {
                 "left": "6px",
@@ -928,7 +928,7 @@
         "e00013": {
             "tpl": "tplValueFloat",
             "data": {
-                "oid": "e3dc-rscp.0.PVI.PVI_0.VOLTAGE_MONITORING_THRESHOLD_BOTTOM",
+                "oid": "e3dc-rscp.0.PVI.PVI_0.DC_MAX_STRING_COUNT",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -968,7 +968,7 @@
                 "signals-vert-2": 0,
                 "signals-hide-edit-2": false,
                 "html_append_singular": "",
-                "html_append_plural": " V",
+                "html_append_plural": "",
                 "html_prepend": "",
                 "lc-type": "last-change",
                 "lc-is-interval": true,
@@ -1008,7 +1008,7 @@
         "e00014": {
             "tpl": "tplValueFloat",
             "data": {
-                "oid": "e3dc-rscp.0.PVI.PVI_0.VOLTAGE_MONITORING_SLOPE_UP",
+                "oid": "e3dc-rscp.0.PVI.PVI_0.TEMPERATURE_COUNT",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -1048,7 +1048,7 @@
                 "signals-vert-2": 0,
                 "signals-hide-edit-2": false,
                 "html_append_singular": "",
-                "html_append_plural": " V",
+                "html_append_plural": "",
                 "html_prepend": "",
                 "lc-type": "last-change",
                 "lc-is-interval": true,
@@ -1088,7 +1088,7 @@
         "e00015": {
             "tpl": "tplValueFloat",
             "data": {
-                "oid": "e3dc-rscp.0.PVI.PVI_0.VOLTAGE_MONITORING_SLOPE_DOWN",
+                "oid": "",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -1128,7 +1128,7 @@
                 "signals-vert-2": 0,
                 "signals-hide-edit-2": false,
                 "html_append_singular": "",
-                "html_append_plural": " V",
+                "html_append_plural": "",
                 "html_prepend": "",
                 "lc-type": "last-change",
                 "lc-is-interval": true,
@@ -1248,7 +1248,7 @@
         "e00017": {
             "tpl": "tplValueFloat",
             "data": {
-                "oid": "e3dc-rscp.0.PVI.PVI_0.FREQUENCY_OVER",
+                "oid": "",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -1288,7 +1288,7 @@
                 "signals-vert-2": 0,
                 "signals-hide-edit-2": false,
                 "html_append_singular": "",
-                "html_append_plural": " Hz",
+                "html_append_plural": "",
                 "html_prepend": "",
                 "lc-type": "last-change",
                 "lc-is-interval": true,
@@ -1328,7 +1328,7 @@
         "e00018": {
             "tpl": "tplValueFloat",
             "data": {
-                "oid": "e3dc-rscp.0.PVI.PVI_0.FREQUENCY_UNDER",
+                "oid": "",
                 "g_fixed": false,
                 "g_visibility": false,
                 "g_css_font_text": true,
@@ -1368,7 +1368,7 @@
                 "signals-vert-2": 0,
                 "signals-hide-edit-2": false,
                 "html_append_singular": "",
-                "html_append_plural": " Hz",
+                "html_append_plural": "",
                 "html_prepend": "",
                 "lc-type": "last-change",
                 "lc-is-interval": true,
