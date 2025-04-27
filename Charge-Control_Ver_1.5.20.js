@@ -765,8 +765,13 @@ async function Ladesteuerung()
         const steigungsrate = 100;
         const maxGesamtleistung = 20000;
         if(tibberMaxLadeleistung_W === null){tibberMaxLadeleistung_W = tibberMaxLadeleistungUser_W}
-        const gesamtleistung = Math.abs((PV_Leistung_Summe_W || 0) - Power_Home_W) + tibberMaxLadeleistung_W;
-        
+        let gesamtleistung
+        if (PV_Leistung_Summe_W >= Power_Home_W) {
+            gesamtleistung = tibberMaxLadeleistung_W;
+        } else {
+            gesamtleistung = Math.abs(PV_Leistung_Summe_W - Power_Home_W) + tibberMaxLadeleistung_W;
+        }
+                
         if (gesamtleistung > maxGesamtleistung) {
             tibberMaxLadeleistung_W -= gesamtleistung - maxGesamtleistung;    
         }else{
