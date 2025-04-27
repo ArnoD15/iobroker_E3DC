@@ -77,6 +77,9 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.5.20
+* Fehler bei der Berechnung der maximalen Ladeleistung aus dem Netz korrigiert.
+
 ### Version: 1.5.19
 * (Issues #18) Anpassung an e3dc-rscp Adapter ab Version 1.4.2 : Der Pfad zu PARAM_EP_RESERVE_ENERGY wurde wieder geändert. Im Script wird jetzt die Version vom e3dc-rscp Adapter abgefragt und dann der Pfad entsprechend angepasst.
 * (Issues #19) Der Pfad zu den Datenpunkten für Verbraucher Heizstab, Wärmepumpe, Wallbox 1 und 2 können jetzt unter 0_userdata.0.Charge_Control.USER_ANPASSUNGEN (10_Path_LeistungHeizstab,10_Path_WallboxLadeLeistung_1,10_Path_WallboxLadeLeistung_2,10_Path_LeistungLW_Pumpe) als String eingetragen werden und müssen nicht mehr im Skript eingetragen werden.

@@ -14,7 +14,7 @@ const BUFFER_SIZE= 5;                                                           
 //------------------------------------------------------------------------------------------------------
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.5.19 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.5.20 ====- ${Logparser2}`);
 
 //******************************************************************************************************
 //****************************************** Objekt ID anlegen *****************************************
@@ -765,7 +765,7 @@ async function Ladesteuerung()
         const steigungsrate = 100;
         const maxGesamtleistung = 20000;
         if(tibberMaxLadeleistung_W === null){tibberMaxLadeleistung_W = tibberMaxLadeleistungUser_W}
-        const gesamtleistung = Power_Home_W + tibberMaxLadeleistung_W;
+        const gesamtleistung = Math.abs((PV_Leistung_Summe_W || 0) - Power_Home_W) + tibberMaxLadeleistung_W;
         
         if (gesamtleistung > maxGesamtleistung) {
             tibberMaxLadeleistung_W -= gesamtleistung - maxGesamtleistung;    
