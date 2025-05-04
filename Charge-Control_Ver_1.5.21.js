@@ -14,14 +14,13 @@ const BUFFER_SIZE= 5;                                                           
 //------------------------------------------------------------------------------------------------------
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.5.20 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.5.21 ====- ${Logparser2}`);
 
 //******************************************************************************************************
 //****************************************** Objekt ID anlegen *****************************************
 //******************************************************************************************************
 
 //*************************************** ID's Adapter e3dc.rscp ***************************************
-const sID_Power_GRID_W =`${instanzE3DC_RSCP}.EMS.POWER_GRID`;                                           // aktuelle Netzleistung
 const sID_Power_Home_W =`${instanzE3DC_RSCP}.EMS.POWER_HOME`;                                           // aktueller Hausverbrauch E3DC                                         // Pfad ist abhängig von Variable ScriptHausverbrauch siehe function CheckState()
 const sID_Batterie_SOC =`${instanzE3DC_RSCP}.EMS.BAT_SOC`;                                              // aktueller Batterie_SOC
 const sID_PvLeistung_E3DC_W =`${instanzE3DC_RSCP}.EMS.POWER_PV`;                                        // aktuelle PV_Leistung
@@ -345,68 +344,91 @@ async function CheckState() {
         { id: '30_SolcastAPI_key', varName: 'SolcastAPI_key', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
     ];
     const objekteTibber = [
-        { id: 'BatterieEntladesperre', varName: 'bTibberEntladesperre', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
-        { id: 'BatterieLaden', varName: 'bTibberLaden', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
-        { id: 'maxLadeleistung', varName: 'tibberMaxLadeleistungUser_W', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
+        { id: 'BatterieEntladesperre', varName: 'bTibberEntladesperre', beschreibung: 'enthält keinen gültigen Wert, bitte unter Skripte im ioBroker prüfen ob das TibberSkript läuft' },
+        { id: 'BatterieLaden', varName: 'bTibberLaden', beschreibung: 'enthält keinen gültigen Wert, bitte unter Skripte im ioBroker prüfen ob das TibberSkript läuft' },
+        { id: 'maxLadeleistung', varName: 'tibberMaxLadeleistungUser_W', beschreibung: 'enthält keinen gültigen Wert, bitte unter Skripte im ioBroker prüfen ob das TibberSkript läuft' },
     ];
 
     for (const obj of objekte) {
-        const value = (await getStateAsync(`${idUSER_ANPASSUNGEN}.${obj.id}`)).val;
-        if (value === undefined || value === null) {
+        const state = await getStateAsync(`${idUSER_ANPASSUNGEN}.${obj.id}`);
+        if (!state || typeof state.val === 'undefined' || state.val === null) {
             logError(obj.beschreibung, `${idUSER_ANPASSUNGEN}.${obj.id}`);
-        } else {
+            continue;
+        }
+
+        const value = state.val;
+        eval(`${obj.varName} = value`);
+    
+        if (obj.min !== undefined && (value < obj.min || value > obj.max)) {
+            console.error(obj.errorMsg);
+        }
+    }
+    
+    if (bScriptTibber) {
+        for (const obj of objekteTibber) {
+            let state;
+            if (obj.id === 'maxLadeleistung') {
+                state = await getStateAsync(`${idTibber}.USER_ANPASSUNGEN.${obj.id}`);
+            } else {
+                state = await getStateAsync(`${idTibber}.OutputSignal.${obj.id}`);
+            }
+
+            if (!state || typeof state.val === 'undefined' || state.val === null) {
+                logError(obj.beschreibung, `${idTibber}...${obj.id}`);
+                continue;
+            }
+
+            const value = state.val;
             eval(`${obj.varName} = value`);
+
             if (obj.min !== undefined && (value < obj.min || value > obj.max)) {
                 console.error(obj.errorMsg);
             }
         }
-    }
-    
-    if(bScriptTibber){
-        for (const obj of objekteTibber) {
-            let value;
-            if(obj.id == 'maxLadeleistung'){
-                value = (await getStateAsync(`${idTibber}.USER_ANPASSUNGEN.${obj.id}`)).val;
-            }else{
-                value = (await getStateAsync(`${idTibber}.OutputSignal.${obj.id}`)).val;    
-            }
-            if (value === undefined || value === null) {
-                logError(obj.beschreibung, `${idTibber}...${obj.id}`);
-            } else {
-                eval(`${obj.varName} = value`);
-                if (obj.min !== undefined && (value < obj.min || value > obj.max)) {
-                    console.error(obj.errorMsg);
-                }
-            }
-        }
+
         const regexPattern = new RegExp(`${idTibber}`);
-        TibberSubscribeID = on({id: regexPattern, change: "ne"}, async function (obj){	
-            const logTxT = `-==== Tibber output signal ${obj.id.split('.')[4]} wurde in ${obj.state.val} geändert ====-`
-            if (obj.id.split('.')[4] == 'BatterieEntladesperre' ){bTibberEntladesperre = obj.state.val;log(logTxT,'warn')}
-            if (obj.id.split('.')[4] == 'BatterieLaden' ){bTibberLaden = obj.state.val;log(logTxT,'warn')}
-            if (obj.id.split('.')[4] == 'maxLadeleistung' ){tibberMaxLadeleistungUser_W = obj.state.val;log(logTxT,'warn')}
+        TibberSubscribeID = on({ id: regexPattern, change: "ne" }, async function (obj) {
+            const key = obj.id.split('.')[4];
+            const logTxT = `-==== Tibber output signal ${key} wurde in ${obj.state.val} geändert ====-`;
+
+            if (key === 'BatterieEntladesperre') {
+                bTibberEntladesperre = obj.state.val;
+                log(logTxT, 'warn');
+            }
+            if (key === 'BatterieLaden') {
+                bTibberLaden = obj.state.val;
+                log(logTxT, 'warn');
+            }
+            if (key === 'maxLadeleistung') {
+                tibberMaxLadeleistungUser_W = obj.state.val;
+                log(logTxT, 'warn');
+            }
         });
-        
-    }else{
-        unsubscribe(TibberSubscribeID);    
+
+    } else {
+        unsubscribe(TibberSubscribeID);
         bTibberEntladesperre = false;
         bTibberLaden = false;
     }
     
-    if (bSolcast){
+    if (bSolcast) {
         for (const obj of objekteSolcast) {
-            const value = (await getStateAsync(`${idUSER_ANPASSUNGEN}.${obj.id}`)).val;
-            if (value === undefined || value === null) {
+            const state = await getStateAsync(`${idUSER_ANPASSUNGEN}.${obj.id}`);
+            if (!state || typeof state.val === 'undefined' || state.val === null) {
                 logError(obj.beschreibung, `${idUSER_ANPASSUNGEN}.${obj.id}`);
-            } else {
-                eval(`${obj.varName} = value`);
-                if (obj.min !== undefined && (value < obj.min || value > obj.max)) {
-                    console.error(obj.errorMsg);
-                }
+                continue;
+            }
+
+            const value = state.val;
+            eval(`${obj.varName} = value`);
+
+            if (obj.min !== undefined && (value < obj.min || value > obj.max)) {
+                console.error(obj.errorMsg);
             }
         }
+
         // Daten von Solcast immer zwischen 04:01 und 04:59 Uhr abholen wenn const Solcast = true
-        schedule(`${Math.floor(Math.random() * (59 - 1 + 1)) + 1} 4 * * *`, function() {
+        schedule(`${Math.floor(Math.random() * (59 - 1 + 1)) + 1} 4 * * *`, function () {
             SheduleSolcast(SolcastDachflaechen);
         });
     }
@@ -445,32 +467,23 @@ async function Ladesteuerung()
     const currentTime = Date.now();
     
     const [
-        stateNetzLeistung,
         stateSetPowerMode,
         statePvLeistungE3DC,
         statePvLeistungADD,
         stateWallboxPower,
-        stateWb1Power,
-        stateWb2Power,
         stateUntererLadekorridor
     ] = await Promise.all([
-        getStateAsync(sID_Power_GRID_W),
         getStateAsync(sID_SET_POWER_MODE),
         getStateAsync(sID_PvLeistung_E3DC_W),
         getStateAsync(sID_PvLeistung_ADD_W),
         getStateAsync(sID_Power_Wallbox_W),
-        safeGetState(sID_WallboxLadeLeistung_1_W), 
-        safeGetState(sID_WallboxLadeLeistung_2_W),
         getStateAsync(sID_UntererLadekorridor_W[EinstellungAnwahl])
     ]);
 
-    const netzLeistung_W        = stateNetzLeistung?.val;
     const SET_POWER_MODE        = stateSetPowerMode?.val ?? 0;
     const PV_Leistung_E3DC_W    = statePvLeistungE3DC?.val;
     const PV_Leistung_ADD_W     = statePvLeistungADD?.val;
     const WallboxPower          = stateWallboxPower?.val ?? 0;
-    const wb1Power              = stateWb1Power?.val ?? 0; 
-    const wb2Power              = stateWb2Power?.val ?? 0; 
     const UntererLadekorridor_W = stateUntererLadekorridor?.val;
 
     const Power_Home_W =toInt((await getStateAsync(sID_Power_Home_W)).val + WallboxPower);                          // Aktueller Hausverbrauch + Ladeleistung Wallbox E3DC externe Wallbox ist bereits im Hausverbrauch enthalten. 
@@ -2240,8 +2253,6 @@ async function pruefeAdapterEinstellungen() {
         log(`Bitte die e3dc-rscp Adapter Version 1.4.1 updaten `,'warn');
     }
     
-    
-    
     // Tags, die geprüft werden sollen
     const tagsToCheckChargeControl = [
         { tag: "TAG_EMS_REQ_POWER_PV"},
@@ -2267,10 +2278,7 @@ async function pruefeAdapterEinstellungen() {
         { tag: "TAG_PVI_REQ_DC_CURRENT"},
         { tag: "TAG_PVI_REQ_DC_STRING_ENERGY_ALL"},
         { tag: "TAG_SYS_REQ_IS_SYSTEM_REBOOTING"},
-        { tag: "TAG_BAT_REQ_TRAINING_MODE"}
-    ];
-
-    const tagsToCheckWB = [
+        { tag: "TAG_BAT_REQ_TRAINING_MODE"},
         { tag: "TAG_WB_REQ_PM_POWER_L1"},
         { tag: "TAG_WB_REQ_PM_POWER_L2"},
         { tag: "TAG_WB_REQ_PM_POWER_L3"}

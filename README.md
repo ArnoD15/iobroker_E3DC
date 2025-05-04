@@ -77,6 +77,9 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.5.21
+* Fehlerbehandlung ergänzt und kleinere Bugs behoben.
+
 ### Version: 1.5.20
 * Fehler bei der Berechnung der maximalen Ladeleistung aus dem Netz korrigiert.
 
