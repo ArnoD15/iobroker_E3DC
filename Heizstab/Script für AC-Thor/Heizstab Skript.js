@@ -1,3 +1,5 @@
+// Erstellt von DA_Hood am 06.05.2025
+
 const INTERVAL_MS = 1000; // 1 Sekunde
 const socLimit = 60;
 const statusTimeout = 2 * 60 * 1000; // 2 Minuten
