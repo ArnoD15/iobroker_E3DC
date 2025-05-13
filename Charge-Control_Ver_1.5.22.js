@@ -14,7 +14,7 @@ const BUFFER_SIZE= 5;                                                           
 //------------------------------------------------------------------------------------------------------
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.5.21 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.5.22 ====- ${Logparser2}`);
 
 //******************************************************************************************************
 //****************************************** Objekt ID anlegen *****************************************
@@ -145,9 +145,8 @@ let RE_AstroSolarNoon,LE_AstroSunset,RB_AstroSolarNoon,RE_AstroSolarNoon_alt_mil
 
 //******************************* Globale Variable Boolean *******************************
 let bStart = true, bM_Notstrom = false, bStoppTriggerParameter = false, bStoppTriggerEinstellungAnwahl =false, bNotstromVerwenden;
-let bStatus_Notstrom_SOC=false, bLadenEntladenStoppen= false, bLadenEntladenStoppen_alt=false, bLadeschwelle_Proz_erreicht = false;
+let bStatus_Notstrom_SOC=false, bLadenEntladenStoppen= false, bLadenEntladenStoppen_alt=false;
 let bM_Abriegelung = false, bLadenAufNotstromSOC = false, bHeuteNotstromVerbraucht = false, bCheckConfig = true;
-let bLadeende_Proz_erreicht = false, bLadeende2_Proz_erreicht = false, bLadeende2_Proz_erreicht2 = false;
 let bNotstromAusNetz, bAutomatikAnwahl, bAutomatikRegelung, bManuelleLadungBatt, bTibberLaden = false, bTibberEntladesperre = false;
 
 //*********************************** Globale Variable ***********************************
@@ -213,98 +212,102 @@ async function ScriptStart()
 
 // Alle nötigen Objekt ID's anlegen 
 async function CreateState(){
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Notstrom_min`, {'def':30, 'name':'Speicherreserve in % bei Wintersonnenwende 21.12', 'type':'number', 'role':'value', 'desc':'Speicherreserve in % bei winterminimum', 'unit':'%'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Notstrom_sockel`, {'def':20, 'name':'min. SOC Wert bei Tag-/Nachtgleiche 21.3./21.9.', 'type':'number', 'role':'value', 'desc':'min. SOC Wert bei Tag-/Nachtgleiche 21.3./21.9.', 'unit':'%'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Autonomiezeit`, {'def':"", 'name':'verbleibende Reichweite der Batterie in h und m', 'type':'string', 'role':'value', 'desc':'verbleibende Reichweite der Batterie in h'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.AutonomiezeitDurchschnitt`, {'def':"", 'name':'Durchschnittliche verbleibende Reichweite der Batterie in h und m', 'type':'string', 'role':'value', 'desc':'verbleibende Reichweite der Batterie in h'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Batteriekapazität_kWh`, {'def':0, 'name':'verbleibende Reichweite der Batterie in kWh', 'type':'number', 'role':'value', 'desc':'verbleibende Reichweite der Batterie in kWh', 'unit':'kWh'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Hausverbrauch`, {'def':0, 'name':'Reiner Hausverbrauch ohne WB, LW-Pumpe oder Heizstab' , 'type':'number', 'role':'value', 'unit':'W'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.arrayHausverbrauchDurchschnitt`, {'def':{"Montag":{"night":100,"day":100},"Dienstag":{"night":100,"day":100},"Mittwoch":{"night":100,"day":100},"Donnerstag":{"night":100,"day":100},"Freitag":{"night":100,"day":100},"Samstag":{"night":100,"day":100},"Sonntag":{"night":100,"day":100}}, 'name':'Merker durchschnittlicher Hausverbrauch ohne Wallbox und Heizstab' , 'type':'string', 'role':'value'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.arrayHausverbrauch`, {'def':{"Montag":{"night":[100],"day":[100]},"Dienstag":{"night":[100],"day":[100]},"Mittwoch":{"night":[100],"day":[100]},"Donnerstag":{"night":[100],"day":[100]},"Freitag":{"night":[100],"day":[100]},"Samstag":{"night":[100],"day":[100]},"Sonntag":{"night":[100],"day":[100]}}, 'name':'Merker Leistung Hausverbrauch ohne Wallbox und Heizstab' , 'type':'string', 'role':'value'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Notstrom_akt`, {'def':0, 'name':'aktuell berechnete Notstromreserve', 'type':'number', 'role':'value', 'desc':'aktuell berechnete Notstromreserve', 'unit':'%'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.EinstellungAnwahl`, {'def':0, 'name':'Aktuell manuell angewählte Einstellung', 'type':'number', 'role':'State'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.EigenverbrauchTag`, {'def':0, 'name':'min. Eigenverbrauch von 6:00 Uhr bis 19:00 Uhr in kWh', 'type':'number', 'role':'value'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Automatik`, {'def':false, 'name':'Bei true werden die Parameter automatisch nach Wetterprognose angepast' , 'type':'boolean', 'role':'State', 'desc':'Automatik Charge-Control ein/aus'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Automatik_Regelung`, {'def':false, 'name':'Bei true ist die Lade Regelung eingeschaltet' , 'type':'boolean', 'role':'State', 'desc':'Automatik Charge-Control ein/aus'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.NotstromAusNetz`, {'def':false, 'name':'Bei true wird aus dem Netz bis Notstrom SOC nachgeladen' , 'type':'boolean', 'role':'State', 'desc':'Notstrom aus Netz nachladen'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.PrognoseBerechnung_kWh_heute`, {'def':0, 'name':'Prognose für Berechnung' , 'type':'number', 'role':'value', 'unit':'kWh'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Regelbeginn_MEZ`, {'def':'00:00', 'name':'Regelbeginn MEZ', 'type':'string', 'role':'string', 'desc':'Regelbeginn MEZ Zeit', 'unit':'Uhr'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Regelende_MEZ`, {'def':'00:00', 'name':'Regelende MEZ', 'type':'string', 'role':'string', 'desc':'Regelende MEZ Zeit', 'unit':'Uhr'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Ladeende_MEZ`, {'def':'00:00', 'name':'Ladeende MEZ', 'type':'string', 'role':'string', 'desc':'Ladeende MEZ Zeit', 'unit':'Uhr'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Saved_Power_W`, {'def':0, 'name':'Überschuss in W' , 'type':'number', 'role':'value', 'unit':'W'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Saved_PowerLM2_kWh`, {'def':0, 'name':'kWh Leistungsmesser 2' , 'type':'number', 'role':'value', 'unit':'kWh'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.IstPvErtragLM0_kWh`, {'def':0, 'name':'kWh Leistungsmesser 0 ' , 'type':'number', 'role':'value', 'unit':'kWh'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.IstPvErtragLM1_kWh`, {'def':0, 'name':'kWh Leistungsmesser 1 ' , 'type':'number', 'role':'value', 'unit':'kWh'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.EigenverbrauchDurchschnitt`, {'def':'', 'name':'Eigenverbrauch Durchschnitt Tag/Nacht ' , 'type':'string'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.PrognoseAnwahl`, {'def':0, 'name':'Beide Berechnung nach min. Wert = 0 nur Proplanta=1 nur Solcast=2 Beide Berechnung nach max. Wert=3 Beide Berechnung nach Ø Wert=4 nur Solcast90=5' , 'type':'number', 'role':'value'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.FirmwareDate`, {'def':formatDate(new Date(), "DD.MM.YYYY hh:mm:ss"), 'name':'Datum Firmware Update' , 'type':'string', 'role':'value'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.LastFirmwareVersion`, {'def':"", 'name':'Alte Frimware Version' , 'type':'string', 'role':'value'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Akt_Berechnete_Ladeleistung_W`, {'def':0, 'name':'Aktuell eingestellte ist Ladeleistung in W' , 'type':'number', 'role':'value', 'unit':'W'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.HistoryJSON`, {'def':'[]', 'name':'JSON für materialdesign json chart' ,'type':'string'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.istPV_LeistungTag_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Summe PV Leistung Tag in kWh' ,'type':'array'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseProp_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Prognose Proplanta PV Leistung Tag in kWh' ,'type':'array'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseAuto_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für verwendete Prognose im Automatikmodus' ,'type':'array'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast90_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Prognose Solcast PV-Leistung in Kilowatt (kW) 90. Perzentil (hohes Szenario)' ,'type':'array'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Prognose Solcast PV-Leistung in Kilowatt (kW)' ,'type':'array'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.HistorySelect`, {'def':1, 'name':'Select Menü für materialdesign json chart' ,'type':'number'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.NaesteAktualisierung`, {'def':'0', 'name':'Aktualisierung Proplanta' ,'type':'string'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Bewoelkungsgrad_12`, {'def':NaN, 'name':'Bewölkungsgrad 12 Uhr Proplanta' ,'type':'number'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Bewoelkungsgrad_15`, {'def':NaN, 'name':'Bewölkungsgrad 15 Uhr Proplanta' ,'type':'number'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_0`, {'def':0, 'name':'Max Temperatur heute' ,'type':'number', 'unit':'°C'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_1`, {'def':0, 'name':'Max Temperatur Morgen' ,'type':'number', 'unit':'°C'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_2`, {'def':0, 'name':'Max Temperatur Übermorgen' ,'type':'number', 'unit':'°C'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_3`, {'def':0, 'name':'Max Temperatur in vier Tagen' ,'type':'number', 'unit':'°C'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_0`, {'def':0, 'name':'Min Temperatur heute' ,'type':'number', 'unit':'°C'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_1`, {'def':0, 'name':'Min Temperatur Morgen' ,'type':'number', 'unit':'°C'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_2`, {'def':0, 'name':'Min Temperatur Übermorgen' ,'type':'number', 'unit':'°C'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_3`, {'def':0, 'name':'Min Temperatur in vier Tagen' ,'type':'number', 'unit':'°C'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_LogHistoryLokal`, {'def':false,'name':'History Daten in Lokaler Datei speichern' ,'type':'boolean', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_LogHistoryPath`, {'def':'','name':'Pfad zur Sicherungsdatei History ' ,'type':'string', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Path_LeistungHeizstab`, {'def':'','name':'Pfad zu den Leistungswerte Heizstab eintragen ansonsten leer lassen ' ,'type':'string', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Path_WallboxLadeLeistung_1`, {'def':'','name':'Pfad zu den Leistungswerte Wallbox1 die nicht vom E3DC gesteuert wird eintragen ansonsten leer lassen ' ,'type':'string', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Path_WallboxLadeLeistung_2`, {'def':'','name':'Pfad zu den Leistungswerte Wallbox2 die nicht vom E3DC gesteuert wird eintragen ansonsten leer lassen ' ,'type':'string', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Path_LeistungLW_Pumpe`, {'def':'','name':'Pfad zu den Leistungswerte Wärmepumpe eintragen ansonsten leer lassen ' ,'type':'string', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_LogAusgabe`, {'def':false,'name':'Zusätzliche allgemeine LOG Ausgaben' ,'type':'boolean', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_DebugAusgabe`, {'def':false,'name':'Debug Ausgabe im LOG zur Fehlersuche' ,'type':'boolean', 'unit':'','role':'State'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_DebugAusgabeDetail`, {'def':false,'name':'Zusätzliche LOG Ausgaben der Lade-Regelung' ,'type':'boolean', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Offset_sunriseEnd`, {'def':60,'name':'Wieviele Minuten nach Sonnenaufgang soll die Notstromreserve noch abdecken' ,'type':'number', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_minWertPrognose_kWh`, {'def':0,'name':'Wenn Prognose nächster Tag > als minWertPrognode_kWh wird die Notstromreserve freigegeben 0=Notstromreserve nicht freigegeben' ,'type':'number', 'unit':'kWh','role':'value'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_maxEntladetiefeBatterie`, {'def':90,'name':'Die Entladetiefe der Batterie in % aus den technischen Daten E3DC (beim S10E pro 90%)' ,'type':'number', 'unit':'%','role':'value'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Systemwirkungsgrad`, {'def':88,'name':'max. Systemwirkungsgrad inkl. Batterie in % aus den technischen Daten E3DC (beim S10E 88%)' ,'type':'number', 'unit':'%','role':'value'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_ScriptTibber`, {'def':false,'name':'Wenn das Script Tibber verwendet wird auf True setzen)' ,'type':'boolean', 'unit':'','role':'state'});
+    try {
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Notstrom_min`, {'def':30, 'name':'Speicherreserve in % bei Wintersonnenwende 21.12', 'type':'number', 'role':'value', 'desc':'Speicherreserve in % bei winterminimum', 'unit':'%'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Notstrom_sockel`, {'def':20, 'name':'min. SOC Wert bei Tag-/Nachtgleiche 21.3./21.9.', 'type':'number', 'role':'value', 'desc':'min. SOC Wert bei Tag-/Nachtgleiche 21.3./21.9.', 'unit':'%'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Autonomiezeit`, {'def':"", 'name':'verbleibende Reichweite der Batterie in h und m', 'type':'string', 'role':'value', 'desc':'verbleibende Reichweite der Batterie in h'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.AutonomiezeitDurchschnitt`, {'def':"", 'name':'Durchschnittliche verbleibende Reichweite der Batterie in h und m', 'type':'string', 'role':'value', 'desc':'verbleibende Reichweite der Batterie in h'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Batteriekapazität_kWh`, {'def':0, 'name':'verbleibende Reichweite der Batterie in kWh', 'type':'number', 'role':'value', 'desc':'verbleibende Reichweite der Batterie in kWh', 'unit':'kWh'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Hausverbrauch`, {'def':0, 'name':'Reiner Hausverbrauch ohne WB, LW-Pumpe oder Heizstab' , 'type':'number', 'role':'value', 'unit':'W'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.arrayHausverbrauchDurchschnitt`, {'def':{"Montag":{"night":100,"day":100},"Dienstag":{"night":100,"day":100},"Mittwoch":{"night":100,"day":100},"Donnerstag":{"night":100,"day":100},"Freitag":{"night":100,"day":100},"Samstag":{"night":100,"day":100},"Sonntag":{"night":100,"day":100}}, 'name':'Merker durchschnittlicher Hausverbrauch ohne Wallbox und Heizstab' , 'type':'string', 'role':'value'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.arrayHausverbrauch`, {'def':{"Montag":{"night":[100],"day":[100]},"Dienstag":{"night":[100],"day":[100]},"Mittwoch":{"night":[100],"day":[100]},"Donnerstag":{"night":[100],"day":[100]},"Freitag":{"night":[100],"day":[100]},"Samstag":{"night":[100],"day":[100]},"Sonntag":{"night":[100],"day":[100]}}, 'name':'Merker Leistung Hausverbrauch ohne Wallbox und Heizstab' , 'type':'string', 'role':'value'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Notstrom_akt`, {'def':0, 'name':'aktuell berechnete Notstromreserve', 'type':'number', 'role':'value', 'desc':'aktuell berechnete Notstromreserve', 'unit':'%'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.EinstellungAnwahl`, {'def':0, 'name':'Aktuell manuell angewählte Einstellung', 'type':'number', 'role':'State'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.EigenverbrauchTag`, {'def':0, 'name':'min. Eigenverbrauch von 6:00 Uhr bis 19:00 Uhr in kWh', 'type':'number', 'role':'value'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Automatik`, {'def':false, 'name':'Bei true werden die Parameter automatisch nach Wetterprognose angepast' , 'type':'boolean', 'role':'State', 'desc':'Automatik Charge-Control ein/aus'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Automatik_Regelung`, {'def':false, 'name':'Bei true ist die Lade Regelung eingeschaltet' , 'type':'boolean', 'role':'State', 'desc':'Automatik Charge-Control ein/aus'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.NotstromAusNetz`, {'def':false, 'name':'Bei true wird aus dem Netz bis Notstrom SOC nachgeladen' , 'type':'boolean', 'role':'State', 'desc':'Notstrom aus Netz nachladen'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.PrognoseBerechnung_kWh_heute`, {'def':0, 'name':'Prognose für Berechnung' , 'type':'number', 'role':'value', 'unit':'kWh'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Regelbeginn_MEZ`, {'def':'00:00', 'name':'Regelbeginn MEZ', 'type':'string', 'role':'string', 'desc':'Regelbeginn MEZ Zeit', 'unit':'Uhr'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Regelende_MEZ`, {'def':'00:00', 'name':'Regelende MEZ', 'type':'string', 'role':'string', 'desc':'Regelende MEZ Zeit', 'unit':'Uhr'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Ladeende_MEZ`, {'def':'00:00', 'name':'Ladeende MEZ', 'type':'string', 'role':'string', 'desc':'Ladeende MEZ Zeit', 'unit':'Uhr'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Saved_Power_W`, {'def':0, 'name':'Überschuss in W' , 'type':'number', 'role':'value', 'unit':'W'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Saved_PowerLM2_kWh`, {'def':0, 'name':'kWh Leistungsmesser 2' , 'type':'number', 'role':'value', 'unit':'kWh'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.IstPvErtragLM0_kWh`, {'def':0, 'name':'kWh Leistungsmesser 0 ' , 'type':'number', 'role':'value', 'unit':'kWh'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.IstPvErtragLM1_kWh`, {'def':0, 'name':'kWh Leistungsmesser 1 ' , 'type':'number', 'role':'value', 'unit':'kWh'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.EigenverbrauchDurchschnitt`, {'def':'', 'name':'Eigenverbrauch Durchschnitt Tag/Nacht ' , 'type':'string'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.PrognoseAnwahl`, {'def':0, 'name':'Beide Berechnung nach min. Wert = 0 nur Proplanta=1 nur Solcast=2 Beide Berechnung nach max. Wert=3 Beide Berechnung nach Ø Wert=4 nur Solcast90=5' , 'type':'number', 'role':'value'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.FirmwareDate`, {'def':formatDate(new Date(), "DD.MM.YYYY hh:mm:ss"), 'name':'Datum Firmware Update' , 'type':'string', 'role':'value'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.LastFirmwareVersion`, {'def':"", 'name':'Alte Frimware Version' , 'type':'string', 'role':'value'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Akt_Berechnete_Ladeleistung_W`, {'def':0, 'name':'Aktuell eingestellte ist Ladeleistung in W' , 'type':'number', 'role':'value', 'unit':'W'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.HistoryJSON`, {'def':'[]', 'name':'JSON für materialdesign json chart' ,'type':'string'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.istPV_LeistungTag_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Summe PV Leistung Tag in kWh' ,'type':'array'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseProp_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Prognose Proplanta PV Leistung Tag in kWh' ,'type':'array'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseAuto_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für verwendete Prognose im Automatikmodus' ,'type':'array'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast90_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Prognose Solcast PV-Leistung in Kilowatt (kW) 90. Perzentil (hohes Szenario)' ,'type':'array'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Prognose Solcast PV-Leistung in Kilowatt (kW)' ,'type':'array'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.HistorySelect`, {'def':1, 'name':'Select Menü für materialdesign json chart' ,'type':'number'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.NaesteAktualisierung`, {'def':'0', 'name':'Aktualisierung Proplanta' ,'type':'string'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Bewoelkungsgrad_12`, {'def':NaN, 'name':'Bewölkungsgrad 12 Uhr Proplanta' ,'type':'number'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Bewoelkungsgrad_15`, {'def':NaN, 'name':'Bewölkungsgrad 15 Uhr Proplanta' ,'type':'number'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_0`, {'def':0, 'name':'Max Temperatur heute' ,'type':'number', 'unit':'°C'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_1`, {'def':0, 'name':'Max Temperatur Morgen' ,'type':'number', 'unit':'°C'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_2`, {'def':0, 'name':'Max Temperatur Übermorgen' ,'type':'number', 'unit':'°C'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_3`, {'def':0, 'name':'Max Temperatur in vier Tagen' ,'type':'number', 'unit':'°C'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_0`, {'def':0, 'name':'Min Temperatur heute' ,'type':'number', 'unit':'°C'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_1`, {'def':0, 'name':'Min Temperatur Morgen' ,'type':'number', 'unit':'°C'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_2`, {'def':0, 'name':'Min Temperatur Übermorgen' ,'type':'number', 'unit':'°C'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_3`, {'def':0, 'name':'Min Temperatur in vier Tagen' ,'type':'number', 'unit':'°C'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_LogHistoryLokal`, {'def':false,'name':'History Daten in Lokaler Datei speichern' ,'type':'boolean', 'unit':'','role':'state'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_LogHistoryPath`, {'def':'','name':'Pfad zur Sicherungsdatei History ' ,'type':'string', 'unit':'','role':'state'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Path_LeistungHeizstab`, {'def':'','name':'Pfad zu den Leistungswerte Heizstab eintragen ansonsten leer lassen ' ,'type':'string', 'unit':'','role':'state'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Path_WallboxLadeLeistung_1`, {'def':'','name':'Pfad zu den Leistungswerte Wallbox1 die nicht vom E3DC gesteuert wird eintragen ansonsten leer lassen ' ,'type':'string', 'unit':'','role':'state'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Path_WallboxLadeLeistung_2`, {'def':'','name':'Pfad zu den Leistungswerte Wallbox2 die nicht vom E3DC gesteuert wird eintragen ansonsten leer lassen ' ,'type':'string', 'unit':'','role':'state'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Path_LeistungLW_Pumpe`, {'def':'','name':'Pfad zu den Leistungswerte Wärmepumpe eintragen ansonsten leer lassen ' ,'type':'string', 'unit':'','role':'state'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_LogAusgabe`, {'def':false,'name':'Zusätzliche allgemeine LOG Ausgaben' ,'type':'boolean', 'unit':'','role':'state'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_DebugAusgabe`, {'def':false,'name':'Debug Ausgabe im LOG zur Fehlersuche' ,'type':'boolean', 'unit':'','role':'State'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_DebugAusgabeDetail`, {'def':false,'name':'Zusätzliche LOG Ausgaben der Lade-Regelung' ,'type':'boolean', 'unit':'','role':'state'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Offset_sunriseEnd`, {'def':60,'name':'Wieviele Minuten nach Sonnenaufgang soll die Notstromreserve noch abdecken' ,'type':'number', 'unit':'','role':'state'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_minWertPrognose_kWh`, {'def':0,'name':'Wenn Prognose nächster Tag > als minWertPrognode_kWh wird die Notstromreserve freigegeben 0=Notstromreserve nicht freigegeben' ,'type':'number', 'unit':'kWh','role':'value'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_maxEntladetiefeBatterie`, {'def':90,'name':'Die Entladetiefe der Batterie in % aus den technischen Daten E3DC (beim S10E pro 90%)' ,'type':'number', 'unit':'%','role':'value'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Systemwirkungsgrad`, {'def':88,'name':'max. Systemwirkungsgrad inkl. Batterie in % aus den technischen Daten E3DC (beim S10E 88%)' ,'type':'number', 'unit':'%','role':'value'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_ScriptTibber`, {'def':false,'name':'Wenn das Script Tibber verwendet wird auf True setzen)' ,'type':'boolean', 'unit':'','role':'state'});
     
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_ProplantaCountry`, {'def':'de','name':'Ländercode für Proplanta de,at, ch, fr, it' ,'type':'string', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_ProplantaOrt`, {'def':'','name':'Wohnort für Abfrage Wetterdaten Proplanta' ,'type':'string', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_ProplantaPlz`, {'def':'','name':'Postleitzahl für Abfrage Wetterdaten Proplanta' ,'type':'string', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_BewoelkungsgradGrenzwert`, {'def':90,'name':'wird als Umschaltkriterium für die Einstellung 2-5 verwendet' ,'type':'number', 'unit':'%','role':'value'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_AbfrageSolcast`, {'def':false,'name':'true = Daten Solcast werden abgerufen false = Daten Solcast werden nicht abgerufen' ,'type':'boolean', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastDachflaechen`, {'def':0,'name':'Aktuell max. zwei Dachflächen möglich' ,'type':'number', 'unit':'Stück','role':'value'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastResource_Id_Dach1`, {'def':'','name':'Rooftop 1 Id von der Homepage Solcast' ,'type':'string', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastResource_Id_Dach2`, {'def':'','name':'Rooftop 2 Id von der Homepage Solcast' ,'type':'string', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastAPI_key`, {'def':'','name':'API Key von der Homepage Solcast' ,'type':'string', 'unit':'','role':'state'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_ModulFlaeche`, {'def':0,'name':'Installierte Modulfläche in m² (Silizium-Zelle 156x156x60 Zellen x 50 Module)' ,'type':'number', 'unit':'m²','role':'value'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_WirkungsgradModule`, {'def':21,'name':'Wirkungsgrad / Effizienzgrad der Solarmodule in % bezogen auf die Globalstrahlung (aktuelle Module haben max. 24 %)' ,'type':'number', 'unit':'%','role':'value'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_KorrekturFaktor`, {'def':0,'name':'Korrektur Faktor in Prozent. Reduziert die berechnete Prognose um diese anzugleichen.nKorrFaktor= 0 ohne Korrektur' ,'type':'number', 'unit':'%','role':'value'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_minPvLeistungTag_kWh`, {'def':3,'name':'minimal Mögliche PV-Leistung. Wenn Prognose niedriger ist wird mit diesem Wert gerechnet' ,'type':'number', 'unit':'kWh','role':'value'});
-    createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_maxPvLeistungTag_kWh`, {'def':105,'name':'max. Mögliche PV-Leistung. Wenn Prognose höher ist wird mit diesem Wert gerechnet' ,'type':'number', 'unit':'kWh','role':'value'});
-    for (let i = 0; i <= 31; i++) {
-        if(i <=6){
-            createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Datum_Tag_${i}`, {'def':'0', 'name':'Datum Proplanta' ,'type':'string'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_ProplantaCountry`, {'def':'de','name':'Ländercode für Proplanta de,at, ch, fr, it' ,'type':'string', 'unit':'','role':'state'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_ProplantaOrt`, {'def':'','name':'Wohnort für Abfrage Wetterdaten Proplanta' ,'type':'string', 'unit':'','role':'state'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_ProplantaPlz`, {'def':'','name':'Postleitzahl für Abfrage Wetterdaten Proplanta' ,'type':'string', 'unit':'','role':'state'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_BewoelkungsgradGrenzwert`, {'def':90,'name':'wird als Umschaltkriterium für die Einstellung 2-5 verwendet' ,'type':'number', 'unit':'%','role':'value'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_AbfrageSolcast`, {'def':false,'name':'true = Daten Solcast werden abgerufen false = Daten Solcast werden nicht abgerufen' ,'type':'boolean', 'unit':'','role':'state'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastDachflaechen`, {'def':0,'name':'Aktuell max. zwei Dachflächen möglich' ,'type':'number', 'unit':'Stück','role':'value'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastResource_Id_Dach1`, {'def':'','name':'Rooftop 1 Id von der Homepage Solcast' ,'type':'string', 'unit':'','role':'state'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastResource_Id_Dach2`, {'def':'','name':'Rooftop 2 Id von der Homepage Solcast' ,'type':'string', 'unit':'','role':'state'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.30_SolcastAPI_key`, {'def':'','name':'API Key von der Homepage Solcast' ,'type':'string', 'unit':'','role':'state'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_ModulFlaeche`, {'def':0,'name':'Installierte Modulfläche in m² (Silizium-Zelle 156x156x60 Zellen x 50 Module)' ,'type':'number', 'unit':'m²','role':'value'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_WirkungsgradModule`, {'def':21,'name':'Wirkungsgrad / Effizienzgrad der Solarmodule in % bezogen auf die Globalstrahlung (aktuelle Module haben max. 24 %)' ,'type':'number', 'unit':'%','role':'value'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_KorrekturFaktor`, {'def':0,'name':'Korrektur Faktor in Prozent. Reduziert die berechnete Prognose um diese anzugleichen.nKorrFaktor= 0 ohne Korrektur' ,'type':'number', 'unit':'%','role':'value'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_minPvLeistungTag_kWh`, {'def':3,'name':'minimal Mögliche PV-Leistung. Wenn Prognose niedriger ist wird mit diesem Wert gerechnet' ,'type':'number', 'unit':'kWh','role':'value'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.40_maxPvLeistungTag_kWh`, {'def':105,'name':'max. Mögliche PV-Leistung. Wenn Prognose höher ist wird mit diesem Wert gerechnet' ,'type':'number', 'unit':'kWh','role':'value'});
+        for (let i = 0; i <= 31; i++) {
+            if(i <=6){
+                await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Datum_Tag_${i}`, {'def':'0', 'name':'Datum Proplanta' ,'type':'string'});
+            }
+            if(i <= 5){
+                await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.UntererLadekorridor_${i}`, {'def':500, 'name':'Die Ladeleistung soll sich oberhalb dieses Wertes bewegen', 'type':'number', 'role':'value', 'desc':'UntererLadekorridor', 'unit':'W'});
+                await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Ladeschwelle_${i}`, {'def':0, 'name':'bis zur dieser Schwelle wird geladen bevor die Regelung beginnt', 'type':'number', 'role':'value', 'desc':'Ladeschwelle', 'unit':'%'});
+                await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Ladeende_${i}`, {'def':80, 'name':'Zielwert bis Ende Regelung, dannach wird Ladung auf ladeende2 weiter geregelt', 'type':'number', 'role':'value', 'desc':'Ladeende', 'unit':'%'});
+                await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Ladeende2_${i}`, {'def':93, 'name':'ladeende2 kann der Wert abweichend vom Defaultwert 93% gesetzt werden.Muss > ladeende sein', 'type':'number', 'role':'value', 'desc':'Ladeende2', 'unit':'%'});
+                await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.RegelbeginnOffset_${i}`, {'def':"02:00", 'name':'Offset Wert start Regelbeginn in min. von solarNoon (höchster Sonnenstand) = 0 ', 'type':'string', 'role':'value', 'desc':'RB_Offset'});
+                await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.RegelendeOffset_${i}`, {'def':"02:00", 'name':'Offset Wert ende Regelung in min. von solarNoon (höchster Sonnenstand) = 0 ', 'type':'string', 'role':'value', 'desc':'RE_Offset'});
+                await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.LadeendeOffset_${i}`, {'def':"02:00", 'name':'Offset Wert Ladeende in min. von sunset (Sonnenuntergang) = 0 ', 'type':'string', 'role':'value', 'desc':'LE_Offset'});
+                await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Unload_${i}`, {'def':100, 'name':'Zielwert beim entladen.Die ladeschwelle muss < unload sein', 'type':'number', 'role':'value', 'desc':'Unload', 'unit':'%'});
+            }
+            if (i > 0 && i < 13){
+                let n = i.toString().padStart(2,"0");
+                createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.HistoryJSON_${n}`, {'def':'[]', 'name':'JSON für materialdesign json chart' ,'type':'string'});
+            }
         }
-        if(i <= 5){
-            createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.UntererLadekorridor_${i}`, {'def':500, 'name':'Die Ladeleistung soll sich oberhalb dieses Wertes bewegen', 'type':'number', 'role':'value', 'desc':'UntererLadekorridor', 'unit':'W'});
-            createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Ladeschwelle_${i}`, {'def':0, 'name':'bis zur dieser Schwelle wird geladen bevor die Regelung beginnt', 'type':'number', 'role':'value', 'desc':'Ladeschwelle', 'unit':'%'});
-            createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Ladeende_${i}`, {'def':80, 'name':'Zielwert bis Ende Regelung, dannach wird Ladung auf ladeende2 weiter geregelt', 'type':'number', 'role':'value', 'desc':'Ladeende', 'unit':'%'});
-            createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Ladeende2_${i}`, {'def':93, 'name':'ladeende2 kann der Wert abweichend vom Defaultwert 93% gesetzt werden.Muss > ladeende sein', 'type':'number', 'role':'value', 'desc':'Ladeende2', 'unit':'%'});
-            createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.RegelbeginnOffset_${i}`, {'def':"02:00", 'name':'Offset Wert start Regelbeginn in min. von solarNoon (höchster Sonnenstand) = 0 ', 'type':'string', 'role':'value', 'desc':'RB_Offset'});
-            createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.RegelendeOffset_${i}`, {'def':"02:00", 'name':'Offset Wert ende Regelung in min. von solarNoon (höchster Sonnenstand) = 0 ', 'type':'string', 'role':'value', 'desc':'RE_Offset'});
-            createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.LadeendeOffset_${i}`, {'def':"02:00", 'name':'Offset Wert Ladeende in min. von sunset (Sonnenuntergang) = 0 ', 'type':'string', 'role':'value', 'desc':'LE_Offset'});
-            createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Unload_${i}`, {'def':100, 'name':'Zielwert beim entladen.Die ladeschwelle muss < unload sein', 'type':'number', 'role':'value', 'desc':'Unload', 'unit':'%'});
-        }
-        if (i > 0 && i < 13){
-            let n = i.toString().padStart(2,"0");
-            createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.HistoryJSON_${n}`, {'def':'[]', 'name':'JSON für materialdesign json chart' ,'type':'string'});
-        }
+    } catch (err) {
+        log(`Fehler in Funktion CreateState()`, 'error');
     }
 }
 
@@ -443,7 +446,7 @@ async function CheckState() {
     ];
 
     for (const id of PruefeID) {
-        if (!existsObject(id)) {
+        if (!(await existsObjectAsync(id))) {
             logError('existiert nicht, bitte prüfen', id);
         }
     }
@@ -452,12 +455,17 @@ async function CheckState() {
 // Aktualisiert die Prognose Werte und das Diagramm PV-Prognosen in VIS
 async function WetterprognoseAktualisieren()
 {
-    //Prognosen in kWh umrechen
-    await Prognosen_Berechnen();
-    // Diagramm aktualisieren
-    await makeJson();
-    // Einstellungen 1-5 je nach Überschuss PV Leistung Wetterprognose und Bewölkung anwählen 
-    await Einstellung(await Ueberschuss_Prozent());
+    try {
+        //Prognosen in kWh umrechen
+        await Prognosen_Berechnen();
+        // Diagramm aktualisieren
+        await makeJson();
+        // Einstellungen 1-5 je nach Überschuss PV Leistung Wetterprognose und Bewölkung anwählen 
+        const ueberschuss = await Ueberschuss_Prozent();
+        await Einstellung(ueberschuss);
+    } catch (err) {
+        log(`Fehler in Funktion WetterprognoseAktualisieren(): ${err.message}`, 'error');
+    }    
 }
 
 // Programmablauf für die Laderegelung der Batterie wird im 3 sek. Takt getriggert
@@ -485,12 +493,17 @@ async function Ladesteuerung()
     const PV_Leistung_ADD_W     = statePvLeistungADD?.val;
     const WallboxPower          = stateWallboxPower?.val ?? 0;
     const UntererLadekorridor_W = stateUntererLadekorridor?.val;
-
+    
     const Power_Home_W =toInt((await getStateAsync(sID_Power_Home_W)).val + WallboxPower);                          // Aktueller Hausverbrauch + Ladeleistung Wallbox E3DC externe Wallbox ist bereits im Hausverbrauch enthalten. 
     const PV_Leistung_Summe_W = toInt(PV_Leistung_E3DC_W + Math.abs(PV_Leistung_ADD_W));                            // Summe PV-Leistung  
     Notstrom_Status = (await getStateAsync(sID_Notrom_Status)).val;                                                 // aktueller Notstrom Status E3DC 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
     bNotstromVerwenden = await CheckPrognose();                                                                     // Prüfen ob Notstrom verwendet werden kann bei hoher PV Prognose für den nächsten Tag
+    const newSOC = (await getStateAsync(sID_Batterie_SOC)).val;
     
+    // Batterie SOC erst bei -2% oder + 1% oder 0% aktualisieren um Schwankungen der Batterie auszugleichen
+    if (newSOC > Batterie_SOC_Proz || Batterie_SOC_Proz - newSOC >= 2 || newSOC == 0) {
+        Batterie_SOC_Proz = newSOC;
+    }
     // LOG nur alle 6 sek. aufrufen
     if (bDebugAusgabe && (currentTime - lastDebugLogTime >= 6000)) {
         await DebugLog();
@@ -533,11 +546,8 @@ async function Ladesteuerung()
             LogProgrammablauf += '7,';
             let Ladeschwelle_Proz = (await getStateAsync(sID_Ladeschwelle_Proz[EinstellungAnwahl])).val                 // Parameter Ladeschwelle
             
-            // Hysterese -1% um Batterieschwankungen auszugleiche und ein ständiges ein-/aus-schalten zu verhindern
-            if(Batterie_SOC_Proz > Ladeschwelle_Proz){bLadeschwelle_Proz_erreicht = true}else if(Batterie_SOC_Proz < Ladeschwelle_Proz-1){bLadeschwelle_Proz_erreicht = false}
-            
             // Wenn SOC Ladeschwelle erreicht wurde, mit der Laderegelung starten
-            if(bLadeschwelle_Proz_erreicht){
+            if(Batterie_SOC_Proz > Ladeschwelle_Proz){
                 LogProgrammablauf += '9,';
                 
                 // Prüfen ob vor Regelbeginn
@@ -611,15 +621,13 @@ async function Ladesteuerung()
                     let Ladeende2_Proz = (await getStateAsync(sID_Ladeende2_Proz[EinstellungAnwahl])).val   // Parameter Ladeende2
         
                     // Wenn SOC Ladeende_Proz oder Ladeende2_Proz erreicht wurde, Merker setzen um Batterieschwankungen -1% zu ignorieren.
-                    if(Batterie_SOC_Proz > Ladeende_Proz){bLadeende_Proz_erreicht = true}else if(Batterie_SOC_Proz < Ladeende_Proz-1){bLadeende_Proz_erreicht = false}
-                    if(Batterie_SOC_Proz > Ladeende2_Proz){bLadeende2_Proz_erreicht = true}else if(Batterie_SOC_Proz < Ladeende2_Proz-1){bLadeende2_Proz_erreicht = false}
-                    if (!bLadeende_Proz_erreicht){
+                    if (Batterie_SOC_Proz < Ladeende_Proz){
                         LogProgrammablauf += '23,';
                         M_Power = maximumLadeleistung_W;
-                    }else if (!bLadeende2_Proz_erreicht){
+                    }else if (Batterie_SOC_Proz < Ladeende2_Proz){
                         LogProgrammablauf += '24,';
                         // Berechnen der Ladeleistung bis zum Ladeende2 SOC in W/sek.
-                        // Neuberechnung der Ladeleistung erfolgt, wenn der SoC sich ändert oder nach Ablauf von höchstens 5 Minuten oder tLadezeitende sich ändert oder die letzte Ladeleistung 0 W war oder die Parameter sich geändert haben.
+                        // Neuberechnung der Ladeleistung erfolgt, wenn der SoC sich ändert oder nach Ablauf von höchstens 30 Sek. oder tLadezeitende sich ändert oder die letzte Ladeleistung 0 W war oder die Parameter sich geändert haben.
                         if(Batterie_SOC_Proz != Batterie_SOC_alt_Proz || (dAkt.getTime() - Zeit_alt_milisek) > 30000 || RE_AstroSolarNoon.getTime() != RE_AstroSolarNoon_alt_milisek || M_Power == 0 || M_Power == maximumLadeleistung_W || bCheckConfig){
                             Batterie_SOC_alt_Proz = Batterie_SOC_Proz; bCheckConfig = false; RE_AstroSolarNoon_alt_milisek = RE_AstroSolarNoon.getTime(); Zeit_alt_milisek = dAkt.getTime();
                             LogProgrammablauf += '25,';
@@ -652,17 +660,16 @@ async function Ladesteuerung()
                     let Ladeende2_Proz = (await getStateAsync(sID_Ladeende2_Proz[EinstellungAnwahl])).val    // Parameter Ladeende2
         
                     // Wurde Batterie SOC Ladeende2 erreicht, dann Ladung beenden ansonsten mit maximal möglicher Ladeleistung Laden.
-                    if(Batterie_SOC_Proz > Ladeende2_Proz){bLadeende2_Proz_erreicht2 = true}else if(Batterie_SOC_Proz < Ladeende2_Proz-1){bLadeende2_Proz_erreicht2 = false}
-                    if (!bLadeende2_Proz_erreicht2 && PV_Leistung_Summe_W > toInt(UntererLadekorridor_W)){
+                    if (Batterie_SOC_Proz < Ladeende2_Proz && PV_Leistung_Summe_W > toInt(UntererLadekorridor_W)){
                         // SOC Ladeende2 nicht erreicht und ausreichend PV-Leistung vorhanden. (idle)
                         LogProgrammablauf += '31,';
                         M_Power = maximumLadeleistung_W;
-                    }else if(bLadeende2_Proz_erreicht2 && PV_Leistung_Summe_W -Power_Home_W > 0){
+                    }else if(Batterie_SOC_Proz >= Ladeende2_Proz && PV_Leistung_Summe_W -Power_Home_W > 0){
                         // SOC Ladeende2 erreicht und PV-Leistung höher als Eigenverbrauch. (0 W)
                         LogProgrammablauf += '32,';
                         bLadenEntladenStoppen = true
                         M_Power = 0;
-                    }else if(bLadeende2_Proz_erreicht2 && PV_Leistung_Summe_W-Power_Home_W <= 0 ){
+                    }else if(Batterie_SOC_Proz >= Ladeende2_Proz && PV_Leistung_Summe_W-Power_Home_W <= 0 ){
                         // SOC Ladeende2 erreicht und PV-Leistung < Eigenverbrauch. (idle)
                         LogProgrammablauf += '33,';
                         M_Power = maximumLadeleistung_W;
@@ -690,9 +697,16 @@ async function Ladesteuerung()
             //Prüfen ob berechnete Ladeleistung M_Power zu Netzbezug führt nur wenn LadenStoppen = false ist
             if(M_Power >= 0 && !bLadenEntladenStoppen){   
                 let PowerGrid = PV_Leistung_Summe_W -(Power_Home_W + M_Power)
-                if(PowerGrid < 500 && M_Power != maximumLadeleistung_W){// Führt zu Netzbezug, Steuerung ausschalten
+                if(PowerGrid < UntererLadekorridor_W && M_Power != maximumLadeleistung_W){
                     LogProgrammablauf += '34,';
-                    M_Power = maximumLadeleistung_W
+                    if (M_Power+PowerGrid > UntererLadekorridor_W){
+                        LogProgrammablauf += '34/1,';
+                        M_Power = M_Power+PowerGrid-UntererLadekorridor_W   
+                    }else{
+                        LogProgrammablauf += '34/2,';
+                        // Führt zu Netzbezug, Regelung E3DC überlassen
+                        M_Power = maximumLadeleistung_W 
+                    }
                 }   
             }else if (!bLadenEntladenStoppen){
                 let PowerGrid = PV_Leistung_Summe_W -(Power_Home_W - M_Power)
@@ -725,6 +739,7 @@ async function Ladesteuerung()
                     await setStateAsync(sID_SET_POWER_VALUE_W,0)
                     await setStateAsync(sID_out_Akt_Ladeleistung_W,0);
                     bLadenEntladenStoppen = false
+                    
                 }else if(M_Power == maximumLadeleistung_W ){
                 // E3DC die Steuerung überlassen, dann wird mit der maximal möglichen Ladeleistung geladen oder entladen
                     Set_Power_Value_W = 0
@@ -879,8 +894,6 @@ async function EMS(bState)
         getStateAsync(sID_Max_Charge_Power_W)                                                   // Aktuell eingestellte Ladeleistung  
     ]).then(states => states.map(state => state.val));
     
-    Batterie_SOC_Proz = (await getStateAsync(sID_Batterie_SOC)).val;
-
     // EMS einschalten
     if(bState && (Akk_max_Discharge_Power_W == 0 || Akk_max_Charge_Power_W == 0)){
         await Promise.all([
@@ -1875,7 +1888,6 @@ async function BatterieLaden(){
 // Batterie bis auf Notstrom SOC laden
 async function LadeNotstromSOC(){
     const nbr_Notstrom_SOC_Proz = (await getStateAsync(sID_Notstrom_akt)).val                               // Berechneter Notstrom SOC
-    Batterie_SOC_Proz = (await getStateAsync(sID_Batterie_SOC)).val;                                        // Aktueller Batterie SOC E3DC 
     while (!(Batterie_SOC_Proz >= nbr_Notstrom_SOC_Proz)) {
         await BatterieLaden();
         await new Promise(resolve => setTimeout(resolve, 4000)); // alle 5 Sekunde wiederholen sonst übernimmt E3DC die Regelung

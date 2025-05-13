@@ -77,6 +77,11 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.5.22
+* Wenn die berechnetet Ladeleistung Batterie höher war als die verfügbare PV-Leistung, führte das zu einem ein und Ausschalten der Ladeleistung.(Danke an @psrelax für den Hinweis)
+* Batterie SOC Schwankungen werden jetzt generell bis -2% ignoriert.
+* Fehlerbehandlung ergänzt und kleinere Bugs behoben.
+
 ### Version: 1.5.21
 * Fehlerbehandlung ergänzt und kleinere Bugs behoben.
 
