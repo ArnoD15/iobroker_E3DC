@@ -77,6 +77,23 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.6.0
+
+- Neue Objekt-IDs für EVCC in Verbindung mit dem EVCC-Adapter:  
+  Wenn das Auto geladen wird, wird das Skript *Charge-Control* deaktiviert, um die Steuerung EVCC zu überlassen.
+  - `0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_evcc`: Wird auf `true` gesetzt, wenn der EVCC-Adapter in Verbindung mit EVCC verwendet wird.  
+  - `0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_Path_evcc_loadpoint1_charging`: Pfad zur Objekt-ID `evcc.0.loadpoint.1.status.charging`.  
+  - `0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_Path_evcc_loadpoint2_charging`: Pfad zur Objekt-ID `evcc.0.loadpoint.2.status.charging`, falls vorhanden.
+
+- Neue Objekt-ID für das Tibber-Skript, um Pfad und Instanz eintragen zu können:  
+  - `0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_ScriptTibber_Path`
+
+- Die Laderegelung *Charge-Control* wird mit dieser Version automatisch deaktiviert, wenn das Batterie-Training aktiv ist.
+
+- Neue Objekt-ID `0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_Discharge_Start_Power`, um die untere Entladeschwelle in Watt (E3DC) festzulegen. Dieser Wert wird dann vom Skript als Standardwert verwendet.
+
+- Kleinere Optimierungen am Code und an der Laderegelung durchgeführt.
+
 ### Version: 1.5.23
 * Laderegelung optimiert
 
