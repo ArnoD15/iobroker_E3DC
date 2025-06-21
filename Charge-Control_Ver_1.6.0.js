@@ -209,17 +209,14 @@ async function ScriptStart()
         const useID2 = typeof id2 === 'string' && id2.trim() !== '' && await objectExists(id2);
         if (useID1 || useID2) {
             if (useID1 && !useID2) {
-                // @ts-ignore
-                bCharging_evcc = await getStateAsync(id1);
+               bCharging_evcc = (await getStateAsync(id1)).val;
             } else if (!useID1 && useID2) {
-                // @ts-ignore
-                bCharging_evcc = await getStateAsync(id2);
+                bCharging_evcc = (await getStateAsync(id2)).val;
             } else {
                 const [val1, val2] = await Promise.all([
                     getStateAsync(id1),
                     getStateAsync(id2)
-                ]);
-                // @ts-ignore
+                ]).then(states => states.map(state => state.val));
                 bCharging_evcc = val1 || val2;
             }
         }
