@@ -1,3 +1,4 @@
+
 'use strict';
 //------------------------------------------------------------------------------------------------------
 //++++++++++++++++++++++++++++++++++++++++++  USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++++
@@ -14,7 +15,7 @@ const BUFFER_SIZE= 5;                                                           
 //------------------------------------------------------------------------------------------------------
 let Logparser1 ='',Logparser2 ='';
 if (LogparserSyntax){Logparser1 ='##{"from":"Charge-Control", "message":"';Logparser2 ='"}##'}
-log(`${Logparser1} -==== Charge-Control Version 1.6.0 ====- ${Logparser2}`);
+log(`${Logparser1} -==== Charge-Control Version 1.6.1 ====- ${Logparser2}`);
 
 //******************************************************************************************************
 //****************************************** Objekt ID anlegen *****************************************
@@ -30,7 +31,6 @@ const sID_Power_Bat_W = `${instanzE3DC_RSCP}.EMS.POWER_BAT`;                    
 const sID_Installed_Peak_Power =`${instanzE3DC_RSCP}.EMS.INSTALLED_PEAK_POWER`;                         // Wp der installierten PV Module
 const sID_Bat_Discharge_Limit =`${instanzE3DC_RSCP}.EMS.SYS_SPECS.maxBatDischargPower`;                 // Batterie Entladelimit
 const sID_Bat_Charge_Limit =`${instanzE3DC_RSCP}.EMS.SYS_SPECS.maxBatChargePower`;                      // Batterie Ladelimit
-const sID_startDischargeDefault =`${instanzE3DC_RSCP}.EMS.SYS_SPECS.startDischargeDefault`;             // Anfängliche Entladeleistung Standard
 const sID_Notrom_Status =`${instanzE3DC_RSCP}.EMS.EMERGENCY_POWER_STATUS`;                              // 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
 const sID_SPECIFIED_Battery_Capacity_0 =`${instanzE3DC_RSCP}.BAT.BAT_0.SPECIFIED_CAPACITY`;             // Installierte Batterie Kapazität Batteriekreis 0
 const sID_SPECIFIED_Battery_Capacity_1 =`${instanzE3DC_RSCP}.BAT.BAT_1.SPECIFIED_CAPACITY`;             // Installierte Batterie Kapazität Batteriekreis 1
@@ -140,7 +140,7 @@ let Systemwirkungsgrad_Pro,bScriptTibber,bEvcc,country,ProplantaOrt,ProplantaPlz
 let nModulFlaeche,nWirkungsgradModule,nKorrFaktor,nMinPvLeistungTag_kWh,nMaxPvLeistungTag_kWh;
 let SolcastDachflaechen,Resource_Id_Dach=[],SolcastAPI_key,tibberMaxLadeleistungUser_W, startDischargeDefault;
 let sID_LeistungHeizstab_W, sID_WallboxLadeLeistung_1_W,sID_WallboxLadeLeistung_2_W,sID_LeistungLW_Pumpe_W; 
-let sID_Path_evcc_loadpoint1_charging,sID_Path_evcc_loadpoint2_charging,sID_Path_ScriptTibber;
+let sID_Path_evcc_loadpoint1_charging,sID_Path_evcc_loadpoint2_charging,sID_Path_evcc_mode1, sID_Path_evcc_mode2,sID_Path_ScriptTibber;
 
 //******************************* Globale Variable Time Counter *******************************
 let lastDebugLogTime = 0,lastExecutionTime = 0, count0 = 0, count1 = 0, count2 = 0, count3 = 0;
@@ -158,6 +158,7 @@ let LogProgrammablauf = "", Notstrom_Status,Batterie_SOC_Proz, Speichergroesse_k
 let Max_wrleistung_W ,InstalliertPeakLeistung, Einspeiselimit_Pro, Einspeiselimit_kWh, maximumLadeleistung_W, Bat_Discharge_Limit_W
 let EinstellungAnwahl,PrognoseAnwahl, M_Power=0,M_Power_alt=0,Set_Power_Value_W=0,tibberMaxLadeleistung_W= null;
 let Batterie_SOC_alt_Proz=0, Notstrom_SOC_Proz = 0, Summe0 = 0, Summe1 = 0, Summe2 = 0, Summe3 = 0, baseurl, TibberSubscribeID;
+let sMode_evcc,nEvcc_Instanz;
 
 //***************************************************************************************************
 //**************************************** Function Bereich *****************************************
@@ -173,17 +174,22 @@ async function ScriptStart()
     await pruefeAdapterEinstellungen();
     // Proplanta Länderauswahl zuordnen
     baseurl = await baseUrlsCountrys[country];
-    homeConsumption = JSON.parse((await getStateAsync(sID_arrayHausverbrauch)).val);
-    homeAverage = JSON.parse((await getStateAsync(sID_arrayHausverbrauchDurchschnitt)).val);
-    [arrayPrognoseProp_kWh, arrayPrognoseAuto_kWh, arrayPrognoseSolcast90_kWh, arrayPrognoseSolcast_kWh, arrayPV_LeistungTag_kWh
-    , bAutomatikAnwahl, bAutomatikRegelung, bNotstromAusNetz, Notstrom_Status,PrognoseAnwahl, EinstellungAnwahl, Max_wrleistung_W
-    , InstalliertPeakLeistung, Einspeiselimit_Pro, maximumLadeleistung_W, Bat_Discharge_Limit_W, Batterie_SOC_Proz, bBattTraining
-    ]= await Promise.all([
-        getStateAsync(sID_PrognoseProp_kWh),
+    
+    [homeConsumption, homeAverage, arrayPrognoseAuto_kWh, arrayPrognoseSolcast90_kWh,
+        arrayPrognoseProp_kWh, arrayPrognoseSolcast_kWh, arrayPV_LeistungTag_kWh
+    ] = (await Promise.all([
+        getStateAsync(sID_arrayHausverbrauch),
+        getStateAsync(sID_arrayHausverbrauchDurchschnitt),
         getStateAsync(sID_PrognoseAuto_kWh),
         getStateAsync(sID_PrognoseSolcast90_kWh),
+        getStateAsync(sID_PrognoseProp_kWh),
         getStateAsync(sID_PrognoseSolcast_kWh),
-        getStateAsync(sID_arrayPV_LeistungTag_kWh),
+        getStateAsync(sID_arrayPV_LeistungTag_kWh)
+    ])).map(s => JSON.parse(s.val));
+
+    [bAutomatikAnwahl, bAutomatikRegelung, bNotstromAusNetz, Notstrom_Status,PrognoseAnwahl, EinstellungAnwahl, Max_wrleistung_W
+    , InstalliertPeakLeistung, Einspeiselimit_Pro, maximumLadeleistung_W, Bat_Discharge_Limit_W, Batterie_SOC_Proz, bBattTraining
+    ]= await Promise.all([
         getStateAsync(sID_Automatik_Prognose),      // Vorwahl in VIS true = automatik false = manuell
         getStateAsync(sID_Automatik_Regelung),      // Vorwahl in VIS true = automatik false = manuell
         getStateAsync(sID_NotstromAusNetz),         // Vorwahl in VIS true = Notstrom aus Netz nachladen
@@ -198,28 +204,49 @@ async function ScriptStart()
         getStateAsync(sID_Batterie_SOC),            // Aktueller Batterie SOC
         getStateAsync(sID_BattTraining)             // Batterie Training aktiv
     ]).then(states => states.map(state => state.val));
-
     Max_wrleistung_W = Max_wrleistung_W - 200;                                         // Maximale Wechselrichter Leistung (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
     Einspeiselimit_kWh = ((InstalliertPeakLeistung/100)*Einspeiselimit_Pro-200)/1000   // Einspeiselimit (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
- 
+    
     if (bEvcc) {
-        const id1 = sID_Path_evcc_loadpoint1_charging;
-        const id2 = sID_Path_evcc_loadpoint2_charging;
-        const useID1 = typeof id1 === 'string' && id1.trim() !== '' && await objectExists(id1);
-        const useID2 = typeof id2 === 'string' && id2.trim() !== '' && await objectExists(id2);
+        sID_Path_evcc_loadpoint1_charging = `evcc.${nEvcc_Instanz}.loadpoint.1.status.charging`
+        sID_Path_evcc_loadpoint2_charging = `evcc.${nEvcc_Instanz}.loadpoint.2.status.charging`
+        sID_Path_evcc_mode1 = `evcc.${nEvcc_Instanz}.loadpoint.1.status.mode`
+        sID_Path_evcc_mode2 = `evcc.${nEvcc_Instanz}.loadpoint.2.status.mode`
+
+        const useID1 = existsObject(sID_Path_evcc_loadpoint1_charging);
+        const useID2 = existsObject(sID_Path_evcc_loadpoint2_charging);
+        const useID3 = existsObject(sID_Path_evcc_mode1);
+        const useID4 = existsObject(sID_Path_evcc_mode2);
+    
         if (useID1 || useID2) {
             if (useID1 && !useID2) {
-               bCharging_evcc = (await getStateAsync(id1)).val;
+               bCharging_evcc = (await getStateAsync(sID_Path_evcc_loadpoint1_charging)).val;
             } else if (!useID1 && useID2) {
-                bCharging_evcc = (await getStateAsync(id2)).val;
-            } else {
+                bCharging_evcc = (await getStateAsync(sID_Path_evcc_loadpoint2_charging)).val;
+            } else if (useID1 && useID2) {
                 const [val1, val2] = await Promise.all([
-                    getStateAsync(id1),
-                    getStateAsync(id2)
+                    getStateAsync(sID_Path_evcc_loadpoint1_charging),
+                    getStateAsync(sID_Path_evcc_loadpoint2_charging)
                 ]).then(states => states.map(state => state.val));
                 bCharging_evcc = val1 || val2;
             }
         }
+        if (useID3 || useID4) {
+            if (useID3 && !useID4) {
+               sMode_evcc = (await getStateAsync(sID_Path_evcc_mode1)).val
+            } else if (!useID3 && useID4) {
+                sMode_evcc = (await getStateAsync(sID_Path_evcc_mode2)).val
+            } else {
+                const [val3, val4] = await Promise.all([
+                    getStateAsync(sID_Path_evcc_mode1),
+                    getStateAsync(sID_Path_evcc_mode2)
+                ]).then(states => states.map(state => state.val));
+                if (val3 == 'pv' && val4 == 'pv') {
+                    sMode_evcc = 'pv';
+                }
+            }    
+        }
+        
     }
      
     if ((await getStateAsync(sID_Manual_Charge_Energy)).val > 0){bManuelleLadungBatt = true}else{bManuelleLadungBatt = false}
@@ -265,11 +292,11 @@ async function CreateState(){
         await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.LastFirmwareVersion`, {'def':"", 'name':'Alte Frimware Version' , 'type':'string', 'role':'value'});
         await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Akt_Berechnete_Ladeleistung_W`, {'def':0, 'name':'Aktuell eingestellte ist Ladeleistung in W' , 'type':'number', 'role':'value', 'unit':'W'});
         await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.HistoryJSON`, {'def':'[]', 'name':'JSON für materialdesign json chart' ,'type':'string'});
-        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.istPV_LeistungTag_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Summe PV Leistung Tag in kWh' ,'type':'array'});
-        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseProp_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Prognose Proplanta PV Leistung Tag in kWh' ,'type':'array'});
-        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseAuto_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für verwendete Prognose im Automatikmodus' ,'type':'array'});
-        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast90_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Prognose Solcast PV-Leistung in Kilowatt (kW) 90. Perzentil (hohes Szenario)' ,'type':'array'});
-        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Prognose Solcast PV-Leistung in Kilowatt (kW)' ,'type':'array'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.istPV_LeistungTag_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Summe PV Leistung Tag in kWh' ,'type':'string'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseProp_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Prognose Proplanta PV Leistung Tag in kWh' ,'type':'string'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseAuto_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für verwendete Prognose im Automatikmodus' ,'type':'string'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast90_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Prognose Solcast PV-Leistung in Kilowatt (kW) 90. Perzentil (hohes Szenario)' ,'type':'string'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.PrognoseSolcast_kWh`, {'def':'[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]', 'name':'Array für Prognose Solcast PV-Leistung in Kilowatt (kW)' ,'type':'string'});
         await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.HistorySelect`, {'def':1, 'name':'Select Menü für materialdesign json chart' ,'type':'number'});
         await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.NaesteAktualisierung`, {'def':'0', 'name':'Aktualisierung Proplanta' ,'type':'string'});
         await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Bewoelkungsgrad_12`, {'def':NaN, 'name':'Bewölkungsgrad 12 Uhr Proplanta' ,'type':'number'});
@@ -299,8 +326,7 @@ async function CreateState(){
         await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_ScriptTibber_Path`, {'def':'0_userdata.0.TibberSkript','name':'Pfad zu ID TibberSkript eintragen ansonsten leer lassen ' ,'type':'string', 'unit':'','role':'state'});
         await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Discharge_Start_Power`, {'def':65,'name':'Einstellung E3DC untere Entladeschwelle W)' ,'type':'number', 'unit':'W','role':'state'});
         await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_evcc`, {'def':false,'name':'Wenn evcc verwendet wird auf True setzen' ,'type':'boolean', 'unit':'','role':'state'});
-        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Path_evcc_loadpoint1_charging`, {'def':'evcc.0.loadpoint.1.status.charging','name':'Wenn evcc verwendet wird den Pfad zur Objekt ID Status Loadpoint 1 Charging eintragen' ,'type':'string', 'unit':'','role':'state'});
-        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Path_evcc_loadpoint2_charging`, {'def':'','name':'Wenn evcc verwendet wird den Pfad zur Objekt ID Status Loadpoint 2 Charging eintragen' ,'type':'string', 'unit':'','role':'state'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_evcc_Instanz`, {'def':0,'name':'Die Instanz vom evcc Adapter eintragen' ,'type':'number', 'unit':'','role':'state'});
         
         await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_ProplantaCountry`, {'def':'de','name':'Ländercode für Proplanta de,at, ch, fr, it' ,'type':'string', 'unit':'','role':'state'});
         await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_ProplantaOrt`, {'def':'','name':'Wohnort für Abfrage Wetterdaten Proplanta' ,'type':'string', 'unit':'','role':'state'});
@@ -361,8 +387,7 @@ async function CheckState() {
         { id: '10_ScriptTibber_Path', varName: 'sID_Path_ScriptTibber', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
         { id: '10_Discharge_Start_Power', varName: 'startDischargeDefault', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen'},
         { id: '10_evcc', varName: 'bEvcc', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen'},
-        { id: '10_Path_evcc_loadpoint1_charging', varName: 'sID_Path_evcc_loadpoint1_charging', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen'},
-        { id: '10_Path_evcc_loadpoint2_charging', varName: 'sID_Path_evcc_loadpoint2_charging', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen'},      
+        { id: '10_evcc_Instanz', varName: 'nEvcc_Instanz', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen'},
         
         { id: '20_ProplantaCountry', varName: 'country', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
         { id: '20_ProplantaOrt', varName: 'ProplantaOrt', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
@@ -423,7 +448,6 @@ async function CheckState() {
                 console.error(obj.errorMsg);
             }
         }
-        
     } else {
         unsubscribe(TibberSubscribeID);
         bTibberEntladesperre = false;
@@ -457,7 +481,7 @@ async function CheckState() {
         sID_Batterie_SOC, sID_PvLeistung_E3DC_W, sID_PvLeistung_ADD_W,
         sID_Power_Home_W, sID_Power_Wallbox_W, sID_Bat_Discharge_Limit, sID_Bat_Charge_Limit,
         sID_Notrom_Status, sID_SPECIFIED_Battery_Capacity_0, sID_SET_POWER_MODE, sID_SET_POWER_VALUE_W,
-        sID_Max_Discharge_Power_W, sID_Max_Charge_Power_W, sID_startDischargeDefault, sID_Max_wrleistung_W,
+        sID_Max_Discharge_Power_W, sID_Max_Charge_Power_W, sID_Max_wrleistung_W,
         sID_BAT0_Alterungszustand, sID_DISCHARGE_START_POWER, sID_PARAM_EP_RESERVE_W
     ];
 
@@ -1132,7 +1156,7 @@ async function Prognosen_Berechnen() {
         arrayPrognoseAuto_kWh[Tag[i]] = Prognose_kWh_Tag[i];
     }
 
-    await setStateAsync(sID_PrognoseAuto_kWh, arrayPrognoseAuto_kWh);
+    await setStateAsync(sID_PrognoseAuto_kWh, JSON.stringify(arrayPrognoseAuto_kWh));
 }
 
 // Die Funktion berechnet den Überschuss anhand der PrognoseBerechnung_kWh_heute 
@@ -1414,7 +1438,7 @@ async function SummePvLeistung(){
 	    }
 	    IstPvLeistung_kWh = IstPvLeistung0_kWh + IstPvLeistung1_kWh;
 	    arrayPV_LeistungTag_kWh[TagHeute] = IstPvLeistung_kWh
-        await setStateAsync(sID_arrayPV_LeistungTag_kWh, arrayPV_LeistungTag_kWh);
+        await setStateAsync(sID_arrayPV_LeistungTag_kWh, JSON.stringify(arrayPV_LeistungTag_kWh));
     
         await makeJson();
     }
@@ -1564,7 +1588,7 @@ async function SheduleProplanta() {
                 await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.NaesteAktualisierung`,"6:00");
                 if(bLogAusgabe){log(`${Logparser1} Näste Aktualisierung Wetterdaten = konnte nicht abgerufen werden. Standard 6:00 Uhr wurde gesetzt ${Logparser2}`)}
             }
-            await setStateAsync(sID_PrognoseProp_kWh,arrayPrognoseProp_kWh)    
+            await setStateAsync(sID_PrognoseProp_kWh,JSON.stringify(arrayPrognoseProp_kWh))   
             
         }
     }, function(error) {
@@ -1615,7 +1639,7 @@ async function SheduleProplanta() {
                 }
             }
         }
-        await setStateAsync(sID_PrognoseProp_kWh,arrayPrognoseProp_kWh)   
+        await setStateAsync(sID_PrognoseProp_kWh,JSON.stringify(arrayPrognoseProp_kWh))   
         
     }, function(error) {
         log (`${Logparser1}-==== Error in der function InterrogateProplanta. Fehler = ${error} ====- ${Logparser2}`,'warn')
@@ -1730,8 +1754,8 @@ async function SheduleSolcast(DachFl) {
                 if (Datum.slice(5, 7) === Monat && (hours <= 4 || d !== 0)) {
                     arrayPrognoseSolcast_kWh[nextDay(d)] = Prognose
                     arrayPrognoseSolcast90_kWh[nextDay(d)] = Prognose90
-                    await setStateAsync(sID_PrognoseSolcast_kWh,arrayPrognoseSolcast_kWh)
-                    await setStateAsync(sID_PrognoseSolcast90_kWh,arrayPrognoseSolcast90_kWh)
+                    await setStateAsync(sID_PrognoseSolcast_kWh,JSON.stringify(arrayPrognoseSolcast_kWh))
+                    await setStateAsync(sID_PrognoseSolcast90_kWh,JSON.stringify(arrayPrognoseSolcast90_kWh))
                 }
                 SummePV_Leistung_Tag_kW[1][d] = 0;
                 SummePV_Leistung_Tag_kW[3][d] = 0;
@@ -2036,15 +2060,6 @@ async function safeGetState(id) {
     } catch (err) {
         log(`⚠️ Fehler beim Lesen von State ${id}:${err.message} ⚠️`, 'warn');
         return { val: 0 };
-    }
-}
-
-async function objectExists(id) {
-    try {
-        const obj = await getObjectAsync(id);
-        return !!obj;
-    } catch {
-        return false;
     }
 }
 
@@ -2542,6 +2557,7 @@ async function registerEventHandlers() {
         const val = obj.state.val;
     
         if (bAutomatikAnwahl) {
+            // @ts-ignore
             let CallingJavascript = ''+obj.state.from.match(/javascript/ig)
             if (CallingJavascript !== 'javascript'){
                 bAutomatikAnwahl = false
@@ -2658,40 +2674,66 @@ async function registerEventHandlers() {
     
     // Triggern wenn Variable bEvcc= true und sID_Path_evcc_loadpoint1_charging oder sID_Path_evcc_loadpoint2_charging existiert
     if (bEvcc) {
-        const arrayID_evcc = [
+        const idsToCheck = [
             sID_Path_evcc_loadpoint1_charging,
-            sID_Path_evcc_loadpoint2_charging
-        ].filter(id => typeof id === 'string' && id.trim() !== '');
+            sID_Path_evcc_loadpoint2_charging,
+            sID_Path_evcc_mode1,
+            sID_Path_evcc_mode2
+        ];
+
+        const arrayID_evcc = (
+            await Promise.all(idsToCheck.map(async id => (await existsObject(id)) ? id : null))
+        ).filter(Boolean);
 
         if (arrayID_evcc.length === 0) {
-            log("-==== ⚠️ EVCC ist aktiv, aber keine gültigen Objektpfade für loadpoint1_charging oder loadpoint2_charging gefunden! ====-", "warn");
+            log("⚠️ EVCC ist aktiv, aber keine gültigen Objektpfade für charging oder mode gefunden!", "warn");
             return;
         }
 
-        listeners[25] = on({ id: arrayID_evcc, change: "ne" }, async function (obj) {
-            const loadpoint = obj.id.split('.')[3];
-            const value = obj.state.val;
+        listeners[25] = on({ id: arrayID_evcc, change: "ne" }, async ({ id, state }) => {
+            const loadpoint = id.split('.')[3];
+            const objekID = id.split('.')[5];
+            const value = state.val;
 
-            log(`-==== evcc charging Loadpoint ${loadpoint} wurde in ${value} geändert ====-`);
+            log(`🔄 evcc Änderung: ${objekID} (LP${loadpoint}) → ${value}`);
 
-            if (arrayID_evcc.length === 1) {
-                bCharging_evcc = value;
-            } else {
-                const [Charging1, Charging2] = await Promise.all([
-                    getStateAsync(sID_Path_evcc_loadpoint1_charging),
-                    getStateAsync(sID_Path_evcc_loadpoint2_charging)
-                ]);
-
-                bCharging_evcc = (Charging1?.val ?? false) || (Charging2?.val ?? false);
+            if (loadpoint === '1') {
+                if (objekID === 'mode') {
+                    sMode_evcc = value;
+                } else if (objekID === 'charging') {
+                    bCharging_evcc = value;
+                }
+                return;
             }
+
+            if (loadpoint === '2') {
+                if (objekID === 'mode') {
+                    const [mode1, mode2] = await Promise.all(
+                        [sID_Path_evcc_mode1, sID_Path_evcc_mode2].map(async id =>
+                            (await existsObject(id)) ? (await getStateAsync(id)).val : null
+                        )
+                    );
+                    sMode_evcc = (mode1 === 'pv' && mode2 === 'pv') ? 'pv' : 'off';
+                } else if (objekID === 'charging') {
+                    const [c1, c2] = await Promise.all([
+                        getStateAsync(sID_Path_evcc_loadpoint1_charging),
+                        getStateAsync(sID_Path_evcc_loadpoint2_charging)
+                    ]);
+                    bCharging_evcc = (c1?.val ?? false) || (c2?.val ?? false);
+                }
+                return;
+            }
+
+            log("⚠️ Aktuell werden von CC nur zwei Wallboxen berücksichtigt.", "warn");
         });
     }
+
 }
 
 
 schedule('*/3 * * * * *', async function() {
     // Vor Regelung Skript Startdurchlauf erst abwarten  
-    if(!bStart && bAutomatikRegelung && !bManuelleLadungBatt && !bBattTraining && !bCharging_evcc){await Ladesteuerung();}
+    if(!bStart && bAutomatikRegelung && !bManuelleLadungBatt && !bBattTraining && (!bCharging_evcc || sMode_evcc === 'pv')){await Ladesteuerung();}
 });
 
 // jeden Monat am 1 History Daten Tag aktuelles Monat Löschen
@@ -2702,11 +2744,11 @@ schedule("0 0 1 * *", async function() {
     arrayPrognoseSolcast_kWh.fill(0)
     arrayPV_LeistungTag_kWh.fill(0)
     await Promise.all([
-        setStateAsync(sID_PrognoseProp_kWh,arrayPrognoseProp_kWh),
-        setStateAsync(sID_PrognoseAuto_kWh,arrayPrognoseAuto_kWh),
-        setStateAsync(sID_PrognoseSolcast90_kWh,arrayPrognoseSolcast90_kWh),
-        setStateAsync(sID_PrognoseSolcast_kWh,arrayPrognoseSolcast_kWh),
-        setStateAsync(sID_arrayPV_LeistungTag_kWh,arrayPV_LeistungTag_kWh)
+        setStateAsync(sID_PrognoseProp_kWh,JSON.stringify(arrayPrognoseProp_kWh)),
+        setStateAsync(sID_PrognoseAuto_kWh,JSON.stringify(arrayPrognoseAuto_kWh)),
+        setStateAsync(sID_PrognoseSolcast90_kWh,JSON.stringify(arrayPrognoseSolcast90_kWh)),
+        setStateAsync(sID_PrognoseSolcast_kWh,JSON.stringify(arrayPrognoseSolcast_kWh)),
+        setStateAsync(sID_arrayPV_LeistungTag_kWh,JSON.stringify(arrayPV_LeistungTag_kWh))
     ]);
     await writelog();
 });
