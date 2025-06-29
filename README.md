@@ -77,6 +77,50 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.6.1
+
+Änderungen bei den Objekt-IDs für EVCC in Verbindung mit dem EVCC-Adapter
+Um die Anzahl der Objekte zu reduzieren, wurden folgende Objekt-IDs gelöscht:
+
+- `0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_Path_evcc_loadpoint1_charging`  
+- `0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_Path_evcc_loadpoint2_charging`
+
+Dafür wurde folgende neue Objekt-ID erstellt:
+
+- `0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_evcc_Instanz`  
+  → Hier wird nur noch die Instanz des EVCC-Adapters eingetragen.
+
+---
+
+- **CC wird jetzt nicht mehr deaktiviert**, wenn über EVCC im PV-Modus das Auto geladen wird.
+
+---
+In der JavaScript-Adapter-Version 9.0.6 erscheinen Log-Meldungen, wenn ein Array in einem Objekt gespeichert wird, ohne es vorher in JSON umzuwandeln.
+
+Daher wurde der Datentyp der folgenden Objekt-IDs von `array` auf `string` geändert:
+
+- `0_userdata.0.Charge_Control.History.PrognoseAuto_kWh`  
+- `0_userdata.0.Charge_Control.History.PrognoseProp_kWh`  
+- `0_userdata.0.Charge_Control.History.PrognoseSolcast90_kWh`  
+- `0_userdata.0.Charge_Control.History.PrognoseSolcast_kWh`  
+- `0_userdata.0.Charge_Control.History.istPV_LeistungTag_kWh`
+
+Vorgehensweise zur Anpassung
+Es gibt zwei Möglichkeiten, diese Änderung durchzuführen:
+
+1. **Objekt-IDs löschen und automatisch neu erstellen lassen:**  
+   Dabei gehen jedoch alle bisherigen Werte verloren.
+
+2. **Objekt-IDs manuell ändern:**  
+   - Typ der fünf Objekt-IDs auf `string` setzen  
+   - Bei den Werten jeweils eine eckige Klammer am Anfang und Ende ergänzen, z. B.:  
+     ```json
+     [10, 34, 19]
+     ```
+
+---
+  
+
 ### Version: 1.6.0
 
 - Neue Objekt-IDs für EVCC in Verbindung mit dem EVCC-Adapter:  
