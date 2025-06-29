@@ -81,22 +81,16 @@ verbunden sein.
 
 Änderungen bei den Objekt-IDs für EVCC in Verbindung mit dem EVCC-Adapter
 Um die Anzahl der Objekte zu reduzieren, wurden folgende Objekt-IDs gelöscht:
-
 - `0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_Path_evcc_loadpoint1_charging`  
 - `0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_Path_evcc_loadpoint2_charging`
 
 Dafür wurde folgende neue Objekt-ID erstellt:
-
 - `0_userdata.0.Charge_Control.USER_ANPASSUNGEN.10_evcc_Instanz`  
   → Hier wird nur noch die Instanz des EVCC-Adapters eingetragen.
 
----
-
 - **CC wird jetzt nicht mehr deaktiviert**, wenn über EVCC im PV-Modus das Auto geladen wird.
-
 ---
 In der JavaScript-Adapter-Version 9.0.6 erscheinen Log-Meldungen, wenn ein Array in einem Objekt gespeichert wird, ohne es vorher in JSON umzuwandeln.
-
 Daher wurde der Datentyp der folgenden Objekt-IDs von `array` auf `string` geändert:
 
 - `0_userdata.0.Charge_Control.History.PrognoseAuto_kWh`  
@@ -117,9 +111,6 @@ Es gibt zwei Möglichkeiten, diese Änderung durchzuführen:
      ```json
      [10, 34, 19]
      ```
-
----
-  
 
 ### Version: 1.6.0
 
