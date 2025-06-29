@@ -99,7 +99,7 @@ Daher wurde der Datentyp der folgenden Objekt-IDs von `array` auf `string` geän
 - `0_userdata.0.Charge_Control.History.PrognoseSolcast_kWh`  
 - `0_userdata.0.Charge_Control.History.istPV_LeistungTag_kWh`
 
-Vorgehensweise zur Anpassung
+Vorgehensweise zur Anpassung  
 Es gibt zwei Möglichkeiten, diese Änderung durchzuführen:
 
 1. **Objekt-IDs löschen und automatisch neu erstellen lassen:**  
