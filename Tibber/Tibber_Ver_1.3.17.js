@@ -16,7 +16,7 @@ const hystereseKapazitaet = 2;                                                  
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.3.16'
+const scriptVersion = 'Version 1.3.17'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 // IDs Script Charge_Control
 const sID_Autonomiezeit =`${instanz}.Charge_Control.Allgemein.AutonomiezeitDurchschnitt`;
@@ -43,7 +43,7 @@ const sID_StrompreisBatterie = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.stromp
 const sID_Spitzenstrompreis = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Spitzenstrompreis`                     // Anzeige in VIS aktueller Strompreis Batterie
 
 const sID_BatterieLaden =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.BatterieLaden`;                             // Schnittstelle zu Charge-Control für die Ladefreigabe
-const sID_eAutoLaden = `${instanz}.${PfadEbene1}.${PfadEbene2[1]}.eAutoLaden`;                                  // Schnittstelle zu E3DC_Wallbox Script Auto laden
+const sID_eAutoLaden = `${instanz}.${PfadEbene1}.${PfadEbene2[1]}.eAutoLaden`;                                  // Schnittstelle zu Wallbox Script Auto laden
 const sID_BatterieEntladesperre =`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.BatterieEntladesperre`;             // Schnittstelle zu Charge-Control für die Entladesperre
 
 const sID_DiagramJosonChart =`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.JSON_Chart`;                            // JSON für Diagramm Tibber Preise in VIS
@@ -94,7 +94,7 @@ async function createState(){
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.strompreisBatterie`, { 'def': 0, 'name': 'Anzeige in VIS aktueller Strompreis Batterie', 'type': 'number', 'unit': '€' }),
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.Spitzenstrompreis`, { 'def': 0, 'name': 'Anzeige in VIS Schwellwert Spitzenstrompreis', 'type': 'number', 'unit': '€' }),
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.BatterieLaden`, { 'def': false, 'name': 'Schnittstelle zu Charge-Control laden', 'type': 'boolean' }),
-        createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.eAutoLaden`, { 'def': false, 'name': 'Schnittstelle zu E3DC_Wallbox Script Auto laden', 'type': 'boolean' }),
+        createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.eAutoLaden`, { 'def': false, 'name': 'Schnittstelle zu Wallbox Script Auto laden', 'type': 'boolean' }),
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.BatterieEntladesperre`, { 'def': false, 'name': 'Schnittstelle zu Charge-Control Entladesperre', 'type': 'boolean' }),
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.JSON_Chart`, { 'def': '[]', 'name': 'JSON für materialdesign json chart', 'type': 'string' }),
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.BatterieLadedaten`, { 'def': [], 'name': 'Batterie Start SOC mit Strompreis', 'type': 'string' }),
@@ -739,7 +739,7 @@ async function pruefePVLeistung(reichweiteStunden) {
         const sonnenuntergangHeute_ms = getAstroDate("sunset", heute).getTime() - 2 * 3600000;      // Sonnenuntergang - 2 Stunden Puffer
         const sonnenaufgangMorgen_ms = getAstroDate("sunrise", morgen).getTime();                   // Sonnenaufgang nächster Tag
         // PV-Prognosen für heute und morgen in kWh
-        let arrayPrognoseAuto_kWh = (await getStateAsync(sID_PrognoseAuto_kWh)).val;
+        let arrayPrognoseAuto_kWh = JSON.parse((await getStateAsync(sID_PrognoseAuto_kWh)).val);
         let heuteErwartetePVLeistung_kWh = round(parseFloat(arrayPrognoseAuto_kWh[heute.getDate()]),0);
         let morgenErwartetePVLeistung_kWh = round(parseFloat(arrayPrognoseAuto_kWh[morgen.getDate()]),0);
         // Benötigte Kapazität, um die Batterie auf maximalen SOC zu laden
@@ -1304,10 +1304,9 @@ function formatDate(date) {
 
 async function DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend)
 {
-    const [prognoseLadezeitBatterie,statusText,arrayPrognoseAuto_kWh,Batterie_SOC,reichweiteBatterie,BatterieLaden,Power_Bat_W,Power_Grid,eAutoLaden,bEntladenSperren] = await Promise.all([
+    const [prognoseLadezeitBatterie,statusText,Batterie_SOC,reichweiteBatterie,BatterieLaden,Power_Bat_W,Power_Grid,eAutoLaden,bEntladenSperren] = await Promise.all([
         getStateAsync(sID_ladezeitBatterie),
         getStateAsync(sID_status),
-        getStateAsync(sID_PrognoseAuto_kWh),
         getStateAsync(sID_Batterie_SOC),
         getStateAsync(sID_Autonomiezeit),
         getStateAsync(sID_BatterieLaden),
@@ -1316,12 +1315,13 @@ async function DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend)
         getStateAsync(sID_eAutoLaden),
         getStateAsync(sID_BatterieEntladesperre)
     ]).then(states => states.map(state => state.val));
+    const _arrayPrognoseAuto_kWh = JSON.parse((await getStateAsync(sID_PrognoseAuto_kWh))?.val || '[]');
     const tagHeute = new Date().getDate();
     const tagMorgen = new Date(new Date().setDate(new Date().getDate() + 1)).getDate();
-    let heuteErwartetePVLeistung_kWh = round(arrayPrognoseAuto_kWh[tagHeute],2);
-    let morgenErwartetePVLeistung_kWh = round(arrayPrognoseAuto_kWh[tagMorgen],2);
+    let heuteErwartetePVLeistung_kWh = round(_arrayPrognoseAuto_kWh[tagHeute],2);
+    let morgenErwartetePVLeistung_kWh = round(_arrayPrognoseAuto_kWh[tagMorgen],2);
     
-    log(`************************************************************************************`)
+    if (DebugAusgabeDetail){log(`************************************************************************************`)}
     if (DebugAusgabeDetail){log(`** timerTarget = ${JSON.stringify(timerTarget)}`)}
     if (DebugAusgabeDetail){log(`** timerState = ${JSON.stringify(timerState)}`)}
     if (DebugAusgabeDetail){log(`** timerObjektID = ${JSON.stringify(timerObjektID)}`)}
@@ -1359,8 +1359,8 @@ async function DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend)
     if (DebugAusgabeDetail){log(`** BatterieLaden = ${BatterieLaden}`)}
     if (DebugAusgabeDetail){log(`** battSperrePrio = ${bBattSperrePrio}`)}
     if (DebugAusgabeDetail){log(`** Status = ${statusText}`)}
-    log(`** ProgrammAblauf = ${LogProgrammablauf} `,'warn')
-    log(`*******************  Debug LOG Tibber Skript ${scriptVersion} *******************`)
+    if (DebugAusgabeDetail){log(`** ProgrammAblauf = ${LogProgrammablauf} `,'warn')}
+    if (DebugAusgabeDetail){log(`*******************  Debug LOG Tibber Skript ${scriptVersion} *******************`)}
 }
 
 
