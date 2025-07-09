@@ -16,7 +16,7 @@ const hystereseKapazitaet = 2;                                                  
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
 //******************************************************************************************************
-const scriptVersion = 'Version 1.3.17'
+const scriptVersion = 'Version 1.3.18'
 log(`-==== Tibber Skript ${scriptVersion} ====-`);
 // IDs Script Charge_Control
 const sID_Autonomiezeit =`${instanz}.Charge_Control.Allgemein.AutonomiezeitDurchschnitt`;
@@ -145,9 +145,9 @@ async function ScriptStart()
     }
     
     [datenHeute, datenMorgen] = await Promise.all([
-        getStateAsync(sID_PricesTodayJSON),
-        getStateAsync(sID_PricesTomorrowJSON)
-    ]).then(states => states.map(state => JSON.parse(state.val)));
+            getParsedStateWithRetry(sID_PricesTodayJSON),
+            getParsedStateWithRetry(sID_PricesTomorrowJSON)
+    ]);    
     
     datenTibberLink48h = [...datenHeute, ...datenMorgen];
     
@@ -1727,6 +1727,33 @@ async function autoPreisanpassung(strompreis) {
     bLock = false;
 }
 
+// Wiederholter Abruf mit Timeout bei leeren Daten
+async function getParsedStateWithRetry(id, retries = 3, delayMs = 5000) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            const state = await getStateAsync(id);
+            const val = state?.val;
+            // Prüfen: val darf nicht undefined, null, leerer String oder "undefined"/"null" als String sein
+            if (typeof val === 'string' && val.trim() !== '' && val !== 'undefined' && val !== 'null') {
+                try {
+                    return JSON.parse(val);
+                } catch (parseErr) {
+                    log(`JSON-Fehler bei ${id} (Versuch ${attempt}): ${parseErr.message}`, 'warn');
+                }
+            } else {
+                log(`Ungültiger oder leerer Wert bei ${id} (Versuch ${attempt}): ${val}`, 'warn');
+            }
+        } catch (err) {
+            log(`Fehler beim Abrufen von ${id} (Versuch ${attempt}): ${err.message}`, 'error');
+        }
+
+        if (attempt < retries) {
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+    }
+
+    throw new Error(`Konnte gültige JSON-Daten für ${id} nach ${retries} Versuchen nicht abrufen.`);
+}
 
 //***************************************************************************************************
 //********************************** Schedules und Trigger Bereich **********************************
@@ -1765,9 +1792,9 @@ on({id: regexPatternTibber, change: "ne"}, async function (obj){
 // Triggern wenn neue JSON Preise von TibberLink geladen werden
 on({id: arrayID_TibberPrices, change: "ne"}, async function (obj){
     [datenHeute, datenMorgen] = await Promise.all([
-        getStateAsync(sID_PricesTodayJSON),
-        getStateAsync(sID_PricesTomorrowJSON)
-    ]).then(states => states.map(state => JSON.parse(state.val)));
+            getParsedStateWithRetry(sID_PricesTodayJSON),
+            getParsedStateWithRetry(sID_PricesTomorrowJSON)
+    ]);
     datenTibberLink48h = [...datenHeute, ...datenMorgen];
     // aktuellen Strompreis berechnen
     aktuellerPreisTibber = await getCurrentPrice()     
