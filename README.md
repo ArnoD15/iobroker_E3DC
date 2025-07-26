@@ -77,6 +77,9 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.6.2
+- Kleinere Optimierungen am Code und an der Laderegelung durchgeführt.
+
 ### Version: 1.6.1
 
 Änderungen bei den Objekt-IDs für EVCC in Verbindung mit dem EVCC-Adapter
