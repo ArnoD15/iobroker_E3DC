@@ -17,7 +17,7 @@ const BUFFER_SIZE= 5;                                                           
 // ======================= ENDE USER ANPASSUNGEN ==============================
 // ============================================================================
 
-logChargeControl(`-==== Charge-Control Version 1.6.2 ====-`);
+logChargeControl(`-==== Charge-Control Version 1.6.3 ====-`);
 
 //*************************************** ID's Adapter e3dc.rscp ***************************************
 const sID_Power_Home_W =`${instanzE3DC_RSCP}.EMS.POWER_HOME`;                                           // aktueller Hausverbrauch E3DC                                         // Pfad ist abhängig von Variable ScriptHausverbrauch siehe function CheckState()
@@ -156,7 +156,7 @@ let LogProgrammablauf = "", Notstrom_Status,Batterie_SOC_Proz, Speichergroesse_k
 let Max_wrleistung_W ,InstalliertPeakLeistung, Einspeiselimit_Pro, Einspeiselimit_kWh, maximumLadeleistung_W, Bat_Discharge_Limit_W
 let EinstellungAnwahl,PrognoseAnwahl, M_Power=0,M_Power_alt=0,Set_Power_Value_W=0,tibberMaxLadeleistung_W= null;
 let Batterie_SOC_alt_Proz=0, Notstrom_SOC_Proz = 0, Summe0 = 0, Summe1 = 0, Summe2 = 0, Summe3 = 0, baseurl, TibberSubscribeID;
-let sMode_evcc,nEvcc_Instanz, hystereseWatt = 1000;;
+let sMode_evcc,nEvcc_Instanz, hystereseWatt = 2000;
 
 //***************************************************************************************************
 //**************************************** Function Bereich *****************************************
@@ -754,16 +754,16 @@ async function Ladesteuerung()
                 //Prüfen ob berechnete Ladeleistung M_Power zu Netzbezug führt nur wenn LadenStoppen = false ist
                 const ladeleistung = Math.max(0, M_Power);
                 const ueberschuss = PV_Leistung_Summe_W - (Power_Home_W + ladeleistung);
-                if (bDebugAusgabe){log(`ueberschuss = ${ueberschuss}`)}
+                if (bDebugAusgabe){log(`ueberschuss = ${ueberschuss} hystereseWatt = ${hystereseWatt} bRegelungAktiv = ${bRegelungAktiv} M_Power=${M_Power}`)}
                 if (!bRegelungAktiv && ueberschuss > hystereseWatt) {
                     hystereseWatt = 2000                        // Beim einschalten auf Standard Wert setzen
                     bRegelungAktiv = true;                      // Regelung übernimmt CC
                 } else if (bRegelungAktiv && ueberschuss < 500) {
-                    hystereseWatt = Math.max(2000,M_Power)      // Berechnete Ladeleistung Merken beim ausschalten
+                    hystereseWatt = Math.max(2000,M_Power)      // Berechnete Ladeleistung Merken beim ausschalten 
                     bRegelungAktiv = false;                     // Regelung übernimmt E3DC
                 }               
                 if (!bRegelungAktiv) {
-                    // Regelung E3DC überlassen
+                    // Regelung E3DC überlassen 
                     LogProgrammablauf += '34,';
                     M_Power = maximumLadeleistung_W;
                 }
@@ -2761,6 +2761,7 @@ async function registerEventHandlers() {
 
 schedule('*/3 * * * * *', async function() {
     // Vor Regelung Skript Startdurchlauf erst abwarten  
+    //log(`bCharging_evcc = ${bCharging_evcc} sMode_evcc = ${sMode_evcc}`)
     if(!bStart && bAutomatikRegelung && !bManuelleLadungBatt && !bBattTraining && (!bCharging_evcc || sMode_evcc === 'pv')){await Ladesteuerung();}
 });
 
@@ -2807,6 +2808,7 @@ schedule({hour: 2, minute: 0}, async function () {
             await LadeNotstromSOC();
         }
     }
+    hystereseWatt = 2000                                                                                    // In der Nacht Hysterese Standard Wert setzen
 });
 
 //Bei Scriptende alle Timer löschen

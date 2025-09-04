@@ -77,6 +77,10 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.6.3
+- Hysteresewert Laderegelung wird in der Nacht wieder auf Standardwert gesetzt.
+- Kleinere Optimierungen am Code durchgeführt.
+
 ### Version: 1.6.2
 - Kleinere Optimierungen am Code und an der Laderegelung durchgeführt.
 
