@@ -16,7 +16,7 @@ const hystereseKapazitaet = 2;                                                  
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
 //------------------------------------------------------------------------------------------------------
 
-const scriptVersion = 'Version 2.0.0'
+const scriptVersion = 'Version 2.0.1'
 log(`-==== Tibber Skript ${scriptVersion} gestartet ====-`);
 
 //******************************************************************************************************
@@ -1282,10 +1282,10 @@ async function berechneBattPrice() {
             });
 
             // Durchschnittspreis
-            const strompreisBatterie = round(gewichteteSumme / gesamtGewichtung, 4);
+            strompreisBatterie = round(gewichteteSumme / gesamtGewichtung, 4);
 
             // Brutto-Preis nur berechnen, wenn systemwirkungsgrad > 0
-            const bruttoPreisBatterie = (systemwirkungsgrad > 0)
+            bruttoPreisBatterie = (systemwirkungsgrad > 0)
                 ? round(strompreisBatterie * (1 / (systemwirkungsgrad / 100)), 4)
                 : strompreisBatterie;
 
