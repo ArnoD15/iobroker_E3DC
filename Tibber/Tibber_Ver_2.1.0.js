@@ -6,7 +6,7 @@ const PfadEbene1 = 'TibberSkript';                                              
 const PfadEbene2 = ['Anzeige_VIS','OutputSignal','History','USER_ANPASSUNGEN']                		            // Pfad innerhalb PfadEbene1
 
 const instanzE3DC_RSCP = 'e3dc-rscp.0'
-const DebugAusgabeDetail = false;
+const DebugAusgabeDetail = true;
 const DebugAusgabe = true;
 
 // Hysterese-Schwellen
@@ -16,7 +16,7 @@ const hystereseKapazitaet = 2;                                                  
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
 //------------------------------------------------------------------------------------------------------
 
-const scriptVersion = 'Version 2.0.1'
+const scriptVersion = 'Version 2.1.0'
 log(`-==== Tibber Skript ${scriptVersion} gestartet ====-`);
 
 //******************************************************************************************************
@@ -28,6 +28,12 @@ const sID_Autonomiezeit =`${instanz}.Charge_Control.Allgemein.AutonomiezeitDurch
 const sID_arrayHausverbrauch =`${instanz}.Charge_Control.Allgemein.arrayHausverbrauchDurchschnitt`;
 const sID_maxEntladetiefeBatterie =`${instanz}.Charge_Control.USER_ANPASSUNGEN.10_maxEntladetiefeBatterie`
 const sID_PrognoseAuto_kWh =`${instanz}.Charge_Control.History.PrognoseAuto_kWh`
+const sID_AbfrageSolcast =`${instanz}.Charge_Control.USER_ANPASSUNGEN.30_AbfrageSolcast`
+const sID_SolcastDachflaechen =`${instanz}.Charge_Control.USER_ANPASSUNGEN.30_SolcastDachflaechen`
+const sID_SolcastResource_Id_Dach1 =`${instanz}.Charge_Control.USER_ANPASSUNGEN.30_SolcastResource_Id_Dach1`
+const sID_SolcastResource_Id_Dach2 =`${instanz}.Charge_Control.USER_ANPASSUNGEN.30_SolcastResource_Id_Dach2`
+const sID_SolcastAPI_key =`${instanz}.Charge_Control.USER_ANPASSUNGEN.30_SolcastAPI_key`
+const sID_PV_Leistung_Tag_kWh =`${instanz}.Charge_Control.Allgemein.IstPvErtragLM0_kWh`
 
 // IDs des Adapters e3dc-rscp
 const sID_Batterie_SOC =`${instanzE3DC_RSCP}.EMS.BAT_SOC`;                                                      // aktueller Batterie_SOC
@@ -55,6 +61,7 @@ const sID_DiagramJosonChart =`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.JSON_Cha
 const sID_DiagramJsonChartHeute =`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.JSON_ChartHeute`;                   // JSON für Diagramm Tibber Preise in VIS
 const sID_DiagramJsonChartMorgen =`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.JSON_ChartMorgen`;                 // JSON für Diagramm Tibber Preise in VIS
 const sID_BatterieLadedaten = `${instanz}.${PfadEbene1}.${PfadEbene2[2]}.BatterieLadedaten`                     // JSON zum berechnen vom Batterie Strompreis
+const sID_PvSolcastSumme =`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.JSON_PvSolcastSumme`;                      // JSON für PV Prognosen 24 h von Solcast
 
 const sID_maxSoC =`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.maxSOC_Batterie`; 
 const sID_maxLadeleistungUser_W =`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.maxLadeleistung`; 
@@ -69,23 +76,26 @@ const sID_Stromgestehungskosten = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.str
 const sID_TibberLinkID = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.tibberLinkId`
 const sID_ScriptAktiv = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.ScriptAktiv`
 
+
 // IDs des Adapters TibberLink, Zuweisung in Funktion ScriptStart() wegen persönlicher ID
 let tibberLinkId = getState(sID_TibberLinkID).val                                                               // TibberLink ID auslesen
 const sID_PricesTodayJSON = `tibberlink.0.Homes.${tibberLinkId}.PricesToday.json`                               // Strompreise für aktuellen Tag
 const sID_PricesTomorrowJSON = `tibberlink.0.Homes.${tibberLinkId}.PricesTomorrow.json`                         // Strompreise für nächsten Tag
 const arrayID_TibberPrices =[sID_PricesTodayJSON,sID_PricesTomorrowJSON];    
+// @ts-ignore
+const axios = require('axios');
 
 let maxBatterieSoC = 0, aktuelleBatterieSoC_Pro,aktuelleBatterieSoC_alt = 0, ladeZeit_h, maxLadeleistungUser_W, stromgestehungskosten;
-let benoetigteKapAktuell_kWh_alt = 0, benoetigteKapPrognose_kWh_alt = 0;
+let benoetigteKapAktuell_kWh_alt = 0, benoetigteKapPrognose_kWh_alt = 0, maxLadeleistungE3DC_W = 0, pvAbweichung_kWh = 0;
 let batterieKapazitaet_kWh = 0, minStrompreis_48h = 0, nReichweite_alt = 0, LogProgrammablauf = "";
 let batterieSOC_alt = null, aktuellerPreisTibber = null, effektivPreisTibber = null ;
 let hoherSchwellwert = 0, niedrigerSchwellwert = 0, peakSchwellwert = 0, systemwirkungsgrad = 0;
-let dateBesteReichweiteLadezeit_alt = new Date();
-let strompreisBatterie, bruttoPreisBatterie;
+let strompreisBatterie, bruttoPreisBatterie, SolcastDachflaechen,SolcastAPI_key;
 
 let bNachladenPeak = false, bLock = false, bSchneeBedeckt = false, bAutPreisanpassung = false, bNotstromAktiv = false, bBatteriepreisAktiv = false, bStart = true;                                                                 
-let bBattLaden = false, bAutoLaden = false, bBattSperre = false, bBattSperrePrio = false, bReichweiteSunrise = false, bScriptAktiv = true, statusText = ``;
-let timerIds = [], timerTarget = [], timerObjektID = [],timerState =[], batterieLadedaten = [],datenHeute =[], datenMorgen = [], datenTibberLink48h = [];
+let bBattLaden = false, bBattSperre = false, bBattSperrePrio = false, bReichweiteSunrise = false, bScriptAktiv = true, bSolcast = false, statusText = ``;
+let timerIds = [], timerTarget = [], timerObjektID = [],timerState =[], batterieLadedaten = [],datenHeute =[], datenMorgen = [], datenTibberLink48h = [], Resource_Id_Dach=[];
+
 
 //***************************************************************************************************
 //**************************************** Function Bereich *****************************************
@@ -107,6 +117,8 @@ async function createState(){
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.JSON_ChartHeute`, { 'def': '[]', 'name': 'JSON für materialdesign json chart', 'type': 'string' }),
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.JSON_ChartMorgen`, { 'def': '[]', 'name': 'JSON für materialdesign json chart', 'type': 'string' }),
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.BatterieLadedaten`, { 'def': [], 'name': 'Batterie Start SOC mit Strompreis', 'type': 'string' }),
+        createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[2]}.JSON_PvSolcastSumme`, { 'def': '[]', 'name': 'JSON für PV Prognosen 24 h von Solcast', 'type': 'string' }),
+        
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.maxLadeleistung`, { 'def': 0, 'name': 'max Ladeleistung mit der die Batterie geladen wird', 'type': 'number', 'unit': 'W' }),
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.hoherSchwellwertStrompreis`, { 'def': 0.24, 'name': 'Strompreisgrenze für Hochpreisphase', 'type': 'number', 'unit': '€' }),
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.niedrigerSchwellwertStrompreis`, { 'def': 0.2, 'name': 'Strompreisgrenze für Niedrigpreisphase', 'type': 'number', 'unit': '€' }),
@@ -136,14 +148,33 @@ async function ScriptStart()
         getStateAsync(sID_Batterie_SOC),
         getStateAsync(sID_SPECIFIED_Battery_Capacity_0),
         getStateAsync(sID_maxEntladetiefeBatterie),
-        getStateAsync(sID_BAT0_Alterungszustand)
-    ]).then(states => states.map(state => state.val));
-    [
-        batterieLadedaten, aktuelleBatterieSoC_Pro 
-    ] = results; 
-    const batteryCapacity0 = results[2];
-    const entladetiefe_Pro = results[3];
-    const aSOC_Bat_Pro = results[4];
+        getStateAsync(sID_BAT0_Alterungszustand),
+        getStateAsync(sID_AbfrageSolcast),
+        getStateAsync(sID_Bat_Charge_Limit)
+    ]);
+    
+    batterieLadedaten        = results[0].val;
+    aktuelleBatterieSoC_Pro  = results[1].val;
+    const batteryCapacity0   = results[2].val;
+    const entladetiefe_Pro   = results[3].val;
+    const aSOC_Bat_Pro       = results[4].val;
+    bSolcast                 = results[5].val;
+    maxLadeleistungE3DC_W    = results[6].val;
+    
+    if (bSolcast){
+        const resultsSolcast = await Promise.all([
+            getStateAsync(sID_SolcastDachflaechen),
+            getStateAsync(sID_SolcastResource_Id_Dach1),
+            getStateAsync(sID_SolcastResource_Id_Dach2),
+            getStateAsync(sID_SolcastAPI_key)
+        ]);
+    
+        SolcastDachflaechen        = resultsSolcast[0].val;
+        Resource_Id_Dach[1]        = resultsSolcast[1].val;
+        Resource_Id_Dach[2]        = resultsSolcast[2].val;
+        SolcastAPI_key             = resultsSolcast[3].val;
+    }
+
     aktuelleBatterieSoC_alt = aktuelleBatterieSoC_Pro
     batterieSOC_alt = aktuelleBatterieSoC_Pro
     if (existsState(sID_SPECIFIED_Battery_Capacity_1)){
@@ -165,6 +196,7 @@ async function ScriptStart()
     batterieKapazitaet_kWh = round(((batterieKapazitaet_kWh/100)*aSOC_Bat_Pro),0);
     aktuellerPreisTibber = await getCurrentPrice()
     effektivPreisTibber = parseFloat((aktuellerPreisTibber * (1 / (systemwirkungsgrad / 100))).toFixed(4));
+    
     // Erstelle das Tibber Diagramm
     await createDiagramm();
     // Strompreis Batterie berechnen
@@ -223,9 +255,8 @@ async function tibberSteuerungHauskraftwerk() {
     try {    
         if (!bScriptAktiv){return;}
         LogProgrammablauf += '1,';
-        [bBattLaden,bAutoLaden,statusText,bBattSperre,peakSchwellwert] = await Promise.all([
+        [bBattLaden,statusText,bBattSperre,peakSchwellwert] = await Promise.all([
             getStateAsync(sID_BatterieLaden),
-            getStateAsync(sID_eAutoLaden),
             getStateAsync(sID_status),
             getStateAsync(sID_BatterieEntladesperre),
             getStateAsync(sID_peakSchwellwert_VIS)
@@ -305,7 +336,6 @@ async function tibberSteuerungHauskraftwerk() {
       
         const naechsteNormalphase = findeNaechstePhase(ergebnis.normalPhases);
         const naechstePhase0 = ergebnis?.naechstePhasen[0] // @ts-ignore
-        const dauerAktivePhase_h = aktivePhase ? round((new Date(aktivePhase.end) - new Date()) / (1000 * 60 * 60),2):null
         const aktivePhaseType = aktivePhase.type;    
         peakSchwellwert != spitzenSchwellwert ? await setStateAsync(sID_peakSchwellwert_VIS, spitzenSchwellwert):null;
         
@@ -761,23 +791,31 @@ async function pruefePVLeistung(reichweiteStunden) {
 
         // PV-Prognose
         let arrayPrognoseAuto_kWh = JSON.parse((await getStateAsync(sID_PrognoseAuto_kWh)).val);
-
+                
         // Achtung: Array-Index korrigiert (getDate() - 1)
         const heuteIndex = jetzt.getDate() - 1;
         const morgenIndex = morgen.getDate() - 1;
-        const pvHeute = round(parseFloat(arrayPrognoseAuto_kWh[heuteIndex] || 0), 0);
-        const pvMorgen = round(parseFloat(arrayPrognoseAuto_kWh[morgenIndex] || 0), 0);
+        const pvHeute = round(parseFloat(arrayPrognoseAuto_kWh[heuteIndex] || 0), 1);
+        const pvMorgen = round(parseFloat(arrayPrognoseAuto_kWh[morgenIndex] || 0), 1);
 
+        // --- PV-Prognose-Korrektur auf Basis der Ist-Abweichung (in kWh) berechnet in der Funktion pruefeAbweichung() ---
+        let korrekturFaktor = pvAbweichung_kWh || 0;
+        if(korrekturFaktor > 0 ){korrekturFaktor = 0}
+        const pvHeuteKorr = pvHeute + korrekturFaktor;
+        if (DebugAusgabe){log(`PV Prognose heute: ${pvHeute} kWh, Abweichung: ${pvAbweichung_kWh} kWh, nach Korrektur: ${pvHeuteKorr} kWh`,'warn');}
+        
         // Benötigte Kapazität
         const progBattSoC = await prognoseBatterieSOC(nreichweiteStunden);
         let benoetigteKapPrognose = round((100 - progBattSoC.soc) / 100 * batterieKapazitaet_kWh, 0);
+        const ladeWirkungsgrad = systemwirkungsgrad/100;
+        let benoetigteKapPrognoseEff = benoetigteKapPrognose / ladeWirkungsgrad;
         let benoetigteKapAktuell = round((100 - aktuelleBatterieSoC_Pro) / 100 * batterieKapazitaet_kWh, 0);
 
         // Hysterese anwenden
-        if (Math.abs(benoetigteKapPrognose - benoetigteKapPrognose_kWh_alt) < hystereseKapazitaet) {
-            benoetigteKapPrognose = benoetigteKapPrognose_kWh_alt;
+        if (Math.abs(benoetigteKapPrognoseEff - benoetigteKapPrognose_kWh_alt) < hystereseKapazitaet) {
+            benoetigteKapPrognoseEff = benoetigteKapPrognose_kWh_alt;
         } else {
-            benoetigteKapPrognose_kWh_alt = benoetigteKapPrognose;
+            benoetigteKapPrognose_kWh_alt = benoetigteKapPrognoseEff;
         }
 
         if (Math.abs(benoetigteKapAktuell - benoetigteKapAktuell_kWh_alt) < hystereseKapazitaet) {
@@ -797,7 +835,7 @@ async function pruefePVLeistung(reichweiteStunden) {
             // Zwischen Sonnenaufgang und Sonnenuntergang
             const verbleibendeSonnenstunden = (sunsetHeute - jetztMs) / 3600000;
             const gesamteSonnenstunden = (sunsetHeute - sunriseHeute) / 3600000;
-            const pvBisSunset = (pvHeute / gesamteSonnenstunden) * verbleibendeSonnenstunden;
+            const pvBisSunset = (pvHeuteKorr / gesamteSonnenstunden) * verbleibendeSonnenstunden;
 
             if (pvBisSunset >= benoetigteKapAktuell) {
                 LogProgrammablauf += '18/2,';
@@ -825,7 +863,13 @@ async function pruefePVLeistung(reichweiteStunden) {
             }
         } else {
             // Heute prüfen
-            if (pvHeute >= benoetigteKapPrognose) {
+            // prüfen ob die max. Ladeleistung ausreicht.
+            
+            const jetztMs = Date.now();
+            const verbleibendeSonnenstunden = (sunsetHeute - jetztMs) / 3600000;
+            const maxLadbareEnergie = (maxLadeleistungE3DC_W / 1000) * verbleibendeSonnenstunden;
+            
+            if (pvHeuteKorr >= benoetigteKapPrognoseEff && maxLadbareEnergie >= benoetigteKapPrognoseEff) {
                 LogProgrammablauf += '18/6,';
                 return { state: true };
             }
@@ -894,7 +938,7 @@ async function berechneLadezeitBatterie(dauer_h = null, startSOC = null) {
         }
 
         const hausverbrauch = JSON.parse((await getStateAsync(sID_arrayHausverbrauch)).val);
-        const maxLadeleistungE3DC_W = (await getStateAsync(sID_Bat_Charge_Limit)).val;
+        maxLadeleistungE3DC_W = (await getStateAsync(sID_Bat_Charge_Limit)).val;
 
         const maxLadeleistung = Math.min(maxLadeleistungUser_W, maxLadeleistungE3DC_W);
         const maxLadeleistung_kW = (maxLadeleistung - 200) / 1000;
@@ -1006,12 +1050,12 @@ async function setStateAtSpecificTime(targetTime, stateID, state) {
                     const stateAkt = (await getStateAsync(stateID)).val;
                     if (stateAkt != state) {
                         await setStateAsync(stateID, state);
-                        log(`State ${stateID} wurde durch Timer um ${targetTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} auf ${state} gesetzt.`, 'warn');
+                        //log(`State ${stateID} wurde durch Timer um ${targetTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} auf ${state} gesetzt.`, 'warn');
                     }
                     if (stateID === sID_BatterieLaden && state === false) {
                         if (stateAkt != state) {
                             await setStateAsync(sID_timerAktiv, false);
-                            log(`State ${stateID} wurde durch Timer um ${targetTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} auf ${state} gesetzt.`, 'warn');
+                            //log(`State ${stateID} wurde durch Timer um ${targetTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} auf ${state} gesetzt.`, 'warn');
                         }
                     }
                     if (stateID === sID_BatterieEntladesperre && state === false) { bBattSperrePrio = false; }
@@ -1154,9 +1198,6 @@ async function createDiagramm() {
     // Zeitangaben berechnen
     const currentDateTime = new Date();
     const battDateTime = new Date(currentDateTime.getTime() + reichweite_h * 3600000);
-
-    const currentDate = formatDate(currentDateTime);
-    const battcurrentDate = formatDate(battDateTime);
 
     // Hilfsfunktion zum Erstellen eines Diagramm-JSONs
     const createChart = (data, label) => {
@@ -1304,40 +1345,57 @@ async function berechneBattPrice() {
     }
 }
 
-// aktuellen Tibber Preis aus JSON auslesen
+// Aktuellen Tibber-Preis aus JSON auslesen (auto-erkennend: 15min oder 60min)
 async function getCurrentPrice() {
-    try {    
-        const roundedTime = new Date();
-        roundedTime.setMinutes(0, 0, 0);  // Auf volle Stunde runden
+    try {
+        const now = new Date();
 
         // Globale Variablen zurücksetzen
         aktuellerPreisTibber = null;
         minStrompreis_48h = null;
 
-        // Prüfen ob datenHeute ein Array ist
-        if (Array.isArray(datenHeute)) {
-            for (let entry of datenHeute) {
+        // Intervall bestimmen (z. B. 15 oder 60 Minuten)
+        const intervalMinutes = detectIntervalMinutes(datenHeute);
+        const intervalMs = intervalMinutes * 60 * 1000;
+
+        // Aktuelle Zeit auf gültiges Intervall runden
+        const roundedTime = new Date(now);
+        const minutes = roundedTime.getMinutes();
+        const roundedMinutes = Math.floor(minutes / intervalMinutes) * intervalMinutes;
+        roundedTime.setMinutes(roundedMinutes, 0, 0);
+
+        // Kleine Toleranz für Rundungs- oder Übertragungsabweichungen
+        const toleranceMs = Math.min(60 * 1000, intervalMs / 2);
+
+        // Hilfsfunktion zur Preisverarbeitung
+        function processData(dataArray) {
+            if (!Array.isArray(dataArray)) return;
+
+            for (let entry of dataArray) {
                 const startsAt = new Date(entry.startsAt);
 
-                // Niedrigster Preis
+                // Niedrigster Preis (48h)
                 if (minStrompreis_48h === null || entry.total < minStrompreis_48h) {
                     minStrompreis_48h = entry.total;
                 }
 
-                // Prüfe, ob die Startzeit innerhalb der aktuellen Stunde liegt
-                if (Math.abs(startsAt.getTime() - roundedTime.getTime()) < 1000) { 
+                // Preis für aktuelles Intervall finden
+                if (Math.abs(startsAt.getTime() - roundedTime.getTime()) < toleranceMs) {
                     aktuellerPreisTibber = entry.total;
                 }
             }
         }
 
-        // Günstigsten Preis in datenMorgen prüfen
-        if (Array.isArray(datenMorgen)) {
-            for (let entry of datenMorgen) {
-                if (minStrompreis_48h === null || entry.total < minStrompreis_48h) {
-                    minStrompreis_48h = entry.total;
-                }
-            }
+        // Heute und ggf. Morgen-Daten prüfen
+        processData(datenHeute);
+        processData(datenMorgen);
+
+        // Fallback: falls kein Treffer, nächsten Eintrag mit nächstliegender Zeit nehmen
+        if (aktuellerPreisTibber === null && Array.isArray(datenHeute)) {
+            const sorted = datenHeute
+                .map(e => ({ ...e, t: new Date(e.startsAt).getTime() }))
+                .sort((a, b) => Math.abs(a.t - now.getTime()) - Math.abs(b.t - now.getTime()));
+            if (sorted.length > 0) aktuellerPreisTibber = sorted[0].total;
         }
 
         return aktuellerPreisTibber;
@@ -1347,21 +1405,11 @@ async function getCurrentPrice() {
 }
 
 // Runden. Parameter float digit, int digits Anzahl der Stellen
-function round(digit, digits) {
-    digit = (Math.round(digit * Math.pow(10, digits)) / Math.pow(10, digits));
-    return digit;
+function round(value, digits = 2) {
+    if (typeof value !== 'number' || isNaN(value)) return 0;
+    const factor = Math.pow(10, digits);
+    return Math.round((value + Number.EPSILON) * factor) / factor;
 }
-
-// Funktion zum Formatieren der Datumswerte. Rückgabe im Format TT.MM mit führender Null 08.08
-function formatDate(date) {
-    if (!(date instanceof Date) || isNaN(date.getTime())) {
-        return '';
-    }
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    return `${day}.${month}`;
-}
-
 
 async function DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend)
 {
@@ -1689,22 +1737,28 @@ async function loescheAlleTimer(timerID) {
             timerState.splice(index, 1);
         }
 
-        // States zurücksetzen
-        if (alleTimer || timerID === 'Laden') {
-            await setStateAsync(sID_BatterieLaden, false);
-            await setStateAsync(sID_timerAktiv, false);
-        }
-        if (alleTimer || timerID === 'Entladesperre') {
+        if (alleTimer){
+            await Promise.all([
+                setStateAsync(sID_timerAktiv,false),
+                setStateAsync(sID_BatterieLaden,false),
+                setStateAsync(sID_BatterieEntladesperre,false),
+                setStateAsync(sID_eAutoLaden,false)
+            ]);
             bBattSperrePrio = false;
-            await setStateAsync(sID_BatterieEntladesperre, false);
+        }
+        // States zurücksetzen
+        if (timerID === 'Laden') {
+            await setStateAsync(sID_timerAktiv, false);
+            LogProgrammablauf += '30,';
+        }
+        if (timerID === 'Entladesperre') {
+            LogProgrammablauf += '31,';
         }
         if (alleTimer || timerID === 'Auto') {
-            await setStateAsync(sID_eAutoLaden, false);
+            LogProgrammablauf += '32,';
         }
-
-        log(`Timer${alleTimer ? ' alle' : ` '${timerID}'`} gelöscht`, 'warn');
-        LogProgrammablauf += alleTimer ? 'all,' : `${timerID},`;
-
+        //log(`Timer${alleTimer ? ' alle' : ` '${timerID}'`} gelöscht`, 'warn');
+    
     } catch (error) {
         log(`Fehler in loescheAlleTimer: ${error.message}`, 'error');
     }
@@ -1758,13 +1812,9 @@ async function getParsedStateWithRetry(id, retries = 3, delayMs = 5000) {
     throw new Error(`Konnte gültige JSON-Daten für ${id} nach ${retries} Versuchen nicht abrufen.`);
 }
 
-// ----------------- Helfer: Zeitfeld erkennen & Intervall bestimmen -----------------
-
-/**
- * Liefert das Zeit-Feld (ISO-String) aus einem Daten-Eintrag.
- * Unterstützt gängige Feldnamen: startsAt, start, time, timestamp, dateTime, ...
- * Gibt null zurück, wenn nichts gefunden wurde.
- */
+// Liefert das Zeit-Feld (ISO-String) aus einem Daten-Eintrag.
+// Unterstützt gängige Feldnamen: startsAt, start, time, timestamp, dateTime, ...
+// Gibt null zurück, wenn nichts gefunden wurde.
 function getStartTimeFromEntry(entry) {
     if (!entry) return null;
     if (entry.startsAt) return entry.startsAt;
@@ -1780,10 +1830,8 @@ function getStartTimeFromEntry(entry) {
     return null;
 }
 
-/**
- * Bestimmt die Intervall-Länge (in Minuten) anhand der ersten beiden Einträge.
- * Falls nicht bestimmbar, wird 60 Minuten zurückgegeben (Fallback).
- */
+// Bestimmt die Intervall-Länge (in Minuten) anhand der ersten beiden Einträge.
+// Falls nicht bestimmbar, wird 60 Minuten zurückgegeben (Fallback).
 function detectIntervalMinutes(data) {
     try {
         if (!Array.isArray(data) || data.length < 2) return 60;
@@ -1803,29 +1851,115 @@ function detectIntervalMinutes(data) {
     }
 }
 
-// Optional: Extrahiere Preiswert aus einem Eintrag (falls benötigt)
-function extractPriceValue(entry) {
-    if (!entry) return null;
-    if (typeof entry.total === 'number') return entry.total;
-    if (typeof entry.price === 'number') return entry.price;
-    if (typeof entry.value === 'number') return entry.value;
-    // manche Formate verwenden nested fields
-    if (entry?.priceInfo?.total !== undefined) return entry.priceInfo.total;
-    // Fallback: suche nach der ersten numerischen Eigenschaft
-    for (const k of Object.keys(entry)) {
-        if (typeof entry[k] === 'number') return entry[k];
-        if (typeof entry[k] === 'string' && !isNaN(parseFloat(entry[k]))) return parseFloat(entry[k]);
+const InterrogateSolcast = async (DachFl) => {
+    if (DachFl !== 1 && DachFl !== 2) {
+        throw new Error('Invalid DachFl value, must be 1 or 2');
     }
-    return null;
+    const url = `https://api.solcast.com.au/rooftop_sites/${Resource_Id_Dach[DachFl]}/forecasts?format=json&api_key=${SolcastAPI_key}&hours=24`;
+    try {
+        const response = await axios.get(url);
+        if (response.status >= 200 && response.status <= 206) {
+            if (DebugAusgabe) log(`✅ Solcast-Antwort für Dach ${DachFl}: ${response.status}`, "info");
+            return response.data;
+        } else {
+            throw new Error(`HTTP Status = ${response.status}`);
+        }
+    } catch (error) {
+        throw new Error(`Fehler beim Abrufen Solcast Dach ${DachFl}: ${error.message}`);
+    }
+};
+
+// Summiert die PV-Prognosen beider Dachflächen (je 30 Minuten)
+function kombiniereSolcastDaten(dach1, dach2) {
+    if (!Array.isArray(dach1) || !Array.isArray(dach2)) {
+        throw new Error('Beide Eingaben müssen Arrays sein!');
+    }
+
+    const laenge = Math.min(dach1.length, dach2.length);
+    const summenArray = [];
+
+    for (let i = 0; i < laenge; i++) {
+        const d1 = dach1[i];
+        const d2 = dach2[i];
+        const periodEnd = new Date(d1.period_end);
+        const hourLocal = periodEnd.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+
+        if (d1.period_end !== d2.period_end) {
+            log(`⚠️ Zeitabweichung bei Index ${i}: ${d1.period_end} ≠ ${d2.period_end}`, "warn");
+        }
+
+        summenArray.push({
+            period_end: d1.period_end,
+            hourLocal, // lokale Uhrzeit hinzufügen
+            pv_estimate: (d1.pv_estimate || 0) + (d2.pv_estimate || 0),
+            pv_estimate10: (d1.pv_estimate10 || 0) + (d2.pv_estimate10 || 0),
+            pv_estimate90: (d1.pv_estimate90 || 0) + (d2.pv_estimate90 || 0)
+        });
+    }
+
+    return summenArray;
 }
-// ----------------- Ende Helfer -----------------
+
+// Prognose Solcast abrufen.
+async function SheduleSolcast() { 
+    try {
+        if (DebugAusgabe){log("🌅 TibberSkript Starte täglichen Solcast-Abruf...", "warn");}
+        let gesamtPrognose = [];
+
+        if (SolcastDachflaechen === 1) {
+            const result = await InterrogateSolcast(1);
+            gesamtPrognose = result.forecasts.map(entry => ({
+                ...entry,
+                hourLocal: new Date(entry.period_end).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })
+            }));
+        } else if (SolcastDachflaechen === 2) {
+            const [res1, res2] = await Promise.all([InterrogateSolcast(1), InterrogateSolcast(2)]);
+            gesamtPrognose = kombiniereSolcastDaten(res1.forecasts, res2.forecasts);
+        } else {
+            log(`❌ Ungültige Dachflächenzahl: ${SolcastDachflaechen}`, "warn");
+            return;
+        }
+        
+        // Prognose speichern
+        await setStateAsync(sID_PvSolcastSumme, JSON.stringify(gesamtPrognose), true);
+        log(`✅ Solcast-Prognose gespeichert (${gesamtPrognose.length} Einträge)`, "info");
+
+    } catch (err) {
+        log(`❌ Fehler in SheduleSolcast(): ${err.message}`, "warn");
+    }
+}
+
+// ========== ABWEICHUNGSPRÜFUNG ==========
+async function pruefeAbweichung() {
+    try {
+        const prognoseState = await getStateAsync(sID_PvSolcastSumme);
+        if (!prognoseState?.val) return log("⚠️ Keine Prognosedaten gefunden", "warn");
+        const prognose = JSON.parse(prognoseState.val);
+
+        const jetzt = new Date();
+
+        // Prognosewerte bis aktuelle Uhrzeit summieren
+        const prognoseBisJetzt = prognose.filter(p => new Date(p.period_end) <= jetzt);
+        const prognoseSumme_kWh = prognoseBisJetzt.reduce((sum, e) => sum + (e.pv_estimate * 0.5), 0); // 0.5h = 30min
+
+        // Ist-Leistung (Tagesertrag bisher)
+        const istState = await getStateAsync(sID_PV_Leistung_Tag_kWh);
+        const istSumme_kWh = istState?.val || 0;
+        
+        pvAbweichung_kWh = istSumme_kWh - prognoseSumme_kWh;
+        if (DebugAusgabe){log(`🔍 Prognose bis jetzt: ${prognoseSumme_kWh.toFixed(2)} kWh | Ist: ${istSumme_kWh.toFixed(2)} kWh | Δ=${pvAbweichung_kWh.toFixed(2)} kWh`, "warn");}
+                
+    } catch (err) {
+        log(`❌ Fehler in pruefeAbweichung(): ${err.message}`, "warn");
+    }
+}
 
 //***************************************************************************************************
 //********************************** Schedules und Trigger Bereich **********************************
 //***************************************************************************************************
 
 // Event-Handler für Änderungen an Tibber-User-Parametern
-const regexPatternTibber = new RegExp(`${PfadEbene1}\\.${PfadEbene2[3]}`); // Punkt escaped
+const regexPatternTibber = new RegExp(`${PfadEbene1}\\.${PfadEbene2[3]}`);
 
 on({ id: regexPatternTibber, change: "ne" }, async function (obj) {
     if (bLock) return;
@@ -1910,10 +2044,7 @@ on({id: sID_Batterie_SOC, change: "ne"}, async function (obj){
         }
         // SOC gesunken: Gewichteten Durchschnittspreis ermitteln und Array neu setzen
         if (aktuelleBatterieSoC_Pro < batterieSOC_alt && batterieLadedaten.length > 1) {
-            const allePreise = batterieLadedaten.map(data => data.price);
             const ersteGewichtung = batterieLadedaten[1]?.soc - 1 || 1;
-            const restGewichtungen = batterieLadedaten.slice(1).map(() => 1); // Gewichtung aller weiteren Einträge = 1
-
             let gewichteteSumme = 0;
             let gesamtGewichtung = 0;
 
@@ -1958,8 +2089,8 @@ on({id: sID_Batterie_SOC, change: "ne"}, async function (obj){
     }
 });
 
-// Tibber Steuerung alle 1 min. aufrufen.
-let scheduleTibber = schedule("*/1 * * * *", async function() {
+// Tibber Steuerung alle 10 min. aufrufen.
+let scheduleTibber = schedule("*/10 * * * *", async function() {
     if(!bNotstromAktiv){
         await berechneBattPrice();
         await tibberSteuerungHauskraftwerk();
@@ -1976,17 +2107,26 @@ let scheduleTibber = schedule("*/1 * * * *", async function() {
     }
 });
 
-// Bei Sonnenaufgang Merker zurücksetzen
-schedule('{"time":{"exactTime":true,"start":"sunrise"},"period":{"days":1}}', function () { 
-    log(`Merker bReichweiteSunrise wurde auf false gesetzt`)
-    bReichweiteSunrise = false
-});
-
 //Bei Scriptende alle Timer löschen
 onStop(function () { 
     loescheAlleTimer('all')
     setState(sID_status, ``)
     log(`-==== Alle Timer beendet ====-`)
 }, 100);
+
+// ========== ZEITSTEUERUNG ==========
+schedule("0 4 * * *", async () => {   // jeden Tag um 04:00 Uhr
+    await SheduleSolcast();
+});
+
+schedule("0 10-17 * * *", async () => { // stündlich 10:00–17:00
+    await pruefeAbweichung();
+});
+
+// Bei Sonnenaufgang Merker zurücksetzen
+schedule('{"time":{"exactTime":true,"start":"sunrise"},"period":{"days":1}}', function () { 
+    log(`Merker bReichweiteSunrise wurde auf false gesetzt`)
+    bReichweiteSunrise = false
+});
 
 ScriptStart();
