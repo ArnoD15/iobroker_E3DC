@@ -77,6 +77,22 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.6.4
+Unter `USER_ANPASSUNGEN -> Charge-Control` wurden zwei neue States hinzugefügt:
+- `10_evcc_WB1_Loadpoint`
+- `10_evcc_WB2_Loadpoint`
+Diese States ermöglichen die Angabe des jeweiligen EVCC Loadpoints für **Wallbox 1** und **Wallbox 2**.
+- **Wertebereich:** `0 = Deaktiviert`
+- **Hinweis:** Aktuell können maximal **zwei Wallboxen** konfiguriert werden.
+  
+Verbrauchseinträge enthalten nun zusätzlich die aktuelle Stunde (`hour`) bei Speicherung.
+- Neue Datenstruktur: `homeConsumption[Wochentag][day|night] = [{ hour, value }, ...]`
+
+### ⚠️ Wichtiger Hinweis
+**Vor dem ersten Start nach dem Update muss folgender Datenpunkt manuell gelöscht werden:**
+0_userdata.0.Charge_Control.Allgemein.arrayHausverbrauch
+Anschließend das Skript neu starten, damit die neue Datenstruktur korrekt initialisiert wird.
+
 ### Version: 1.6.3
 - Hysteresewert Laderegelung wird in der Nacht wieder auf Standardwert gesetzt.
 - Kleinere Optimierungen am Code durchgeführt.
