@@ -1,3 +1,8 @@
+// Anpassung der Funktion berechneReinenHausverbrauch:
+//  - Statt nur den berechneten Verbrauchswert zu speichern, wird nun ein Objekt mit { hour, value } gespeichert.
+//    Dadurch lassen sich spätere Auswertungen des Verbrauchs nach Stunden realisieren.
+
+
 'use strict';
 // ============================================================================
 // ============================ USER ANPASSUNGEN ==============================
@@ -17,7 +22,7 @@ const BUFFER_SIZE= 5;                                                           
 // ======================= ENDE USER ANPASSUNGEN ==============================
 // ============================================================================
 
-logChargeControl(`-==== Charge-Control Version 1.6.3 ====-`);
+logChargeControl(`-==== Charge-Control Version 1.6.4 ====-`);
 
 //*************************************** ID's Adapter e3dc.rscp ***************************************
 const sID_Power_Home_W =`${instanzE3DC_RSCP}.EMS.POWER_HOME`;                                           // aktueller Hausverbrauch E3DC                                         // Pfad ist abhängig von Variable ScriptHausverbrauch siehe function CheckState()
@@ -141,7 +146,7 @@ let sID_LeistungHeizstab_W, sID_WallboxLadeLeistung_1_W,sID_WallboxLadeLeistung_
 let sID_Path_evcc_loadpoint1_charging,sID_Path_evcc_loadpoint2_charging,sID_Path_evcc_mode1, sID_Path_evcc_mode2,sID_Path_ScriptTibber;
 
 //******************************* Globale Variable Time Counter *******************************
-let lastDebugLogTime = 0,lastExecutionTime = 0, count0 = 0, count1 = 0, count2 = 0, count3 = 0;
+let lastDebugLogTime = 0, lastExecutionTime = 0, count0 = 0, count1 = 0, count2 = 0, count3 = 0;
 let Timer0 = null, Timer1 = null,Timer2 = null,TimerProplanta= null;
 let RE_AstroSolarNoon,LE_AstroSunset,RB_AstroSolarNoon,RE_AstroSolarNoon_alt_milisek,RB_AstroSolarNoon_alt_milisek,Zeit_alt_milisek=0,ZeitE3DC_SetPowerAlt_ms=0;
 
@@ -156,7 +161,7 @@ let LogProgrammablauf = "", Notstrom_Status,Batterie_SOC_Proz, Speichergroesse_k
 let Max_wrleistung_W ,InstalliertPeakLeistung, Einspeiselimit_Pro, Einspeiselimit_kWh, maximumLadeleistung_W, Bat_Discharge_Limit_W
 let EinstellungAnwahl,PrognoseAnwahl, M_Power=0,M_Power_alt=0,Set_Power_Value_W=0,tibberMaxLadeleistung_W= null;
 let Batterie_SOC_alt_Proz=0, Notstrom_SOC_Proz = 0, Summe0 = 0, Summe1 = 0, Summe2 = 0, Summe3 = 0, baseurl, TibberSubscribeID;
-let sMode_evcc,nEvcc_Instanz, hystereseWatt = 2000;
+let sMode_evcc,nEvcc_Instanz, nEvcc_WB1_Loadpoint, nEvcc_WB2_Loadpoint, hystereseWatt = 2000;
 
 //***************************************************************************************************
 //**************************************** Function Bereich *****************************************
@@ -206,10 +211,10 @@ async function ScriptStart()
     Einspeiselimit_kWh = ((InstalliertPeakLeistung/100)*Einspeiselimit_Pro-200)/1000   // Einspeiselimit (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
     
     if (bEvcc) {
-        sID_Path_evcc_loadpoint1_charging = `evcc.${nEvcc_Instanz}.loadpoint.1.status.charging`
-        sID_Path_evcc_loadpoint2_charging = `evcc.${nEvcc_Instanz}.loadpoint.2.status.charging`
-        sID_Path_evcc_mode1 = `evcc.${nEvcc_Instanz}.loadpoint.1.status.mode`
-        sID_Path_evcc_mode2 = `evcc.${nEvcc_Instanz}.loadpoint.2.status.mode`
+        sID_Path_evcc_loadpoint1_charging = `evcc.${nEvcc_Instanz}.loadpoint.${nEvcc_WB1_Loadpoint}.status.charging`
+        sID_Path_evcc_loadpoint2_charging = `evcc.${nEvcc_Instanz}.loadpoint.${nEvcc_WB2_Loadpoint}.status.charging`
+        sID_Path_evcc_mode1 = `evcc.${nEvcc_Instanz}.loadpoint.${nEvcc_WB1_Loadpoint}.status.mode`
+        sID_Path_evcc_mode2 = `evcc.${nEvcc_Instanz}.loadpoint.${nEvcc_WB2_Loadpoint}.status.mode`
 
         const useID1 = existsObject(sID_Path_evcc_loadpoint1_charging);
         const useID2 = existsObject(sID_Path_evcc_loadpoint2_charging);
@@ -269,7 +274,7 @@ async function CreateState(){
         await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Batteriekapazität_kWh`, {'def':0, 'name':'verbleibende Reichweite der Batterie in kWh', 'type':'number', 'role':'value', 'desc':'verbleibende Reichweite der Batterie in kWh', 'unit':'kWh'});
         await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Hausverbrauch`, {'def':0, 'name':'Reiner Hausverbrauch ohne WB, LW-Pumpe oder Heizstab' , 'type':'number', 'role':'value', 'unit':'W'});
         await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.arrayHausverbrauchDurchschnitt`, {'def':{"Montag":{"night":100,"day":100},"Dienstag":{"night":100,"day":100},"Mittwoch":{"night":100,"day":100},"Donnerstag":{"night":100,"day":100},"Freitag":{"night":100,"day":100},"Samstag":{"night":100,"day":100},"Sonntag":{"night":100,"day":100}}, 'name':'Merker durchschnittlicher Hausverbrauch ohne Wallbox und Heizstab' , 'type':'string', 'role':'value'});
-        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.arrayHausverbrauch`, {'def':{"Montag":{"night":[100],"day":[100]},"Dienstag":{"night":[100],"day":[100]},"Mittwoch":{"night":[100],"day":[100]},"Donnerstag":{"night":[100],"day":[100]},"Freitag":{"night":[100],"day":[100]},"Samstag":{"night":[100],"day":[100]},"Sonntag":{"night":[100],"day":[100]}}, 'name':'Merker Leistung Hausverbrauch ohne Wallbox und Heizstab' , 'type':'string', 'role':'value'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.arrayHausverbrauch`, {'def':{"Montag":{"night":[{ "hour": 14, "value": 380 }],"day":[{ "hour": 14, "value": 380 }]},"Dienstag":{"night":[{ "hour": 14, "value": 380 }],"day":[{ "hour": 14, "value": 380 }]},"Mittwoch":{"night":[{ "hour": 14, "value": 380 }],"day":[{ "hour": 14, "value": 380 }]},"Donnerstag":{"night":[{ "hour": 14, "value": 380 }],"day":[{ "hour": 14, "value": 380 }]},"Freitag":{"night":[{ "hour": 14, "value": 380 }],"day":[{ "hour": 14, "value": 380 }]},"Samstag":{"night":[{ "hour": 14, "value": 380 }],"day":[{ "hour": 14, "value": 380 }]},"Sonntag":{"night":[{ "hour": 14, "value": 380 }],"day":[{ "hour": 14, "value": 380 }]}}, 'name':'Merker Leistung Hausverbrauch ohne Wallbox und Heizstab' , 'type':'string', 'role':'value'});
         await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.Notstrom_akt`, {'def':0, 'name':'aktuell berechnete Notstromreserve', 'type':'number', 'role':'value', 'desc':'aktuell berechnete Notstromreserve', 'unit':'%'});
         await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.EinstellungAnwahl`, {'def':0, 'name':'Aktuell manuell angewählte Einstellung', 'type':'number', 'role':'State'});
         await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[1]}.EigenverbrauchTag`, {'def':0, 'name':'min. Eigenverbrauch von 6:00 Uhr bis 19:00 Uhr in kWh', 'type':'number', 'role':'value'});
@@ -325,6 +330,8 @@ async function CreateState(){
         await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_Discharge_Start_Power`, {'def':65,'name':'Einstellung E3DC untere Entladeschwelle W)' ,'type':'number', 'unit':'W','role':'state'});
         await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_evcc`, {'def':false,'name':'Wenn evcc verwendet wird auf True setzen' ,'type':'boolean', 'unit':'','role':'state'});
         await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_evcc_Instanz`, {'def':0,'name':'Die Instanz vom evcc Adapter eintragen' ,'type':'number', 'unit':'','role':'state'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_evcc_WB1_Loadpoint`, {'def':0,'name':'Nr EVCC Loadpoint Wallbox 1 eintragen' ,'type':'number', 'unit':'','role':'state'});
+        await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.10_evcc_WB2_Loadpoint`, {'def':0,'name':'Nr EVCC Loadpoint Wallbox 2 eintragen' ,'type':'number', 'unit':'','role':'state'});
         
         await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_ProplantaCountry`, {'def':'de','name':'Ländercode für Proplanta de,at, ch, fr, it' ,'type':'string', 'unit':'','role':'state'});
         await createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[4]}.20_ProplantaOrt`, {'def':'','name':'Wohnort für Abfrage Wetterdaten Proplanta' ,'type':'string', 'unit':'','role':'state'});
@@ -386,7 +393,8 @@ async function CheckState() {
         { id: '10_Discharge_Start_Power', varName: 'startDischargeDefault', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen'},
         { id: '10_evcc', varName: 'bEvcc', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen'},
         { id: '10_evcc_Instanz', varName: 'nEvcc_Instanz', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen'},
-        
+        { id: '10_evcc_WB1_Loadpoint', varName: 'nEvcc_WB1_Loadpoint', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen'},
+        { id: '10_evcc_WB2_Loadpoint', varName: 'nEvcc_WB2_Loadpoint', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen'},
         { id: '20_ProplantaCountry', varName: 'country', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
         { id: '20_ProplantaOrt', varName: 'ProplantaOrt', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
         { id: '20_ProplantaPlz', varName: 'ProplantaPlz', beschreibung: 'enthält keinen gültigen Wert, bitte prüfen' },
@@ -589,7 +597,7 @@ async function Ladesteuerung()
     }
 
     // Zwischen Sonnenuntergang und Sonnenaufgang kann Merker Notstrom entladen wieder zurückgesetzt werden.
-    if (new Date() < getAstroDate("sunset") && new Date() > getAstroDate("sunrise")){bM_Notstrom = false;LogProgrammablauf += '3,';}
+    if (new Date() < getAstroDate("sunset") && new Date() > getAstroDate("sunrise") && bM_Notstrom){bM_Notstrom = false;LogProgrammablauf += '3,';}
     
     // Nur wenn PV-Leistung vorhanden ist oder Entladen freigegeben ist Regelung starten.
     if((PV_Leistung_Summe_W > (UntererLadekorridor_W + Power_Home_W) || getState(sID_Max_Discharge_Power_W).val > 0 || getState(sID_Max_Charge_Power_W).val > 0) && !bTibberLaden){
@@ -1997,6 +2005,7 @@ async function berechneReinenHausverbrauch(powerHome) {
         reinerHausverbrauch_W = Math.max(reinerHausverbrauch_W, 0);
         count3 ++
 	    Summe3 = Summe3 + reinerHausverbrauch_W;
+        
         // Prüfen, ob seit der letzten Ausführung 60 Sekunden vergangen sind
         if (currentTime - lastExecutionTime >= 60000) {
             const Pmin = round(Summe3/count3,0)
@@ -2012,16 +2021,19 @@ async function berechneReinenHausverbrauch(powerHome) {
             if (!Array.isArray(homeAverage[currentDay][timeInterval])) {homeAverage[currentDay][timeInterval] = [];}
         
             if (homeConsumption[currentDay][timeInterval].length >= MAX_ENTRIES) {
-                homeConsumption[currentDay][timeInterval].shift();// Entferne den ältesten Eintrag, wenn die maximale Größe erreicht ist
+            homeConsumption[currentDay][timeInterval].shift();// Entferne den ältesten Eintrag, wenn die maximale Größe erreicht ist
             }
             // Füge den neuen Wert hinzu
-            homeConsumption[currentDay][timeInterval].push(Pmin);
+            homeConsumption[currentDay][timeInterval].push({
+                hour: currentHour,
+                value: Pmin
+            });
             count3= Summe3 = 0
             // Durchschnitt Hausverbrauch berechnen
             for (const [day, intervals] of Object.entries(homeConsumption)) {
                 for (const [interval, values] of Object.entries(intervals)) {
-                    const totalConsumption = values.reduce((acc, val) => acc + val, 0);
-                    homeAverage[day][interval] = values.length ? round(totalConsumption / values.length,0) : 0;
+                    const totalConsumption = values.reduce((acc, entry) => acc + entry.value, 0);
+                    homeAverage[day][interval] = values.length ? round(totalConsumption / values.length, 0) : 0;
                 }
             }
             // Anzeige für VIS
@@ -2031,7 +2043,7 @@ async function berechneReinenHausverbrauch(powerHome) {
                 setStateAsync(sID_arrayHausverbrauch, JSON.stringify(homeConsumption)),
             ]);
             lastExecutionTime = currentTime;
-        }
+        }   
         // Wert in den Buffer einfügen
         hausverbrauchBuffer.push(reinerHausverbrauch_W);
         
@@ -2449,7 +2461,7 @@ async function registerEventHandlers() {
     listeners[3] = on(sID_Power_Home_W,async function(obj) {
         await berechneReinenHausverbrauch(Math.abs(obj.state.val));
     });
-
+    
     // Triggern wenn sich Einstellung Notstrom E3DC ändert
     listeners[4] = on(sID_PARAM_EP_RESERVE_W,async function(obj) {
         await Notstromreserve();
@@ -2758,6 +2770,11 @@ async function registerEventHandlers() {
 
 }
 
+// Jede Minute Hausverbrauch erfassen.
+schedule("*/1 * * * *", async function () {
+    const state = await getStateAsync(sID_Power_Home_W);
+    await berechneReinenHausverbrauch(Math.abs(state.val));
+});
 
 schedule('*/3 * * * * *', async function() {
     // Vor Regelung Skript Startdurchlauf erst abwarten  
