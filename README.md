@@ -78,7 +78,7 @@ verbunden sein.
 <h3>Changelog Charge-Control</h3>
 
 ### Version: 1.6.4
-Unter `USER_ANPASSUNGEN -> Charge-Control` wurden zwei neue States hinzugefügt:
+Unter `0_userdata.0.Charge_Control.USER_ANPASSUNGEN` wurden zwei neue States hinzugefügt:
 - `10_evcc_WB1_Loadpoint`
 - `10_evcc_WB2_Loadpoint`
 Diese States ermöglichen die Angabe des jeweiligen EVCC Loadpoints für **Wallbox 1** und **Wallbox 2**.
