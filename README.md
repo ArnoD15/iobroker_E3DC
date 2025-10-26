@@ -77,6 +77,13 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.6.5
+Die Logik der Funktion Ladesteuerung() wurde angepasst, um das Zusammenspiel zwischen EVCC und Charge-Control zu verbessern.  
+Neue Logik:  
+Die Laderegelung von Charge-Control wird jetzt angehalten, wenn:
+EVCC **im Schnelllademodus ist** (sMode_evcc === 'now')
+**und** der State vom Tibber-Skript **BatterieLaden = false** ist
+
 ### Version: 1.6.4
 Unter `0_userdata.0.Charge_Control.USER_ANPASSUNGEN` wurden zwei neue States hinzugefügt:
 - `10_evcc_WB1_Loadpoint`
