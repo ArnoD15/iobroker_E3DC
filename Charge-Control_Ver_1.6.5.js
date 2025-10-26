@@ -22,7 +22,7 @@ const BUFFER_SIZE= 5;                                                           
 // ======================= ENDE USER ANPASSUNGEN ==============================
 // ============================================================================
 
-logChargeControl(`-==== Charge-Control Version 1.6.4 ====-`);
+logChargeControl(`-==== Charge-Control Version 1.6.5 ====-`);
 
 //*************************************** ID's Adapter e3dc.rscp ***************************************
 const sID_Power_Home_W =`${instanzE3DC_RSCP}.EMS.POWER_HOME`;                                           // aktueller Hausverbrauch E3DC                                         // Pfad ist abhängig von Variable ScriptHausverbrauch siehe function CheckState()
@@ -2779,7 +2779,7 @@ schedule("*/1 * * * *", async function () {
 schedule('*/3 * * * * *', async function() {
     // Vor Regelung Skript Startdurchlauf erst abwarten  
     //log(`bCharging_evcc = ${bCharging_evcc} sMode_evcc = ${sMode_evcc}`)
-    if(!bStart && bAutomatikRegelung && !bManuelleLadungBatt && !bBattTraining && (!bCharging_evcc || sMode_evcc === 'pv')){await Ladesteuerung();}
+    if((!bStart && bAutomatikRegelung && !bManuelleLadungBatt && !bBattTraining && (!bCharging_evcc || sMode_evcc !== 'now')) || (!bStart && !bManuelleLadungBatt && !bBattTraining && bTibberLaden)){await Ladesteuerung();}
 });
 
 // jeden Monat am 1 History Daten Tag aktuelles Monat Löschen
