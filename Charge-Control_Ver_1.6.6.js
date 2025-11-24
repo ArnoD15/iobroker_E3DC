@@ -1,8 +1,3 @@
-// Anpassung der Funktion berechneReinenHausverbrauch:
-//  - Statt nur den berechneten Verbrauchswert zu speichern, wird nun ein Objekt mit { hour, value } gespeichert.
-//    Dadurch lassen sich spätere Auswertungen des Verbrauchs nach Stunden realisieren.
-
-
 'use strict';
 // ============================================================================
 // ============================ USER ANPASSUNGEN ==============================
@@ -16,13 +11,17 @@ const PfadEbene1 = 'Charge_Control';                                            
 const PfadEbene2 = ['Parameter','Allgemein','History','Proplanta','USER_ANPASSUNGEN']                	// Pfad innerhalb PfadEbene1
 const idTibber = `${instanz}.TibberSkript`;                                                             // ObjektID Tibber Skript
 
-const BUFFER_SIZE= 5;                                                                                   // Größe des Buffers für gleitenden Durchschnitt
-
+// Berechnung Durchschnittsverbrauch
+const BUFFER_SIZE= 60;                                                                                  // z.B. 60 Werte = 1 Minute (bei 1Hz Trigger)
+const MAX_ENTRIES = 1440;                                                                               // Maximale Anzahl gespeicherter Werte pro Tag/Nacht
+const DAY_START   = 5;                                                                                  // ab 05:00 = Tag
+const NIGHT_START = 21;                                                                                 // ab 21:00 = Nacht                     
+const HAUSVERBRAUCH_BUFFER_SIZE = 5;                                                                    // für den gleitenden Durchschnitt
 // ============================================================================
 // ======================= ENDE USER ANPASSUNGEN ==============================
 // ============================================================================
 
-logChargeControl(`-==== Charge-Control Version 1.6.5 ====-`);
+logChargeControl(`-==== Charge-Control Version 1.6.6 ====-`);
 
 //*************************************** ID's Adapter e3dc.rscp ***************************************
 const sID_Power_Home_W =`${instanzE3DC_RSCP}.EMS.POWER_HOME`;                                           // aktueller Hausverbrauch E3DC                                         // Pfad ist abhängig von Variable ScriptHausverbrauch siehe function CheckState()
@@ -116,18 +115,13 @@ const allParameterIDs = arrayID_Parameters.flat();
 const fs = require('fs').promises;
 // @ts-ignore
 const axios = require('axios');
-const MAX_ENTRIES = 480; // 8 Stunden x 3600 Sekunden pro Tag /60 executionInterval
 
 //******************** Globale Variable Array ********************
 const idCache = {}
 let hausverbrauchBuffer = []; // Buffer für Hausverbrauchswerte
 let listeners = [];  // Array zum Speichern aller Listener-Objekte
-let homeConsumption ={Montag: { night: [], day: [] },Dienstag: { night: [], day: [] },Mittwoch: { night: [], day: [] },
-        Donnerstag: { night: [], day: [] },Freitag: { night: [], day: [] },Samstag: { night: [], day: [] },Sonntag: { night: [], day: [] }
-};
-let homeAverage ={Montag: { night: [], day: [] },Dienstag: { night: [], day: [] },Mittwoch: { night: [], day: [] },
-        Donnerstag: { night: [], day: [] },Freitag: { night: [], day: [] },Samstag: { night: [], day: [] },Sonntag: { night: [], day: [] }
-};
+let homeConsumption = {};
+let homeAverage = {};
 let SummePV_Leistung_Tag_kW =[{0:'',1:'',2:'',3:'',4:'',5:'',6:'',7:''},{0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0},{0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0},{0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0}];
 let baseUrlsCountrys = {
     "de" : "https://www.proplanta.de/Wetter/profi-wetter.php?SITEID=60&PLZ=#PLZ#&STADT=#ORT#&WETTERaufrufen=stadt&Wtp=&SUCHE=Wetter&wT=0",
@@ -168,100 +162,130 @@ let sMode_evcc,nEvcc_Instanz, nEvcc_WB1_Loadpoint, nEvcc_WB2_Loadpoint, hysteres
 //***************************************************************************************************
 
 // Wird nur beim Start vom Script aufgerufen
-async function ScriptStart()
-{
-    await CreateState();
-    logChargeControl(`-==== alle Objekt ID\'s angelegt ====-`);
-    await CheckState();
-    logChargeControl(`-==== alle Objekte ID\'s überprüft ====-`);
-    await pruefeAdapterEinstellungen();
-    // Proplanta Länderauswahl zuordnen
-    baseurl = await baseUrlsCountrys[country];
+async function ScriptStart(){
+    try {
+        await CreateState();
+        logChargeControl(`-==== alle Objekt ID\'s angelegt ====-`);
+        await CheckState();
+        logChargeControl(`-==== alle Objekte ID\'s überprüft ====-`);
+        await pruefeAdapterEinstellungen();
+        // Proplanta Länderauswahl zuordnen
+        baseurl = await baseUrlsCountrys[country];
     
-    [homeConsumption, homeAverage, arrayPrognoseAuto_kWh, arrayPrognoseSolcast90_kWh,
-        arrayPrognoseProp_kWh, arrayPrognoseSolcast_kWh, arrayPV_LeistungTag_kWh
-    ] = (await Promise.all([
-        getStateAsync(sID_arrayHausverbrauch),
-        getStateAsync(sID_arrayHausverbrauchDurchschnitt),
-        getStateAsync(sID_PrognoseAuto_kWh),
-        getStateAsync(sID_PrognoseSolcast90_kWh),
-        getStateAsync(sID_PrognoseProp_kWh),
-        getStateAsync(sID_PrognoseSolcast_kWh),
-        getStateAsync(sID_arrayPV_LeistungTag_kWh)
-    ])).map(s => JSON.parse(s.val));
-
-    [bAutomatikAnwahl, bAutomatikRegelung, bNotstromAusNetz, Notstrom_Status,PrognoseAnwahl, EinstellungAnwahl, Max_wrleistung_W
-    , InstalliertPeakLeistung, Einspeiselimit_Pro, maximumLadeleistung_W, Bat_Discharge_Limit_W, Batterie_SOC_Proz, bBattTraining
-    ]= await Promise.all([
-        getStateAsync(sID_Automatik_Prognose),      // Vorwahl in VIS true = automatik false = manuell
-        getStateAsync(sID_Automatik_Regelung),      // Vorwahl in VIS true = automatik false = manuell
-        getStateAsync(sID_NotstromAusNetz),         // Vorwahl in VIS true = Notstrom aus Netz nachladen
-        getStateAsync(sID_Notrom_Status),           // 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
-        getStateAsync(sID_PrognoseAnwahl),          // Aktuelle Einstellung welche Prognose für Berechnung verwendet wird
-        getStateAsync(sID_EinstellungAnwahl),       // Vorwahl in VIS Einstellung 1-5
-        getStateAsync(sID_Max_wrleistung_W),        // Maximale Wechselrichter Leistung
-        getStateAsync(sID_Installed_Peak_Power),    // Installierte Peak Leistung der PV-Module
-        getStateAsync(sID_Einspeiselimit_Pro),      // Einspeiselimit in Prozent
-        getStateAsync(sID_Bat_Charge_Limit),        // Maximal mögliche Batterie Ladeleistung
-        getStateAsync(sID_Bat_Discharge_Limit),     // Maximal mögliche Batterie Entladeleistung
-        getStateAsync(sID_Batterie_SOC),            // Aktueller Batterie SOC
-        getStateAsync(sID_BattTraining)             // Batterie Training aktiv
-    ]).then(states => states.map(state => state.val));
-    Max_wrleistung_W = Max_wrleistung_W - 200;                                         // Maximale Wechselrichter Leistung (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
-    Einspeiselimit_kWh = ((InstalliertPeakLeistung/100)*Einspeiselimit_Pro-200)/1000   // Einspeiselimit (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
-    
-    if (bEvcc) {
-        sID_Path_evcc_loadpoint1_charging = `evcc.${nEvcc_Instanz}.loadpoint.${nEvcc_WB1_Loadpoint}.status.charging`
-        sID_Path_evcc_loadpoint2_charging = `evcc.${nEvcc_Instanz}.loadpoint.${nEvcc_WB2_Loadpoint}.status.charging`
-        sID_Path_evcc_mode1 = `evcc.${nEvcc_Instanz}.loadpoint.${nEvcc_WB1_Loadpoint}.status.mode`
-        sID_Path_evcc_mode2 = `evcc.${nEvcc_Instanz}.loadpoint.${nEvcc_WB2_Loadpoint}.status.mode`
-
-        const useID1 = existsObject(sID_Path_evcc_loadpoint1_charging);
-        const useID2 = existsObject(sID_Path_evcc_loadpoint2_charging);
-        const useID3 = existsObject(sID_Path_evcc_mode1);
-        const useID4 = existsObject(sID_Path_evcc_mode2);
-    
-        if (useID1 || useID2) {
-            if (useID1 && !useID2) {
-               bCharging_evcc = (await getStateAsync(sID_Path_evcc_loadpoint1_charging)).val;
-            } else if (!useID1 && useID2) {
-                bCharging_evcc = (await getStateAsync(sID_Path_evcc_loadpoint2_charging)).val;
-            } else if (useID1 && useID2) {
-                const [val1, val2] = await Promise.all([
-                    getStateAsync(sID_Path_evcc_loadpoint1_charging),
-                    getStateAsync(sID_Path_evcc_loadpoint2_charging)
-                ]).then(states => states.map(state => state.val));
-                bCharging_evcc = val1 || val2;
+        function safeParse(val, fallback) {
+            try {
+                return (val !== null && val !== undefined && val !== '') ? JSON.parse(val) : fallback;
+            } catch (e) {
+                logChargeControl(`Fehler beim Parsen eines JSON-States: ${e.message}`, 'warn');
+                return fallback;
             }
         }
-        if (useID3 || useID4) {
-            if (useID3 && !useID4) {
-               sMode_evcc = (await getStateAsync(sID_Path_evcc_mode1)).val
-            } else if (!useID3 && useID4) {
-                sMode_evcc = (await getStateAsync(sID_Path_evcc_mode2)).val
-            } else {
-                const [val3, val4] = await Promise.all([
-                    getStateAsync(sID_Path_evcc_mode1),
-                    getStateAsync(sID_Path_evcc_mode2)
-                ]).then(states => states.map(state => state.val));
-                if (val3 == 'pv' && val4 == 'pv') {
-                    sMode_evcc = 'pv';
-                }
-            }    
+
+        const stateResults = await Promise.all([
+            getStateAsync(sID_arrayHausverbrauch),
+            getStateAsync(sID_arrayHausverbrauchDurchschnitt),
+            getStateAsync(sID_PrognoseAuto_kWh),
+            getStateAsync(sID_PrognoseSolcast90_kWh),
+            getStateAsync(sID_PrognoseProp_kWh),
+            getStateAsync(sID_PrognoseSolcast_kWh),
+            getStateAsync(sID_arrayPV_LeistungTag_kWh)
+        ]);
+
+        homeConsumption             = safeParse(stateResults[0]?.val, {});
+        homeAverage                 = safeParse(stateResults[1]?.val, {});
+        arrayPrognoseAuto_kWh       = safeParse(stateResults[2]?.val, []);
+        arrayPrognoseSolcast90_kWh  = safeParse(stateResults[3]?.val, []);
+        arrayPrognoseProp_kWh       = safeParse(stateResults[4]?.val, []);
+        arrayPrognoseSolcast_kWh    = safeParse(stateResults[5]?.val, []);
+        arrayPV_LeistungTag_kWh     = safeParse(stateResults[6]?.val, []);
+
+        // Falls Struktur leer → Defaultstruktur anlegen
+        const wochentage = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+        for (const tag of wochentage) {
+            if (!homeConsumption[tag]) homeConsumption[tag] = { day: [], night: [] };
+            if (!homeAverage[tag]) homeAverage[tag] = { day: 0, night: 0 };
         }
+
+        [bAutomatikAnwahl, bAutomatikRegelung, bNotstromAusNetz, Notstrom_Status,PrognoseAnwahl, EinstellungAnwahl, Max_wrleistung_W
+        , InstalliertPeakLeistung, Einspeiselimit_Pro, maximumLadeleistung_W, Bat_Discharge_Limit_W, Batterie_SOC_Proz, bBattTraining
+        ]= await Promise.all([
+            getStateAsync(sID_Automatik_Prognose),      // Vorwahl in VIS true = automatik false = manuell
+            getStateAsync(sID_Automatik_Regelung),      // Vorwahl in VIS true = automatik false = manuell
+            getStateAsync(sID_NotstromAusNetz),         // Vorwahl in VIS true = Notstrom aus Netz nachladen
+            getStateAsync(sID_Notrom_Status),           // 0= nicht möglich 1=Aktiv 2= nicht Aktiv 3= nicht verfügbar 4=Inselbetrieb
+            getStateAsync(sID_PrognoseAnwahl),          // Aktuelle Einstellung welche Prognose für Berechnung verwendet wird
+            getStateAsync(sID_EinstellungAnwahl),       // Vorwahl in VIS Einstellung 1-5
+            getStateAsync(sID_Max_wrleistung_W),        // Maximale Wechselrichter Leistung
+            getStateAsync(sID_Installed_Peak_Power),    // Installierte Peak Leistung der PV-Module
+            getStateAsync(sID_Einspeiselimit_Pro),      // Einspeiselimit in Prozent
+            getStateAsync(sID_Bat_Charge_Limit),        // Maximal mögliche Batterie Ladeleistung
+            getStateAsync(sID_Bat_Discharge_Limit),     // Maximal mögliche Batterie Entladeleistung
+            getStateAsync(sID_Batterie_SOC),            // Aktueller Batterie SOC
+            getStateAsync(sID_BattTraining)             // Batterie Training aktiv
+        ]).then(states => states.map(s => s?.val));
+    
+        Max_wrleistung_W = Max_wrleistung_W - 200;                                         // Maximale Wechselrichter Leistung (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
+        Einspeiselimit_kWh = ((InstalliertPeakLeistung/100)*Einspeiselimit_Pro-200)/1000   // Einspeiselimit (Abzüglich 200 W, um die Trägheit der Steuerung auszugleichen)
+
+        // EVCC-Integration prüfen
+        if (bEvcc) {
+            sID_Path_evcc_loadpoint1_charging = `evcc.${nEvcc_Instanz}.loadpoint.${nEvcc_WB1_Loadpoint}.status.charging`
+            sID_Path_evcc_loadpoint2_charging = `evcc.${nEvcc_Instanz}.loadpoint.${nEvcc_WB2_Loadpoint}.status.charging`
+            sID_Path_evcc_mode1 = `evcc.${nEvcc_Instanz}.loadpoint.${nEvcc_WB1_Loadpoint}.status.mode`
+            sID_Path_evcc_mode2 = `evcc.${nEvcc_Instanz}.loadpoint.${nEvcc_WB2_Loadpoint}.status.mode`
+            
+            const useID1 = existsObject(sID_Path_evcc_loadpoint1_charging);
+            const useID2 = existsObject(sID_Path_evcc_loadpoint2_charging);
+            const useID3 = existsObject(sID_Path_evcc_mode1);
+            const useID4 = existsObject(sID_Path_evcc_mode2);
+    
+            if (useID1 || useID2) {
+                if (useID1 && !useID2) {
+                bCharging_evcc = (await getStateAsync(sID_Path_evcc_loadpoint1_charging)).val;
+                } else if (!useID1 && useID2) {
+                    bCharging_evcc = (await getStateAsync(sID_Path_evcc_loadpoint2_charging)).val;
+                } else if (useID1 && useID2) {
+                    const [val1, val2] = await Promise.all([
+                        getStateAsync(sID_Path_evcc_loadpoint1_charging),
+                        getStateAsync(sID_Path_evcc_loadpoint2_charging)
+                    ]).then(states => states.map(s => s.val));
+                    bCharging_evcc = val1 || val2;
+                }
+            }
+            if (useID3 || useID4) {
+                if (useID3 && !useID4) {
+                sMode_evcc = (await getStateAsync(sID_Path_evcc_mode1)).val
+                } else if (!useID3 && useID4) {
+                    sMode_evcc = (await getStateAsync(sID_Path_evcc_mode2)).val
+                } else {
+                    const [val3, val4] = await Promise.all([
+                        getStateAsync(sID_Path_evcc_mode1),
+                        getStateAsync(sID_Path_evcc_mode2)
+                    ]).then(states => states.map(s => s.val));
+                    if (val3 == 'pv' && val4 == 'pv') {
+                        sMode_evcc = 'pv';
+                    }
+                }    
+            }
         
-    }
+        }
      
-    if ((await getStateAsync(sID_Manual_Charge_Energy)).val > 0){bManuelleLadungBatt = true}else{bManuelleLadungBatt = false}
-    // Wetterdaten beim Programmstart aktualisieren und Timer starten.
-    await Speichergroesse()                                             // aktuell verfügbare Batterie Speichergröße berechnen
-    if (bSolcast) {await SheduleSolcast(SolcastDachflaechen);}          // Wetterdaten Solcast abrufen wenn User Variable 30_AbfrageSolcast = true
-    await MEZ_Regelzeiten();                                            // RE,RB und Ladeende berechnen
-    await Notstromreserve();                                            // Eingestellte Notstromreserve berechnen
-    await SheduleProplanta();                                           // Wetterdaten Proplanta abrufen danach wird WetterprognoseAktualisieren() augerufen und ein Timer gestartet.
-    bStart = false
-    await registerEventHandlers();
-    LogProgrammablauf += '0,';
+        // Manuelle Batterie-Ladung prüfen
+        bManuelleLadungBatt = ((await getStateAsync(sID_Manual_Charge_Energy)).val > 0);
+    
+        // Wetterdaten beim Programmstart aktualisieren und Timer starten.
+        await Speichergroesse()                                             // aktuell verfügbare Batterie Speichergröße berechnen
+        if (bSolcast) {await SheduleSolcast(SolcastDachflaechen);}          // Wetterdaten Solcast abrufen wenn User Variable 30_AbfrageSolcast = true
+        await MEZ_Regelzeiten();                                            // RE,RB und Ladeende berechnen
+        await Notstromreserve();                                            // Eingestellte Notstromreserve berechnen
+        await SheduleProplanta();                                           // Wetterdaten Proplanta abrufen danach wird WetterprognoseAktualisieren() augerufen und ein Timer gestartet.
+        bStart = false
+        await registerEventHandlers();
+        LogProgrammablauf += '0,';
+        logChargeControl(`-==== ScriptStart() erfolgreich abgeschlossen ====-`);
+    } catch (err) {
+        logChargeControl(`❌ Fehler in ScriptStart(): ${err.message}`, 'error');
+    }
 }   
 
 // Alle nötigen Objekt ID's anlegen 
@@ -1984,6 +2008,8 @@ async function LadeNotstromSOC(){
 async function berechneReinenHausverbrauch(powerHome) {
     try {
         const currentTime = Date.now();
+        
+        // Wallbox, Heizstab und Wärmepumpe parallel auslesen
         const [
             wallboxLeistung1,
             wallboxLeistung2,
@@ -1999,36 +2025,49 @@ async function berechneReinenHausverbrauch(powerHome) {
         const wb2Power = wallboxLeistung2.val;
         const heizstabPower = leistungHeizstab.val;
         const waermepumpePower = leistungWaermepumpe.val;
-        // Berechne die reine Hausverbrauchsleistung
+        
+        // Berechne reinen Hausverbrauch
         let reinerHausverbrauch_W = round(powerHome - heizstabPower - waermepumpePower - wb1Power - wb2Power, 0);
         // Sicherstellen, dass der Hausverbrauch ohne Heizstab nicht negativ ist
         reinerHausverbrauch_W = Math.max(reinerHausverbrauch_W, 0);
-        count3 ++
-	    Summe3 = Summe3 + reinerHausverbrauch_W;
         
-        // Prüfen, ob seit der letzten Ausführung 60 Sekunden vergangen sind
+        
+        // Werte für Durchschnitt berechnencount3 ++
+	    count3++;
+        Summe3 += reinerHausverbrauch_W;
+        
+        // Prüfen, ob 60 Sekunden seit letzter Ausführung vergangen sind
         if (currentTime - lastExecutionTime >= 60000) {
             const Pmin = round(Summe3/count3,0)
             const now = new Date();
             const currentDay = now.toLocaleDateString('de-DE', { weekday: 'long' });
             const currentHour = now.getHours();
         
-            // Abend (21:00 Uhr bis 05:00 Uhr des nächsten Tages) oder Tag (05:00 Uhr bis 21:00 Uhr)
-            const timeInterval = (currentHour >= 21 || currentHour < 5) ? 'night' : 'day';
+            // Tag/Nacht-Intervall bestimmen
+            const timeInterval = (currentHour >= NIGHT_START || currentHour < DAY_START) ? 'night' : 'day';
         
-            // Wenn kein Array. Initialisiere es als leeres Array
-            if (!Array.isArray(homeConsumption[currentDay][timeInterval])) {homeConsumption[currentDay][timeInterval] = [];}
-            if (!Array.isArray(homeAverage[currentDay][timeInterval])) {homeAverage[currentDay][timeInterval] = [];}
-        
+            
+            // Arrays initialisieren, falls nötig
+            if (!homeConsumption[currentDay]) homeConsumption[currentDay] = {};
+            if (!homeAverage[currentDay]) homeAverage[currentDay] = {};
+            if (!Array.isArray(homeConsumption[currentDay][timeInterval])) homeConsumption[currentDay][timeInterval] = [];
+            if (!Array.isArray(homeAverage[currentDay][timeInterval])) homeAverage[currentDay][timeInterval] = [];
+
+            // Ältesten Wert entfernen, falls MAX_ENTRIES erreicht
             if (homeConsumption[currentDay][timeInterval].length >= MAX_ENTRIES) {
-            homeConsumption[currentDay][timeInterval].shift();// Entferne den ältesten Eintrag, wenn die maximale Größe erreicht ist
+                homeConsumption[currentDay][timeInterval].shift();
             }
+
             // Füge den neuen Wert hinzu
             homeConsumption[currentDay][timeInterval].push({
                 hour: currentHour,
                 value: Pmin
             });
-            count3= Summe3 = 0
+            
+            // Reset für nächsten Durchschnitt
+            count3 = 0;
+            Summe3 = 0;
+
             // Durchschnitt Hausverbrauch berechnen
             for (const [day, intervals] of Object.entries(homeConsumption)) {
                 for (const [interval, values] of Object.entries(intervals)) {
@@ -2036,7 +2075,8 @@ async function berechneReinenHausverbrauch(powerHome) {
                     homeAverage[day][interval] = values.length ? round(totalConsumption / values.length, 0) : 0;
                 }
             }
-            // Anzeige für VIS
+            
+            // VIS-Anzeige aktualisieren
             await setStateAsync(sID_EigenverbrauchDurchschnitt,`${homeAverage[currentDay]['day']} W / ${homeAverage[currentDay]['night']} W`)
             await Promise.all([
                 setStateAsync(sID_arrayHausverbrauchDurchschnitt, JSON.stringify(homeAverage)),
@@ -2044,11 +2084,9 @@ async function berechneReinenHausverbrauch(powerHome) {
             ]);
             lastExecutionTime = currentTime;
         }   
-        // Wert in den Buffer einfügen
+        // Puffer für gleitenden Durchschnitt aktualisieren
         hausverbrauchBuffer.push(reinerHausverbrauch_W);
-        
-        // Buffergröße begrenzen
-        if (hausverbrauchBuffer.length > BUFFER_SIZE) {
+        if (hausverbrauchBuffer.length > HAUSVERBRAUCH_BUFFER_SIZE) {
             hausverbrauchBuffer.shift(); // Ältesten Wert entfernen
         }
 
@@ -2059,9 +2097,7 @@ async function berechneReinenHausverbrauch(powerHome) {
         reinerHausverbrauch_W = (reinerHausverbrauch_W == 0) ? averageReinerHausverbrauch_W : reinerHausverbrauch_W;
         
         // Speichere das Ergebnis
-        await Promise.all([
-            setStateAsync(sID_HausverbrauchBereinigt_W, reinerHausverbrauch_W)
-        ]);
+        await setStateAsync(sID_HausverbrauchBereinigt_W, reinerHausverbrauch_W);
         
     } catch (error) {
         logChargeControl(`Fehler bei der Berechnung des reinen Hausverbrauchs: ${error.message}`,'error');
@@ -2164,14 +2200,23 @@ async function calculateBatteryRange(currentConsumptionW) {
     // Berechnung der verfügbaren kWh unter Berücksichtigung der Notstromreserve und des Wirkungsgrads
     let verfuegbareKWh = (batterieSocKWh - notstromKWh) * (Systemwirkungsgrad_Pro / 100);
     const battkWh = verfuegbareKWh;
-    // Verbrauchswerte für die Zeitintervalle night und day oder aktuellen Verbrauch wenn nicht vorhanden
+    
+    // Gibt den primären Wert zurück, sofern er gültig ist. Als "ungültig" gelten: null, undefined, false, 0 und NaN.
+    // Wenn primär ungültig ist, wird der Fallback genommen. Ist auch der Fallback ungültig, wird 0 zurückgegeben.
+    function getPreferredValue(primary, fallback) {
+        const isInvalid = v => v === null || v === undefined || v === false || v === 0 || Number.isNaN(v);
+        if (!isInvalid(primary)) return primary;
+        if (!isInvalid(fallback)) return fallback;
+        return 0;
+    }
     const consumption = {
-        currentDayNightW: homeAverage[currentDay]?.['night'] ?? currentConsumptionW ?? 0,
-        nextDayDayW: homeAverage[nextDayString]?.['day'] ?? currentConsumptionW ?? 0,
-        nextDayNightW: homeAverage[nextDayString]?.['night'] ?? currentConsumptionW ?? 0,
-        currentDayDayW: homeAverage[currentDay]?.['day'] ?? currentConsumptionW ?? 0,
-        lastDayNightW: homeAverage[lastDayString]?.['night'] ?? currentConsumptionW ?? 0
+        currentDayNightW:  getPreferredValue(homeAverage[currentDay]?.['night'], currentConsumptionW),
+        nextDayDayW:       getPreferredValue(homeAverage[nextDayString]?.['day'], currentConsumptionW),
+        nextDayNightW:     getPreferredValue(homeAverage[nextDayString]?.['night'], currentConsumptionW),
+        currentDayDayW:    getPreferredValue(homeAverage[currentDay]?.['day'], currentConsumptionW),
+        lastDayNightW:     getPreferredValue(homeAverage[lastDayString]?.['night'], currentConsumptionW)
     };
+    
     // Prüfen, ob einer der Werte 0 ist und die Funktion beenden
     if (Object.values(consumption).some(value => value === 0)) {
         console.error('Verbrauchswert ist 0. Die Reichweite kann nicht berechnet werden.');
@@ -2429,7 +2474,71 @@ function logChargeControl(message, level) {
 async function registerEventHandlers() {
     if (bStart){return};
     
+    // Initialisierung für Hausverbrauch-Mittelwert
+    if (typeof hausverbrauchBuffer === 'undefined') hausverbrauchBuffer = [];
+    let letzterDurchschnitt = 0;
+    let letzterHausverbrauchW = null;
     
+    // Gemeinsame Funktion für Listener + Minutentimer
+    async function updateHausverbrauch(power, force = false) {
+        try {
+            // Berechne "bereinigten" Hausverbrauch
+            await berechneReinenHausverbrauch(power);
+
+            // Prüfen, ob Wert aufgenommen werden soll
+            if (!force && power === letzterHausverbrauchW) return; // keine Änderung → nichts tun
+            letzterHausverbrauchW = power;
+
+            // In Puffer aufnehmen
+            hausverbrauchBuffer.push(power);
+            if (hausverbrauchBuffer.length > BUFFER_SIZE) hausverbrauchBuffer.shift();
+
+            // Durchschnitt alle 60 Sekunden berechnen
+            if (Date.now() - letzterDurchschnitt >= 60000) {
+                await berechneDurchschnittHausverbrauch();
+                letzterDurchschnitt = Date.now();
+            }
+        } catch (err) {
+            logChargeControl(`Fehler updateHausverbrauch(): ${err.message}`, 'error');
+        }
+    }
+
+    // Durchschnittsberechnung & Speicherung in homeConsumption/homeAverage
+    async function berechneDurchschnittHausverbrauch() {
+        try {
+            if (hausverbrauchBuffer.length === 0) return;
+
+            const avgPowerW = Math.round(hausverbrauchBuffer.reduce((a,v) => a+v,0)/hausverbrauchBuffer.length);
+            hausverbrauchBuffer.length = 0;
+
+            const now = new Date();
+            const currentDay = now.toLocaleDateString('de-DE', { weekday: 'long' });
+            const hour = now.getHours();
+            const interval = (hour >= NIGHT_START || hour < DAY_START) ? 'night' : 'day';
+
+            if (!homeConsumption[currentDay]) homeConsumption[currentDay] = { day: [], night: [] };
+            if (!homeAverage[currentDay]) homeAverage[currentDay] = { day: 0, night: 0 };
+
+            const arr = homeConsumption[currentDay][interval];
+            if (arr.length >= MAX_ENTRIES) arr.shift();
+            arr.push({ hour, value: avgPowerW });
+
+            const total = arr.reduce((a,e) => a+e.value,0);
+            homeAverage[currentDay][interval] = arr.length ? Math.round(total/arr.length) : 0;
+
+            await Promise.all([
+                setStateAsync(sID_arrayHausverbrauch, JSON.stringify(homeConsumption)),
+                setStateAsync(sID_arrayHausverbrauchDurchschnitt, JSON.stringify(homeAverage)),
+                setStateAsync(sID_HausverbrauchBereinigt_W, avgPowerW)
+            ]);
+
+            if (bLogAusgabe) logChargeControl(`📊 Durchschnitt Hausverbrauch aktualisiert: ${avgPowerW} W`, 'info');
+
+        } catch (err) {
+            logChargeControl(`Fehler berechneDurchschnittHausverbrauch(): ${err.message}`, 'error');
+        }
+    }
+
     // Zaehler LM0 PV-Leistung E3DC
     listeners[0] = on(sID_PvLeistung_E3DC_W,async function (obj) {
         let Leistung = (await getStateAsync(obj.id)).val;
@@ -2457,11 +2566,19 @@ async function registerEventHandlers() {
 	    Summe2 = Summe2 + obj.state.val;
     });
 
-    // Triggern wenn sich Hausverbrauch Leistung ändert
-    listeners[3] = on(sID_Power_Home_W,async function(obj) {
-        await berechneReinenHausverbrauch(Math.abs(obj.state.val));
+    // Listener wenn sich Hausverbrauch Leistung ändert
+    listeners[3] = on(sID_Power_Home_W, async function(obj) {
+        const val = Math.abs(obj.state.val);
+        await updateHausverbrauch(val);
     });
     
+    // Minutentimer für konstante Werte bei unverändertem Hausverbrauch
+    schedule("*/1 * * * *", async function() {
+        const state = await getStateAsync(sID_Power_Home_W);
+        const val = Math.abs(state.val);
+        await updateHausverbrauch(val, true); // force=true → erzwingt Aufnahme
+    });
+
     // Triggern wenn sich Einstellung Notstrom E3DC ändert
     listeners[4] = on(sID_PARAM_EP_RESERVE_W,async function(obj) {
         await Notstromreserve();
@@ -2654,7 +2771,7 @@ async function registerEventHandlers() {
     listeners[18] = on({id: sID_Batterie_SOC, change: "ne"}, async function (obj) {
         let BatSoc = obj.state.val;   
         await setStateAsync(sID_BatSoc_kWh,Math.round((Speichergroesse_kWh*(Systemwirkungsgrad_Pro/100) * BatSoc))/100,true);
-        await calculateBatteryRange(0);
+        //await calculateBatteryRange(0);
     });
 
     // Triggern wenn sich am Status Batterie Training was ändert
@@ -2662,12 +2779,12 @@ async function registerEventHandlers() {
         bBattTraining = obj.state.val;   
         logChargeControl(` -==== ⚠️ Batterie Training ist aktiv ⚠️ ====- `,"warn");
     });
-
+    
     // Batterie Reichweite beim entladen der Batterie berechnen
     listeners[20] = on({id: sID_Power_Bat_W, change: "ne",valLt: 0}, async function (obj) {
         await calculateBatteryRange(obj.state.val);
     });
-
+    
     // Speichert zum Zeitpunkt eines Firmware-Updates das Datum des Updates und die alte Versionsnummer.
     listeners[21] = on({id: sID_FirmwareVersion,change: "ne"}, async function(obj){
         await setStateAsync(sID_FirmwareDate, formatDate(new Date(), "DD.MM.YYYY hh:mm:ss"));
@@ -2718,7 +2835,7 @@ async function registerEventHandlers() {
             sID_Path_evcc_loadpoint1_charging,
             sID_Path_evcc_loadpoint2_charging,
             sID_Path_evcc_mode1,
-            sID_Path_evcc_mode2
+            sID_Path_evcc_mode2,
         ];
 
         const arrayID_evcc = (
@@ -2770,15 +2887,11 @@ async function registerEventHandlers() {
 
 }
 
-// Jede Minute Hausverbrauch erfassen.
-schedule("*/1 * * * *", async function () {
-    const state = await getStateAsync(sID_Power_Home_W);
-    await berechneReinenHausverbrauch(Math.abs(state.val));
-});
-
 schedule('*/3 * * * * *', async function() {
     // Vor Regelung Skript Startdurchlauf erst abwarten  
     //log(`bCharging_evcc = ${bCharging_evcc} sMode_evcc = ${sMode_evcc}`)
+    //const state = await getStateAsync(sID_Power_Bat_W);
+    //await calculateBatteryRange(state.val);
     if((!bStart && bAutomatikRegelung && !bManuelleLadungBatt && !bBattTraining && (!bCharging_evcc || sMode_evcc !== 'now')) || (!bStart && !bManuelleLadungBatt && !bBattTraining && bTibberLaden)){await Ladesteuerung();}
 });
 
