@@ -76,7 +76,8 @@ verbunden sein.
 <a name="log"></a>
 
 <h3>Changelog Charge-Control</h3>
-### Version: 1.6.6
+
+### Version: 1.6.6  
 - Initialisierung der Arrays korrigiert
 - Speicherung der Hausverbrauchs-Werte ← optimiert
 - Fallback-Logik für Durchschnittswerte Hausverbrauch korrigiert
