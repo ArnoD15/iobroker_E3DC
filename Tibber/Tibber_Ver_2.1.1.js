@@ -16,7 +16,7 @@ const hystereseKapazitaet = 2;                                                  
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
 //------------------------------------------------------------------------------------------------------
 
-const scriptVersion = 'Version 2.1.0'
+const scriptVersion = 'Version 2.1.1'
 log(`-==== Tibber Skript ${scriptVersion} gestartet ====-`);
 
 //******************************************************************************************************
@@ -47,7 +47,8 @@ const sID_Notrom_Status =`${instanzE3DC_RSCP}.EMS.EMERGENCY_POWER_STATUS`;      
     
 // IDs des Script Tibber
 const sID_aktuellerEigenverbrauch = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.aktuellerEigenverbrauch`;        // Anzeige in VIS durchschnittlicher Eigenverbrauch
-const sID_status = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.status`;                                          // Anzeige in VIS Status
+const sID_statusLaden = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.status`;                                     // Anzeige in VIS Status Laden
+const sID_statusEntladesperre = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.statusEntladesperre`;                // Anzeige in VIS Status Entladesperre
 const sID_ladezeitBatterie = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.ladezeitBatterie`;                      // Anzeige in VIS Prognose Ladezeit Batterie bei aktuellen Einstellungen
 const sID_timerAktiv = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.timerAktiv`;                                  // Anzeige in VIS Status Timer um Batterie zu laden
 const sID_StrompreisBatterie = `${instanz}.${PfadEbene1}.${PfadEbene2[0]}.strompreisBatterie`                   // Anzeige in VIS aktueller Strompreis Batterie
@@ -93,7 +94,7 @@ let hoherSchwellwert = 0, niedrigerSchwellwert = 0, peakSchwellwert = 0, systemw
 let strompreisBatterie, bruttoPreisBatterie, SolcastDachflaechen,SolcastAPI_key;
 
 let bNachladenPeak = false, bLock = false, bSchneeBedeckt = false, bAutPreisanpassung = false, bNotstromAktiv = false, bBatteriepreisAktiv = false, bStart = true;                                                                 
-let bBattLaden = false, bBattSperre = false, bBattSperrePrio = false, bReichweiteSunrise = false, bScriptAktiv = true, bSolcast = false, statusText = ``;
+let bBattLaden = false, bBattSperre = false, bBattSperrePrio = false, bReichweiteSunrise = false, bScriptAktiv = true, bSolcast = false, statusLadenText = ``,statusEntladesperreText = ``;
 let timerIds = [], timerTarget = [], timerObjektID = [],timerState =[], batterieLadedaten = [],datenHeute =[], datenMorgen = [], datenTibberLink48h = [], Resource_Id_Dach=[];
 
 
@@ -105,6 +106,7 @@ async function createState(){
     const createStatePromises = [
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.aktuellerEigenverbrauch`, { 'def': '', 'name': 'Anzeige in VIS durchschnittlicher Eigenverbrauch', 'type': 'string' }),
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.status`, { 'def': '', 'name': 'Anzeige in VIS Status', 'type': 'string' }),
+        createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.statusEntladesperre`, { 'def': '', 'name': 'Anzeige in VIS Status Entladesperre', 'type': 'string' }),
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.ladezeitBatterie`, { 'def': 0, 'name': 'Anzeige in VIS Prognose Ladezeit Batterie bei aktuellen Einstellungen', 'type': 'number', 'unit': 'h' }),
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.timerAktiv`, { 'def': false, 'name': 'Anzeige in VIS Status Timer um Batterie zu laden', 'type': 'boolean' }),
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[0]}.diagrammAktiv`, { 'def': false, 'name': 'Anzeige in VIS Diagramm Ladezeiten', 'type': 'boolean' }),
@@ -191,9 +193,9 @@ async function ScriptStart()
     
     datenTibberLink48h = [...datenHeute, ...datenMorgen];
     
-    batterieLadedaten = JSON.parse(batterieLadedaten)
-    batterieKapazitaet_kWh = batterieKapazitaet_kWh * (entladetiefe_Pro/100);
-    batterieKapazitaet_kWh = round(((batterieKapazitaet_kWh/100)*aSOC_Bat_Pro),0);
+    batterieLadedaten = safeJsonParse(batterieLadedaten, []);
+    batterieKapazitaet_kWh = (batterieKapazitaet_kWh * (entladetiefe_Pro/100)) * (aSOC_Bat_Pro/100);
+	batterieKapazitaet_kWh = round(batterieKapazitaet_kWh, 2);
     aktuellerPreisTibber = await getCurrentPrice()
     effektivPreisTibber = parseFloat((aktuellerPreisTibber * (1 / (systemwirkungsgrad / 100))).toFixed(4));
     
@@ -203,11 +205,23 @@ async function ScriptStart()
     await berechneBattPrice();        
     // Schwellwert setzen
     if(bAutPreisanpassung){await autoPreisanpassung(minStrompreis_48h)}
+    await pruefeAbweichung();
     // Tibber-Steuerung starten
     await tibberSteuerungHauskraftwerk()
     bStart = false;
     
 } 
+
+//  State-Typen können variieren (Adapter-/Script-Einstellungen). Defensive Parsing verhindert Laufzeitfehler.
+function safeJsonParse(val, fallback) {
+  if (val == null) return fallback;
+  if (typeof val === 'string') {
+    try { return JSON.parse(val); } catch { return fallback; }
+  }
+  if (typeof val === 'object') return val;
+  return fallback;
+}
+
 
 // Alle User Eingaben prüfen ob Werte eingetragen wurden und Werte zuweisen
 async function CheckState() {
@@ -230,9 +244,22 @@ async function CheckState() {
         if (value === undefined || value === null) {
             log(`Die Objekt ID = ${idUSER_ANPASSUNGEN}.${obj.id} ${obj.beschreibung} `, 'error');
         } else {
-            eval(`${obj.varName} = value`);
-            if (obj.min !== undefined && (value < obj.min || value > obj.max)) {
-                console.error(obj.errorMsg);
+            const assign = {
+				maxLadeleistungUser_W: v => maxLadeleistungUser_W = v,
+				hoherSchwellwert: v => hoherSchwellwert = v,
+				niedrigerSchwellwert: v => niedrigerSchwellwert = v,
+				bSchneeBedeckt: v => bSchneeBedeckt = v,
+				bAutPreisanpassung: v => bAutPreisanpassung = v,
+				maxBatterieSoC: v => maxBatterieSoC = v,
+				systemwirkungsgrad: v => systemwirkungsgrad = v,
+				bBatteriepreisAktiv: v => bBatteriepreisAktiv = v,
+				stromgestehungskosten: v => stromgestehungskosten = v,
+				bScriptAktiv: v => bScriptAktiv = v,
+			};
+			assign[obj.varName]?.(value);
+            
+			if (obj.min !== undefined && (value < obj.min || value > obj.max)) {
+                log(obj.errorMsg, 'error');
             }
         }
     }
@@ -250,14 +277,41 @@ async function CheckState() {
     }
 }
 
+// Setzt eine Entladesperre in Segmenten (Cap), statt am Stück.
+// startTime: Date, endTime: Date, capMin: number (z. B. 90)
+async function setEntladesperreMitCap(startTime, endTime, capMin) {
+    try {
+        const capMs = capMin * 60 * 1000;
+        let segStart = new Date(startTime);
+        const end = new Date(endTime);
+
+        // Sicherheit: existierende Entladesperren-Timer löschen, damit wir sauber segmentieren
+        await loescheAlleTimer('Entladesperre');
+        
+        while (segStart < end) {
+            const segEnd = new Date(Math.min(segStart.getTime() + capMs, end.getTime()));
+            // Segment setzen
+            await setStateAtSpecificTime(segStart, sID_BatterieEntladesperre, true);
+            await setStateAtSpecificTime(segEnd, sID_BatterieEntladesperre, false);
+            let message = `Entladesperre wird von ${segStart} bis ${segEnd} gesetzt)`
+            statusEntladesperreText != message ? await setStateAsync(sID_statusEntladesperre,message): null;
+            // nächstes Segment beginnt direkt am Ende des aktuellen
+            segStart = new Date(segEnd.getTime());
+        }
+    } catch (e) {
+        log(`Fehler in setEntladesperreMitCap: ${e.message}`, 'error');
+    }
+}
+
 // Ablaufsteuerung zum regeln der Batterieladung bei günstigen Tibber Preise
 async function tibberSteuerungHauskraftwerk() {
     try {    
         if (!bScriptAktiv){return;}
         LogProgrammablauf += '1,';
-        [bBattLaden,statusText,bBattSperre,peakSchwellwert] = await Promise.all([
+        [bBattLaden,statusLadenText,statusEntladesperreText,bBattSperre,peakSchwellwert] = await Promise.all([
             getStateAsync(sID_BatterieLaden),
-            getStateAsync(sID_status),
+            getStateAsync(sID_statusLaden),
+            getStateAsync(sID_statusEntladesperre),
             getStateAsync(sID_BatterieEntladesperre),
             getStateAsync(sID_peakSchwellwert_VIS)
         ]).then(states => states.map(state => state.val));
@@ -297,6 +351,16 @@ async function tibberSteuerungHauskraftwerk() {
         aktuellerPreisTibber = await getCurrentPrice();
         if(bBatteriepreisAktiv){preisBatterie = bruttoPreisBatterie }else{preisBatterie = strompreisBatterie}
         
+		// Früh-Löse-Regel: Wenn Sperre aktiv (Prio) und Preis wieder <= hoherSchwellwert, Sperre aufheben
+		if (bBattSperrePrio && aktuellerPreisTibber <= hoherSchwellwert) {
+			await loescheAlleTimer('Entladesperre');
+			if (getState(sID_BatterieEntladesperre).val === true) {
+				await setStateAsync(sID_BatterieEntladesperre, false);
+                await setStateAsync(sID_statusEntladesperre, ``).catch(()=>{})
+            }
+			bBattSperrePrio = false;
+		}
+		
         // Funktion prüfe Freigabe laden vom E-Auto aufrufen
         await EAutoLaden(naechsteNiedrigphase);
         
@@ -307,9 +371,13 @@ async function tibberSteuerungHauskraftwerk() {
             await loescheAlleTimer('Entladesperre');
             bBattSperrePrio = false;
             bBattLaden ? await setStateAsync(sID_BatterieLaden,false): null;    
-            bBattSperre ? await setStateAsync(sID_BatterieEntladesperre,false): null;    
+            if (bBattSperre) {
+                await setStateAsync(sID_BatterieEntladesperre, false);
+                await setStateAsync(sID_statusEntladesperre, ``).catch(()=>{});
+            }    
+            
             let message = `PV Prognose hoch,es wird bei Sonnenaufgang mit PV Leistung geladen (aktive Phase: ${aktivePhase.type})`;
-            statusText != message ? await setStateAsync(sID_status,message): null;
+            statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
             await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
             LogProgrammablauf = '';
             return;
@@ -318,17 +386,22 @@ async function tibberSteuerungHauskraftwerk() {
         // Entladen der Batterie sperren wenn Batteriepreis höher als Tibberpreis und sperre nicht über Timer gesetzt wurde
         if (!bBattSperrePrio) {
             if (preisBatterie > aktuellerPreisTibber) {
-                if(!bBattSperre){await setStateAsync(sID_BatterieEntladesperre, true);}
+                if(!bBattSperre){
+                    await setStateAsync(sID_BatterieEntladesperre, true);
+                    let message = `Batteriepreis (${preisBatterie}€) ist höher als Tibber Preis (${aktuellerPreisTibber}€) Entladen wurde gesperrt)`
+                    statusEntladesperreText != message ? await setStateAsync(sID_statusEntladesperre,message): null;
+                }
             } else if (bBattSperre) {
                 await setStateAsync(sID_BatterieEntladesperre, false);
+                await setStateAsync(sID_statusEntladesperre, ``).catch(()=>{})
             }
         }
-
+        
         // Wenn max SOC erreicht wurde Funktion beenden -3% um pendeln zu verhindern
         if (aktuelleBatterieSoC_Pro >= maxBatterieSoC - 3) {
             LogProgrammablauf += '3,';
             let message = `max SOC erreicht. Laden beendet (aktive Phase: ${aktivePhase.type})`;
-            statusText != message ? await setStateAsync(sID_status,message): null;
+            statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
             await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
             LogProgrammablauf = '';
             return;
@@ -370,7 +443,7 @@ async function tibberSteuerungHauskraftwerk() {
                         const startTime = dateBesteStartLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                         const endeTime = bisTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                         let message = `Nachladen während Peakphase von ${startTime} bis ${endeTime} (aktive Phase: ${aktivePhase.type})`
-                        statusText != message ? await setStateAsync(sID_status,message): null;
+                        statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
                         await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
                         LogProgrammablauf = '';
                         return;
@@ -380,16 +453,16 @@ async function tibberSteuerungHauskraftwerk() {
                         bNachladenPeak = true; // weiteres Nachladen in der Peakphase verhindern.
                         const vonTime = new Date()
                         const bisTime = new Date(ergebnisPreisvergleich.peakZeit)
-                        await loescheAlleTimer('Entladesperre')
-                        await setStateAtSpecificTime(vonTime, sID_BatterieEntladesperre, true);
-                        await setStateAtSpecificTime(bisTime, sID_BatterieEntladesperre, false);
-                        // Nach der Preissteigerung Merker zurücksetzen.
+                        
+						await setEntladesperreMitCap(vonTime, bisTime, 90);
+                        
+						// Nach der Preissteigerung Merker zurücksetzen.
                         const dauerEndePreissteigerung_ms = dauerEndePreissteigerung_h * 1000 * 60 * 60;
                         setTimeout(() => {bNachladenPeak = false;}, dauerEndePreissteigerung_ms);
                         const startTime = vonTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                         const endeTime = bisTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                         let message = `Batteriesperre während Peakphase von ${startTime} bis ${endeTime} (aktive Phase: ${aktivePhase.type})`
-                        statusText != message ? await setStateAsync(sID_status,message): null;
+                        statusEntladesperreText != message ? await setStateAsync(sID_statusEntladesperre,message): null;
                         await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
                         LogProgrammablauf = '';
                         return;
@@ -401,7 +474,7 @@ async function tibberSteuerungHauskraftwerk() {
                 await loescheAlleTimer('Laden');
                 bBattLaden ? await setStateAsync(sID_BatterieLaden,false): null;
                 let message = `Aktuell Strompreis zu hoch, es wird nicht geladen (aktive Phase: ${aktivePhase.type})`
-                statusText != message ? await setStateAsync(sID_status,message): null;
+                statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
             }
             await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
             LogProgrammablauf = '';
@@ -432,7 +505,7 @@ async function tibberSteuerungHauskraftwerk() {
                     const hours = dateBesteStartLade.zeit.getHours().toString().padStart(2, '0');
                     const minutes = dateBesteStartLade.zeit.getMinutes().toString().padStart(2, '0');
                     let message = `warte auf Niedrigpreisphase. Start laden ${hours}:${minutes} Uhr (aktive Phase: ${aktivePhase.type})`
-                    statusText != message ? await setStateAsync(sID_status,message): null;
+                    statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
                     await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
                     LogProgrammablauf = '';
                     return;
@@ -455,7 +528,7 @@ async function tibberSteuerungHauskraftwerk() {
                     const startTime = dateBesteStartLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                     const endeTime = dateBesteEndeLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                     let message = `Nächste Lademöglichkeit von ${startTime} bis ${endeTime} (aktive Phase: ${aktivePhase.type})`
-                    statusText != message ? await setStateAsync(sID_status,message): null;
+                    statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
                     await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
                     LogProgrammablauf = '';
                     return;
@@ -480,13 +553,13 @@ async function tibberSteuerungHauskraftwerk() {
                         vonTime.setHours(vonTime.getHours() + zeitBisSperre_h);
                         
                         const bisTime = new Date(naechstePhase0.start)
-                        await loescheAlleTimer('Entladesperre')
-                        await setStateAtSpecificTime(vonTime, sID_BatterieEntladesperre, true);
-                        await setStateAtSpecificTime(bisTime, sID_BatterieEntladesperre, false);
-                        const startTime = vonTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
+                        
+						await setEntladesperreMitCap(vonTime, bisTime, 90);
+                        
+						const startTime = vonTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                         const endeTime = bisTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                         let message = `Batterie sperre von ${startTime} bis ${endeTime} um Peakphase zu überbrücken (aktive Phase: ${aktivePhase.type})`
-                        statusText != message ? await setStateAsync(sID_status,message): null;
+                        statusEntladesperreText != message ? await setStateAsync(sID_statusEntladesperre,message): null;
                         await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
                         LogProgrammablauf = '';
                         return;
@@ -509,12 +582,11 @@ async function tibberSteuerungHauskraftwerk() {
                                 await setStateAtSpecificTime(new Date(start.zeit), sID_BatterieLaden, true);
                                 await setStateAtSpecificTime(new Date(endeZeit), sID_BatterieLaden, false);
                                 // Batterie sperren ab Leidezeitpunkt bis zum Start der Peak Phase
-                                await setStateAtSpecificTime(new Date(start.zeit), sID_BatterieEntladesperre, true);
-                                await setStateAtSpecificTime(new Date(naechstePhase0.start), sID_BatterieEntladesperre, false);
+                                await setEntladesperreMitCap(new Date(start.zeit), new Date(naechstePhase0.start), 90);
                                 const startTime = start.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                                 const endeTime = endeZeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                                 let message = `Batterie laden von ${startTime} bis ${endeTime} um Peakphase zu überbrücken (aktive Phase: ${aktivePhase.type})`
-                                statusText != message ? await setStateAsync(sID_status,message): null;
+                                statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
                                 await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
                                 LogProgrammablauf = '';
                                 return;
@@ -526,12 +598,15 @@ async function tibberSteuerungHauskraftwerk() {
                     LogProgrammablauf += '11/6,';
                     await loescheAlleTimer('Laden');
                     let message = `Batterie SOC reicht um nächste Peak Phase zu überbrücken (aktive Phase: ${aktivePhase.type})`
-                    statusText != message ? await setStateAsync(sID_status,message): null;
+                    statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
                     bBattLaden ? await setStateAsync(sID_BatterieLaden,false): null;
                     if(preisBatterie < aktuellerPreisTibber){
                         await loescheAlleTimer('Entladesperre')
                         bBattSperrePrio = false;
-                        bBattSperre ? await setStateAsync(sID_BatterieEntladesperre,false):null;
+                        if (bBattSperre) {
+                            await setStateAsync(sID_BatterieEntladesperre, false);
+                            await setStateAsync(sID_statusEntladesperre, ``).catch(()=>{});
+                        }    
                     }
                     await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
                     LogProgrammablauf = '';
@@ -570,7 +645,7 @@ async function tibberSteuerungHauskraftwerk() {
                     const startTime = dateBesteStartLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                     const endeTime = dateBesteEndeLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                     let message = `warte auf Niedrigpreisphase von ${startTime} bis ${endeTime}  (aktive Phase: ${aktivePhase.type})`
-                    statusText != message ? await setStateAsync(sID_status,message): null;
+                    statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
                     await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
                     LogProgrammablauf = '';
                     return;
@@ -599,7 +674,7 @@ async function tibberSteuerungHauskraftwerk() {
                 const startTime = dateBesteReichweiteLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                 const endeTime = dateReichweiteEndeLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                 let message = `Laden von ${startTime} bis ${endeTime} (aktive Phase: ${aktivePhase.type})`    
-                statusText != message ? await setStateAsync(sID_status,message): null;
+                statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
                 await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
                 LogProgrammablauf = '';
                 return;
@@ -622,7 +697,7 @@ async function tibberSteuerungHauskraftwerk() {
                 const startTime = dateBestePhaseStartLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                 const endeTime = dateBesteEndeLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                 let message = `Laden von ${startTime} bis ${endeTime} (aktive Phase: ${aktivePhase.type})`    
-                statusText != message ? await setStateAsync(sID_status,message): null;
+                statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
                 await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
                 LogProgrammablauf = '';
                 return;
@@ -642,7 +717,7 @@ async function tibberSteuerungHauskraftwerk() {
                     const startTime = dateBesteReichweiteLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                     const endeTime = dateBesteEndeLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                     let message = `Beste Ladezeit abgelaufen. Nachladen von ${startTime} bis ${endeTime} (aktive Phase: ${aktivePhase.type})` 
-                    statusText != message ? await setStateAsync(sID_status,message): null;
+                    statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
                     await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
                     LogProgrammablauf = '';
                     return;
@@ -653,7 +728,7 @@ async function tibberSteuerungHauskraftwerk() {
                 await setStateAtSpecificTime(bisTime, sID_BatterieLaden, false);
                 const endeTimePhase = bisTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
                 let message = `Beste Ladezeit abgelaufen. Nachladen bis max. ${endeTimePhase} (aktive Phase: ${aktivePhase.type})`
-                statusText != message ? await setStateAsync(sID_status,message): null;
+                statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
                 await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
                 LogProgrammablauf = '';
                 return;
@@ -684,7 +759,7 @@ async function tibberSteuerungHauskraftwerk() {
         }
         LogProgrammablauf += '14,';
         let message = `Nicht laden (aktive Phase: ${aktivePhase.type})`
-        statusText != message ? await setStateAsync(sID_status,message): null;
+        statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
         await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
         LogProgrammablauf = '';
         return;
@@ -774,7 +849,7 @@ async function pruefePVLeistung(reichweiteStunden) {
             log(`function pruefePVLeistung(): reichweiteStunden ist keine gültige Zahl`, 'error');
             return { state: false };
         }
-
+        
         // Prüfen, ob PV-Module schneebedeckt sind
         if (bSchneeBedeckt) {
             LogProgrammablauf += '18/1,';
@@ -790,14 +865,31 @@ async function pruefePVLeistung(reichweiteStunden) {
         const sunriseMorgen = getAstroDate("sunrise", morgen).getTime();
 
         // PV-Prognose
-        let arrayPrognoseAuto_kWh = JSON.parse((await getStateAsync(sID_PrognoseAuto_kWh)).val);
+        let arrayPrognoseAuto_kWh = safeJsonParse((await getStateAsync(sID_PrognoseAuto_kWh)).val, []);
                 
-        // Achtung: Array-Index korrigiert (getDate() - 1)
-        const heuteIndex = jetzt.getDate() - 1;
-        const morgenIndex = morgen.getDate() - 1;
-        const pvHeute = round(parseFloat(arrayPrognoseAuto_kWh[heuteIndex] || 0), 1);
-        const pvMorgen = round(parseFloat(arrayPrognoseAuto_kWh[morgenIndex] || 0), 1);
+        // 1..31 -> Array[1..31] genutzt, auch am Monatsübergang = 1
+        const heuteIndex = jetzt.getDate();
+        const morgenIndex = morgen.getDate();
+        
+		function numberOrZero(v) {
+			const n = typeof v === 'string' ? parseFloat(v) : v;
+			return (typeof n === 'number' && !isNaN(n)) ? n : 0;
+		}
 
+		let pvHeute = 0, pvMorgen = 0;
+
+		if (Array.isArray(arrayPrognoseAuto_kWh) && arrayPrognoseAuto_kWh.length >= 31) {
+			pvHeute = numberOrZero(arrayPrognoseAuto_kWh[heuteIndex] ?? 0);
+			pvMorgen = numberOrZero(arrayPrognoseAuto_kWh[morgenIndex] ?? 0);
+		} else {
+			log('PV-Prognose: Monatsarray fehlt oder hat <31 Einträge – setze pvHeute/pvMorgen = 0', 'warn');
+			pvHeute = 0;
+			pvMorgen = 0;
+		}
+
+		pvHeute = round(pvHeute, 1);
+		pvMorgen = round(pvMorgen, 1);
+		
         // --- PV-Prognose-Korrektur auf Basis der Ist-Abweichung (in kWh) berechnet in der Funktion pruefeAbweichung() ---
         let korrekturFaktor = pvAbweichung_kWh || 0;
         if(korrekturFaktor > 0 ){korrekturFaktor = 0}
@@ -810,7 +902,6 @@ async function pruefePVLeistung(reichweiteStunden) {
         const ladeWirkungsgrad = systemwirkungsgrad/100;
         let benoetigteKapPrognoseEff = benoetigteKapPrognose / ladeWirkungsgrad;
         let benoetigteKapAktuell = round((100 - aktuelleBatterieSoC_Pro) / 100 * batterieKapazitaet_kWh, 0);
-
         // Hysterese anwenden
         if (Math.abs(benoetigteKapPrognoseEff - benoetigteKapPrognose_kWh_alt) < hystereseKapazitaet) {
             benoetigteKapPrognoseEff = benoetigteKapPrognose_kWh_alt;
@@ -889,7 +980,7 @@ async function prognoseBatterieSOC(entladezeitStunden) {
         entladezeitStunden = round(+entladezeitStunden, 0) || 0;
 
         // Leistungsdaten vom aktuellen Tag abrufen
-        const hausverbrauch = JSON.parse((await getStateAsync(sID_arrayHausverbrauch)).val);
+        const hausverbrauch = safeJsonParse((await getStateAsync(sID_arrayHausverbrauch)).val, {});
 
         // Aktuellen Wochentag bestimmen
         const now = new Date();
@@ -937,7 +1028,7 @@ async function berechneLadezeitBatterie(dauer_h = null, startSOC = null) {
             throw new Error("Es darf entweder 'dauer_h' oder 'startSOC' gesetzt sein, nicht beide gleichzeitig.");
         }
 
-        const hausverbrauch = JSON.parse((await getStateAsync(sID_arrayHausverbrauch)).val);
+        const hausverbrauch = safeJsonParse((await getStateAsync(sID_arrayHausverbrauch)).val, {});
         maxLadeleistungE3DC_W = (await getStateAsync(sID_Bat_Charge_Limit)).val;
 
         const maxLadeleistung = Math.min(maxLadeleistungUser_W, maxLadeleistungE3DC_W);
@@ -999,27 +1090,36 @@ async function setStateAtSpecificTime(targetTime, stateID, state) {
             throw new Error("timerObjektID oder timerState ist kein gültiges Array");
         }
 
-        // Prüfen ob timer bereits gesetzt wurde (mit Toleranz 1 Sekunde)
-        const z = timerTarget.findIndex(time => Math.abs(time.getTime() - targetDate.getTime()) < 1000);
-        if (z > 0) {
-            if (timerObjektID[z] == stateID && timerState[z] == state) {
-                LogProgrammablauf += '29/1,';
-                return;
-            }
+		if (!(targetTime instanceof Date) || isNaN(targetDate.getTime())) {
+            LogProgrammablauf += '29/2,';
+            log(`Fehler in function setStateAtSpecificTime, targetTime ist kein Date-Objekt / targetTime = ${targetTime} `, 'warn');
+            return;
         }
 
-        // Prüfen ob Objekt ID mit gleichem State bereits gesetzt wurde, dann vorher löschen
-        const objektID = {
-            [sID_BatterieEntladesperre]: 'Entladesperre',
-            [sID_BatterieLaden]: 'Laden',
-            [sID_eAutoLaden]: 'Auto'
-        }[stateID] || '';
+        // Erzeuge logische Aktion aus stateID
+		const objektID = {
+			[sID_BatterieEntladesperre]: 'Entladesperre',
+			[sID_BatterieLaden]: 'Laden',
+			[sID_eAutoLaden]: 'Auto'
+		}[stateID] || '';
+
+		// Duplikate erkennen: gleiche Zielzeit ±1s, gleiche Aktion, gleicher Ziel-State
+		const dupIdx = timerTarget.findIndex((t, i) =>
+			Math.abs(t.getTime() - targetDate.getTime()) < 1000 &&
+			timerObjektID[i] === objektID &&
+			timerState[i] === state
+		);
+		if (dupIdx >= 0) {
+			LogProgrammablauf += '29/1,';
+			return; // identischer Timer existiert bereits
+		}
 
         const matchingIndices = timerObjektID
             .map((id, index) => (id === objektID && timerState[index] === state ? index : -1))
             .filter(index => index !== -1);
 
         if (matchingIndices.length > 0) {
+            LogProgrammablauf += '29/4,';
             for (const index of matchingIndices) {
                 clearTimeout(timerIds[index]);
                 timerObjektID.splice(index, 1);
@@ -1031,12 +1131,6 @@ async function setStateAtSpecificTime(targetTime, stateID, state) {
                     await setStateAsync(sID_timerAktiv, false);
                 }
             }
-        }
-
-        if (!(targetTime instanceof Date) || isNaN(targetDate.getTime())) {
-            LogProgrammablauf += '29/2,';
-            log(`Fehler in function setStateAtSpecificTime, targetTime ist kein Date-Objekt / targetTime = ${targetTime} `, 'warn');
-            return;
         }
 
         let timeDiff = targetDate.getTime() - currentTime.getTime();
@@ -1108,11 +1202,11 @@ function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h) {
         }
 
         // Konvertiere und validiere die Ladezeit
-        if (isNaN(nladezeit_h)) {
-            log(`function bestLoadTime: ladezeit_h ist keine gültige Zahl`, 'error');
-            return null;
-        }
-        
+        if (isNaN(nladezeit_h) || nladezeit_h <= 0) {
+			log(`function bestLoadTime: ungültige Ladezeit (nladezeit_h=${nladezeit_h}`,'warn');
+			return null;
+		}
+		
         // Intervall in Minuten automatisch erkennen (z. B. 15, 30, 60)
         const intervalMin = detectIntervalMinutes(datenTibberLink48h);
         const interval_h = intervalMin / 60;
@@ -1125,8 +1219,33 @@ function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h) {
         const firstEntryTime = new Date(datenTibberLink48h[0].startsAt);
         const lastEntryTime = new Date(datenTibberLink48h[datenTibberLink48h.length - 1].startsAt);
         const lastEndTime = new Date(lastEntryTime.getTime() + intervalMin * 60 * 1000);
+		
+		const minFensterMs = nladezeit_h * 60 * 60 * 1000;
+		if (dateStartTime >= dateEndTime) {
+			log(`function bestLoadTime: Zeitfenster leer nach Clamping (start=${dateStartTime.toISOString()}, end=${dateEndTime.toISOString()}`, 'warn');
+			return null;
+		}
+		
+        if ((dateEndTime.getTime() - dateStartTime.getTime()) < minFensterMs) {
+			const minLadezeitMs = 30 * 60 * 1000; 
+            // min. 30 min Laden sonst nächstes Fenster abwarten
+            if ((dateEndTime.getTime() - dateStartTime.getTime()) < minLadezeitMs) {
+                if ((dateEndTime.getTime() - dateStartTime.getTime()) < minLadezeitMs) {
+                    return null;
+                }else{
+                    const diff = minFensterMs - (dateEndTime.getTime() - dateStartTime.getTime());
+                    dateEndTime = new Date(dateEndTime.getTime() + diff);
+                    log(`Benötigte Ladezeit ${nladezeit_h}h war zu Lang. Ladezeitende wurde auf ${dateEndTime.getHours().toString().padStart(2, '0')}:${dateEndTime.getMinutes().toString().padStart(2, '0')} angepasst.`,'warn')
+                }
+            }
+        }
+        
+		if (!Array.isArray(datenTibberLink48h) || datenTibberLink48h.length < 2) {
+			log(`function bestLoadTime: datenTibberLink48h unzureichend (len=${Array.isArray(datenTibberLink48h) ? datenTibberLink48h.length : 'n/a'}`, 'warn');
+			return null;
+		}
 
-        if (dateStartTime < firstEntryTime) {
+		if (dateStartTime < firstEntryTime) {
             log(`dateStartTime liegt vor dem gültigen Zeitraum. Anpassung auf ${firstEntryTime}`, 'warn');
             dateStartTime = firstEntryTime;
         }
@@ -1413,9 +1532,10 @@ function round(value, digits = 2) {
 
 async function DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend)
 {
-    const [prognoseLadezeitBatterie,statusText,Batterie_SOC,reichweiteBatterie,BatterieLaden,Power_Bat_W,Power_Grid,eAutoLaden,bEntladenSperren] = await Promise.all([
+    const [prognoseLadezeitBatterie,statusLadenText,statusEntladesperreText,Batterie_SOC,reichweiteBatterie,BatterieLaden,Power_Bat_W,Power_Grid,eAutoLaden,bEntladenSperren] = await Promise.all([
         getStateAsync(sID_ladezeitBatterie),
-        getStateAsync(sID_status),
+        getStateAsync(sID_statusLaden),
+        getStateAsync(sID_statusEntladesperre),
         getStateAsync(sID_Batterie_SOC),
         getStateAsync(sID_Autonomiezeit),
         getStateAsync(sID_BatterieLaden),
@@ -1467,7 +1587,8 @@ async function DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend)
     if (DebugAusgabeDetail){log(`** BatterieEntladenSperren = ${bEntladenSperren}`)}
     if (DebugAusgabeDetail){log(`** BatterieLaden = ${BatterieLaden}`)}
     if (DebugAusgabeDetail){log(`** battSperrePrio = ${bBattSperrePrio}`)}
-    if (DebugAusgabeDetail){log(`** Status = ${statusText}`)}
+    if (DebugAusgabeDetail){log(`** StatusLaden = ${statusLadenText}`)}
+    if (DebugAusgabeDetail){log(`** StatusEntladesperre = ${statusEntladesperreText}`)}
     if (DebugAusgabe){log(`** ProgrammAblauf = ${LogProgrammablauf} `,'warn')}
     if (DebugAusgabe){log(`*******************  Debug LOG Tibber Skript ${scriptVersion} *******************`)}
 }
@@ -1624,7 +1745,11 @@ async function preisUnterschiedPruefen(bisZeit, preisDiff) {
         let aktuelleZeit = new Date();
         let bisZeitDate = new Date(bisZeit);
 
-        // PreisDiff validieren
+        // Intervall aus den Daten bestimmen (15/60 Min etc.)
+        const intervalMin = detectIntervalMinutes(datenTibberLink48h);
+        const intervalMs = intervalMin * 60 * 1000;
+
+        // preisDiff validieren
         preisDiff = parseFloat(preisDiff);
         if (isNaN(preisDiff)) {
             log(`function preisUnterschiedPruefen: preisDiff ist keine gültige Zahl`, 'error');
@@ -1634,18 +1759,20 @@ async function preisUnterschiedPruefen(bisZeit, preisDiff) {
 
         // Zeitgrenzen prüfen
         const validStartTime = new Date(datenTibberLink48h[0].startsAt);
-        const validEndTime = new Date(datenTibberLink48h[datenTibberLink48h.length - 1].startsAt);
-        validEndTime.setHours(validEndTime.getHours() + 1);
+        const lastStart = new Date(datenTibberLink48h[datenTibberLink48h.length - 1].startsAt);
+        const validEndTime = new Date(lastStart.getTime() + intervalMs); // Ende des letzten Intervalls
 
         if (aktuelleZeit < validStartTime) aktuelleZeit = validStartTime;
         if (bisZeitDate > validEndTime) bisZeitDate = validEndTime;
 
-        // Auf volle Stunden runden
-        aktuelleZeit.setMinutes(0, 0, 0);
-        if (bisZeitDate.getMinutes() > 0 || bisZeitDate.getSeconds() > 0 || bisZeitDate.getMilliseconds() > 0) {
-            bisZeitDate.setHours(bisZeitDate.getHours() + 1);
-        }
-        bisZeitDate.setMinutes(0, 0, 0);
+        // auf Intervallraster nach oben runden für bisZeitDate
+        const roundToInterval = (d) => {
+            const t = d.getTime();
+            const mod = t % intervalMs;
+            return new Date(mod === 0 ? t : t + (intervalMs - mod));
+        };
+        aktuelleZeit = roundToInterval(aktuelleZeit);
+        bisZeitDate = roundToInterval(bisZeitDate);
 
         // Filter auf relevanten Zeitraum
         const gefilterteDaten = datenTibberLink48h.filter(d => {
@@ -1660,13 +1787,13 @@ async function preisUnterschiedPruefen(bisZeit, preisDiff) {
 
         // günstigsten und teuersten Preis ermitteln
         let guenstigsterPreis = Infinity, teuersterPreis = -Infinity;
-        gefilterteDaten.forEach(d => {
+        for (const d of gefilterteDaten) {
             const preis = parseFloat(d.total);
             if (!isNaN(preis)) {
-                guenstigsterPreis = Math.min(guenstigsterPreis, preis);
-                teuersterPreis = Math.max(teuersterPreis, preis);
+                if (preis < guenstigsterPreis) guenstigsterPreis = preis;
+                if (preis > teuersterPreis) teuersterPreis = preis;
             }
-        });
+        }
 
         // Peak bereits erreicht?
         if (aktuellerPreisTibber !== null && aktuellerPreisTibber >= teuersterPreis) {
@@ -1678,27 +1805,38 @@ async function preisUnterschiedPruefen(bisZeit, preisDiff) {
 
         if (preisDifferenz >= preisDiff) {
             LogProgrammablauf += '15/3,';
-            const teuererPreisZeitpunkt = gefilterteDaten.find(d => parseFloat(d.total) >= parseFloat((guenstigsterPreis + preisDiff).toFixed(4)));
+
+            const schwelleAb = parseFloat((guenstigsterPreis + preisDiff).toFixed(4));
+            const teuererPreisZeitpunkt = gefilterteDaten.find(d => {
+                const p = parseFloat(d.total);
+                return !isNaN(p) && p >= schwelleAb;
+            });
 
             if (teuererPreisZeitpunkt) {
                 LogProgrammablauf += '15/4,';
                 let endZeit = null;
                 const startIndex = gefilterteDaten.indexOf(teuererPreisZeitpunkt);
 
+                // Ende ist das Ende des zuletzt noch „teuren“ Intervalls: startsAt + interval
                 for (let i = startIndex + 1; i < gefilterteDaten.length; i++) {
-                    if (parseFloat(gefilterteDaten[i].total) <= parseFloat((teuererPreisZeitpunkt.total - preisDiff).toFixed(4))) {
-                        endZeit = gefilterteDaten[i].startsAt;
+                    const preis = parseFloat(gefilterteDaten[i].total);
+                    const schwelle = parseFloat((teuererPreisZeitpunkt.total - preisDiff).toFixed(4));
+                    if (!isNaN(preis) && preis <= schwelle) {
+                        // Ende des vorherigen Intervalls (i-1)
+                        const prevStart = new Date(gefilterteDaten[i - 1].startsAt).getTime();
+                        endZeit = new Date(prevStart + intervalMs);
                         break;
                     }
                 }
 
                 if (!endZeit) {
-                    // bleibt bis Ende des Arrays teuer
-                    endZeit = gefilterteDaten[gefilterteDaten.length - 1].startsAt;
+                    // bleibt bis Ende teuer
+                    const lastStartG = new Date(gefilterteDaten[gefilterteDaten.length - 1].startsAt).getTime();
+                    endZeit = new Date(lastStartG + intervalMs);
                 }
 
                 // @ts-ignore
-                const stundenDauer = (new Date(endZeit) - new Date(teuererPreisZeitpunkt.startsAt)) / (1000 * 60 * 60);
+                const stundenDauer = (endZeit - new Date(teuererPreisZeitpunkt.startsAt)) / (1000 * 60 * 60);
 
                 return {
                     state: true,
@@ -1741,7 +1879,9 @@ async function loescheAlleTimer(timerID) {
             await Promise.all([
                 setStateAsync(sID_timerAktiv,false),
                 setStateAsync(sID_BatterieLaden,false),
+                setStateAsync(sID_statusLaden, ``).catch(()=>{}),
                 setStateAsync(sID_BatterieEntladesperre,false),
+                setStateAsync(sID_statusEntladesperre, ``).catch(()=>{}),
                 setStateAsync(sID_eAutoLaden,false)
             ]);
             bBattSperrePrio = false;
@@ -2100,7 +2240,9 @@ let scheduleTibber = schedule("*/10 * * * *", async function() {
         log(`Es wurde auf Notstrom umgeschaltet Script Tibber wurde angehalten und muss neu gestartet werden`,'error')
         await Promise.all([
             setStateAsync(sID_BatterieLaden, false),
+            setStateAsync(sID_statusLaden, ``).catch(()=>{}),
             setStateAsync(sID_BatterieEntladesperre, false),
+            setStateAsync(sID_statusEntladesperre, ``).catch(()=>{}),
             setStateAsync(sID_eAutoLaden, false)
         ]);
         clearSchedule(scheduleTibber);
@@ -2108,9 +2250,10 @@ let scheduleTibber = schedule("*/10 * * * *", async function() {
 });
 
 //Bei Scriptende alle Timer löschen
-onStop(function () { 
+onStop(async function () { 
     loescheAlleTimer('all')
-    setState(sID_status, ``)
+    await setStateAsync(sID_statusLaden, ``).catch(()=>{})
+    await setStateAsync(sID_statusEntladesperre, ``).catch(()=>{})
     log(`-==== Alle Timer beendet ====-`)
 }, 100);
 
