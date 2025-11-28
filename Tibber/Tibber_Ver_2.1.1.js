@@ -72,7 +72,7 @@ const sID_niedrigerSchwellwertStrompreis = `${instanz}.${PfadEbene1}.${PfadEbene
 const sID_Schneebedeckt = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.pvSchneebedeckt`;
 const sID_autPreisanpassung = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.automPreisanpassung`;
 const sID_Systemwirkungsgrad = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Systemwirkungsgrad`
-const sID_BatteriepreisAktiv = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.BatteriepreisAktiv`                   // Auswahl in VIS ob aktueller Strompreis Batterie brücksichtigt werden soll
+const sID_BatteriepreisAktiv = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.BatteriepreisAktiv`                   // Auswahl in VIS ob aktueller Strompreis Batterie berücksichtigt wird
 const sID_Stromgestehungskosten = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.stromgestehungskosten`
 const sID_TibberLinkID = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.tibberLinkId`
 const sID_ScriptAktiv = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.ScriptAktiv`
@@ -95,7 +95,7 @@ let strompreisBatterie, bruttoPreisBatterie, SolcastDachflaechen,SolcastAPI_key;
 
 let bNachladenPeak = false, bLock = false, bSchneeBedeckt = false, bAutPreisanpassung = false, bNotstromAktiv = false, bBatteriepreisAktiv = false, bStart = true;                                                                 
 let bBattLaden = false, bBattSperre = false, bBattSperrePrio = false, bReichweiteSunrise = false, bScriptAktiv = true, bSolcast = false, statusLadenText = ``,statusEntladesperreText = ``;
-let timerIds = [], timerTarget = [], timerObjektID = [],timerState =[], batterieLadedaten = [],datenHeute =[], datenMorgen = [], datenTibberLink48h = [], Resource_Id_Dach=[];
+let timerIds = [], timerTarget = [], timerObjektID = [],timerState = [], batterieLadedaten = [],datenHeute = [], datenMorgen = [], datenTibberLink48h = [], Resource_Id_Dach=[];
 
 
 //***************************************************************************************************
@@ -177,8 +177,8 @@ async function ScriptStart()
         SolcastAPI_key             = resultsSolcast[3].val;
     }
 
-    aktuelleBatterieSoC_alt = aktuelleBatterieSoC_Pro
-    batterieSOC_alt = aktuelleBatterieSoC_Pro
+    aktuelleBatterieSoC_alt = aktuelleBatterieSoC_Pro;
+    batterieSOC_alt = aktuelleBatterieSoC_Pro;
     if (existsState(sID_SPECIFIED_Battery_Capacity_1)){
         const batteryCapacity1 = (await getStateAsync(sID_SPECIFIED_Battery_Capacity_1)).val
         batterieKapazitaet_kWh = (batteryCapacity0 + batteryCapacity1) / 1000;
@@ -196,7 +196,7 @@ async function ScriptStart()
     batterieLadedaten = safeJsonParse(batterieLadedaten, []);
     batterieKapazitaet_kWh = (batterieKapazitaet_kWh * (entladetiefe_Pro/100)) * (aSOC_Bat_Pro/100);
 	batterieKapazitaet_kWh = round(batterieKapazitaet_kWh, 2);
-    aktuellerPreisTibber = await getCurrentPrice()
+    aktuellerPreisTibber = await getCurrentPrice();
     effektivPreisTibber = parseFloat((aktuellerPreisTibber * (1 / (systemwirkungsgrad / 100))).toFixed(4));
     
     // Erstelle das Tibber Diagramm
@@ -293,7 +293,7 @@ async function setEntladesperreMitCap(startTime, endTime, capMin) {
             // Segment setzen
             await setStateAtSpecificTime(segStart, sID_BatterieEntladesperre, true);
             await setStateAtSpecificTime(segEnd, sID_BatterieEntladesperre, false);
-            let message = `Entladesperre wird von ${segStart} bis ${segEnd} gesetzt)`
+            let message = `Entladesperre wird von ${segStart.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'})} bis ${segEnd.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'})} gesetzt`;
             statusEntladesperreText != message ? await setStateAsync(sID_statusEntladesperre,message): null;
             // nächstes Segment beginnt direkt am Ende des aktuellen
             segStart = new Date(segEnd.getTime());
@@ -434,7 +434,7 @@ async function tibberSteuerungHauskraftwerk() {
                         const vonTime = new Date()
                         const bisTime = new Date(ergebnisPreisvergleich.peakZeit)
                         // günstigste Startzeit zum Laden suchen
-                        const dateBesteStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h)
+                        const dateBesteStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h,1)
                         await setStateAtSpecificTime(dateBesteStartLade.zeit, sID_BatterieLaden, true);
                         await setStateAtSpecificTime(bisTime, sID_BatterieLaden, false);
                         // Nach der Preissteigerung Merker zurücksetzen.
@@ -494,7 +494,7 @@ async function tibberSteuerungHauskraftwerk() {
                     const vonTime = new Date(naechsteNiedrigphase.startzeit)
                     const bisTime = new Date(naechsteNiedrigphase.endzeit)
                     // günstigste Startzeit zum Laden suchen
-                    const dateBesteStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h)
+                    const dateBesteStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h,2)
                     // Prüfen ob Startzeit low Preisphase bereits erreicht ist und wenn nein die Ladefreigabe entfernen
                     if(naechsteNiedrigphase.startzeit.getTime() > new Date().getTime()){
                         if(bBattLaden){
@@ -520,7 +520,7 @@ async function tibberSteuerungHauskraftwerk() {
                     const vonTime = new Date(naechsteNormalphase.startzeit)
                     const bisTime = new Date(naechsteNormalphase.endzeit)
                     // günstigste Startzeit zum Laden suchen
-                    const dateBesteStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h)
+                    const dateBesteStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h,3)
                     // Prüfen ob der Zeitraum größer ist als die benötigte Zeit 
                     const difference_ms = bisTime.getTime() - vonTime.getTime();
                     let diffZeit_h = Math.min(difference_ms / (1000 * 60 * 60), ladeZeit_h);
@@ -577,7 +577,7 @@ async function tibberSteuerungHauskraftwerk() {
                                 const ladezeitBatt_h = await berechneLadezeitBatterie(dauerPeakPhase_h,null)
                                 const bisTime = new Date(ergebnisPreisvergleich.peakZeit)
                                 const vonTime = new Date(aktivePhase.start)
-                                const start = bestLoadTime(vonTime,bisTime,ladezeitBatt_h)
+                                const start = bestLoadTime(vonTime,bisTime,ladezeitBatt_h,4)
                                 const endeZeit = new Date(start.zeit.getTime() + ladezeitBatt_h * 60 * 60 * 1000);
                                 await setStateAtSpecificTime(new Date(start.zeit), sID_BatterieLaden, true);
                                 await setStateAtSpecificTime(new Date(endeZeit), sID_BatterieLaden, false);
@@ -629,7 +629,7 @@ async function tibberSteuerungHauskraftwerk() {
                     const vonTime = new Date(naechsteNiedrigphase.startzeit)
                     const bisTime = new Date(naechsteNiedrigphase.endzeit)
                     // günstigste Startzeit zum Laden suchen
-                    const dateBesteStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h)
+                    const dateBesteStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h,5)
                     // Prüfen ob der Zeitraum größer ist als die benötigte Zeit 
                     const difference_ms = bisTime.getTime() - vonTime.getTime();
                     let diffZeit_h = Math.min(difference_ms / (1000 * 60 * 60), ladeZeit_h);
@@ -654,8 +654,8 @@ async function tibberSteuerungHauskraftwerk() {
             
             
             // günstigste Startzeit suchen um auf max SOC zu laden
-            const dateBestePhaseStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h)
-            const dateBesteReichweiteLade = bestLoadTime(new Date(),endZeitBatterie,ladeZeit_h)
+            const dateBestePhaseStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h,6)
+            const dateBesteReichweiteLade = bestLoadTime(new Date(),endZeitBatterie,ladeZeit_h,7)
             const dateBesteEndeLadezeit = new Date(dateBestePhaseStartLade.zeit.getTime() + ladeZeit_h * 60 * 60 * 1000);
             // Differenz berechnen und nur wenn > 1 das Laden stoppen. Verhindert ein ständiges ein und ausschalten 
             const diffBesteLadezeit_h = Math.abs((dateBestePhaseStartLade.zeit.getTime()-dateBesteReichweiteLade.zeit.getTime())/ (1000 * 60 * 60))
@@ -747,7 +747,7 @@ async function tibberSteuerungHauskraftwerk() {
             const bisTime = new Date(aktivePhase.end)
             const vonTime = new Date(aktivePhase.start)
             //log(`Programmablauf 13 vonTime = ${vonTime} bisTime = ${bisTime} ladeZeit_h = ${ladeZeit_h}`)
-            const dateBesteStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h)
+            const dateBesteStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h,8)
             const dateEndeLadezeit = new Date(dateBesteStartLade.zeit);
             //log(`dateBesteStartLade = ${dateBesteStartLade} dateEndeLadezeit = ${dateEndeLadezeit}`)
             dateEndeLadezeit.setHours(dateEndeLadezeit.getHours() + ladeZeit_h);
@@ -1178,8 +1178,9 @@ async function setStateAtSpecificTime(targetTime, stateID, state) {
 
 // Funktion sucht den günstigsten Startzeitpunkt für eine Ladezeit innerhalb eines Zeitraums.
 // Unterstützt jetzt auch 15-Minuten-Intervalle statt Stundenwerte.
-function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h) {
+function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h, trace) {
     try {
+        log(`Aufruf von ${trace}`,'warn');
         // Variablen für günstigsten Ladezeitblock initialisieren
         let billigsterBlockPreis = Infinity;
         let billigsterPreis = Infinity;
