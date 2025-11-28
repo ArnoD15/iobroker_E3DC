@@ -1180,7 +1180,7 @@ async function setStateAtSpecificTime(targetTime, stateID, state) {
 // Unterstützt jetzt auch 15-Minuten-Intervalle statt Stundenwerte.
 function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h, trace) {
     try {
-        log(`Aufruf von ${trace}`,'warn');
+        log(`function bestLoadTime wurde von Position ${trace} aufgerufen`,'warn');
         // Variablen für günstigsten Ladezeitblock initialisieren
         let billigsterBlockPreis = Infinity;
         let billigsterPreis = Infinity;
