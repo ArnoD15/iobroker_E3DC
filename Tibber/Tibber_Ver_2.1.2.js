@@ -16,7 +16,7 @@ const hystereseKapazitaet = 2;                                                  
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
 //------------------------------------------------------------------------------------------------------
 
-const scriptVersion = 'Version 2.1.1'
+const scriptVersion = 'Version 2.1.2'
 log(`-==== Tibber Skript ${scriptVersion} gestartet ====-`);
 
 //******************************************************************************************************
@@ -434,7 +434,7 @@ async function tibberSteuerungHauskraftwerk() {
                         const vonTime = new Date()
                         const bisTime = new Date(ergebnisPreisvergleich.peakZeit)
                         // günstigste Startzeit zum Laden suchen
-                        const dateBesteStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h,1)
+                        const dateBesteStartLade = await bestLoadTime(vonTime,bisTime,ladeZeit_h,1)
                         await setStateAtSpecificTime(dateBesteStartLade.zeit, sID_BatterieLaden, true);
                         await setStateAtSpecificTime(bisTime, sID_BatterieLaden, false);
                         // Nach der Preissteigerung Merker zurücksetzen.
@@ -494,7 +494,7 @@ async function tibberSteuerungHauskraftwerk() {
                     const vonTime = new Date(naechsteNiedrigphase.startzeit)
                     const bisTime = new Date(naechsteNiedrigphase.endzeit)
                     // günstigste Startzeit zum Laden suchen
-                    const dateBesteStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h,2)
+                    const dateBesteStartLade = await bestLoadTime(vonTime,bisTime,ladeZeit_h,2)
                     // Prüfen ob Startzeit low Preisphase bereits erreicht ist und wenn nein die Ladefreigabe entfernen
                     if(naechsteNiedrigphase.startzeit.getTime() > new Date().getTime()){
                         if(bBattLaden){
@@ -520,7 +520,7 @@ async function tibberSteuerungHauskraftwerk() {
                     const vonTime = new Date(naechsteNormalphase.startzeit)
                     const bisTime = new Date(naechsteNormalphase.endzeit)
                     // günstigste Startzeit zum Laden suchen
-                    const dateBesteStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h,3)
+                    const dateBesteStartLade = await bestLoadTime(vonTime,bisTime,ladeZeit_h,3)
                     // Prüfen ob der Zeitraum größer ist als die benötigte Zeit 
                     const difference_ms = bisTime.getTime() - vonTime.getTime();
                     let diffZeit_h = Math.min(difference_ms / (1000 * 60 * 60), ladeZeit_h);
@@ -577,7 +577,7 @@ async function tibberSteuerungHauskraftwerk() {
                                 const ladezeitBatt_h = await berechneLadezeitBatterie(dauerPeakPhase_h,null)
                                 const bisTime = new Date(ergebnisPreisvergleich.peakZeit)
                                 const vonTime = new Date(aktivePhase.start)
-                                const start = bestLoadTime(vonTime,bisTime,ladezeitBatt_h,4)
+                                const start = await bestLoadTime(vonTime,bisTime,ladezeitBatt_h,4)
                                 const endeZeit = new Date(start.zeit.getTime() + ladezeitBatt_h * 60 * 60 * 1000);
                                 await setStateAtSpecificTime(new Date(start.zeit), sID_BatterieLaden, true);
                                 await setStateAtSpecificTime(new Date(endeZeit), sID_BatterieLaden, false);
@@ -629,7 +629,7 @@ async function tibberSteuerungHauskraftwerk() {
                     const vonTime = new Date(naechsteNiedrigphase.startzeit)
                     const bisTime = new Date(naechsteNiedrigphase.endzeit)
                     // günstigste Startzeit zum Laden suchen
-                    const dateBesteStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h,5)
+                    const dateBesteStartLade = await bestLoadTime(vonTime,bisTime,ladeZeit_h,5)
                     // Prüfen ob der Zeitraum größer ist als die benötigte Zeit 
                     const difference_ms = bisTime.getTime() - vonTime.getTime();
                     let diffZeit_h = Math.min(difference_ms / (1000 * 60 * 60), ladeZeit_h);
@@ -654,8 +654,8 @@ async function tibberSteuerungHauskraftwerk() {
             
             
             // günstigste Startzeit suchen um auf max SOC zu laden
-            const dateBestePhaseStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h,6)
-            const dateBesteReichweiteLade = bestLoadTime(new Date(),endZeitBatterie,ladeZeit_h,7)
+            const dateBestePhaseStartLade = await bestLoadTime(vonTime,bisTime,ladeZeit_h,6)
+            const dateBesteReichweiteLade = await bestLoadTime(new Date(),endZeitBatterie,ladeZeit_h,7)
             const dateBesteEndeLadezeit = new Date(dateBestePhaseStartLade.zeit.getTime() + ladeZeit_h * 60 * 60 * 1000);
             // Differenz berechnen und nur wenn > 1 das Laden stoppen. Verhindert ein ständiges ein und ausschalten 
             const diffBesteLadezeit_h = Math.abs((dateBestePhaseStartLade.zeit.getTime()-dateBesteReichweiteLade.zeit.getTime())/ (1000 * 60 * 60))
@@ -747,7 +747,7 @@ async function tibberSteuerungHauskraftwerk() {
             const bisTime = new Date(aktivePhase.end)
             const vonTime = new Date(aktivePhase.start)
             //log(`Programmablauf 13 vonTime = ${vonTime} bisTime = ${bisTime} ladeZeit_h = ${ladeZeit_h}`)
-            const dateBesteStartLade = bestLoadTime(vonTime,bisTime,ladeZeit_h,8)
+            const dateBesteStartLade = await bestLoadTime(vonTime,bisTime,ladeZeit_h,8)
             const dateEndeLadezeit = new Date(dateBesteStartLade.zeit);
             //log(`dateBesteStartLade = ${dateBesteStartLade} dateEndeLadezeit = ${dateEndeLadezeit}`)
             dateEndeLadezeit.setHours(dateEndeLadezeit.getHours() + ladeZeit_h);
@@ -1178,14 +1178,10 @@ async function setStateAtSpecificTime(targetTime, stateID, state) {
 
 // Funktion sucht den günstigsten Startzeitpunkt für eine Ladezeit innerhalb eines Zeitraums.
 // Unterstützt jetzt auch 15-Minuten-Intervalle statt Stundenwerte.
-function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h, trace) {
+async function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h, trace) {
     try {
-        log(`function bestLoadTime wurde von Position ${trace} aufgerufen`,'warn');
-        // Variablen für günstigsten Ladezeitblock initialisieren
-        let billigsterBlockPreis = Infinity;
-        let billigsterPreis = Infinity;
-        let billigsteZeit = null;
-        
+        if (DebugAusgabe){log(`function bestLoadTime wurde von Position ${trace} aufgerufen`,'warn');}
+                
         // Konvertiere Start- und Endzeit zu Datumsobjekten, falls notwendig
         dateStartTime = new Date(dateStartTime);
         dateEndTime = new Date(dateEndTime);
@@ -1196,23 +1192,27 @@ function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h, trace) {
             return null;
         }
 
+        // Konvertiere und validiere die Ladezeit
+        if (isNaN(nladezeit_h) || nladezeit_h <= 0) {
+			log(`function bestLoadTime: ungültige Ladezeit (nladezeit_h=${nladezeit_h}`,'warn');
+			return null;
+		}
+
         // Validierung der globalen Variable datenTibberLink48h
         if (!Array.isArray(datenTibberLink48h) || datenTibberLink48h.length === 0) {
             log(`function bestLoadTime: datenTibberLink48h ist keine gültiges Array oder enthält keine Werte.`, 'error');
             return null;
         }
 
-        // Konvertiere und validiere die Ladezeit
-        if (isNaN(nladezeit_h) || nladezeit_h <= 0) {
-			log(`function bestLoadTime: ungültige Ladezeit (nladezeit_h=${nladezeit_h}`,'warn');
+        if (datenTibberLink48h.length < 2) {
+			log(`function bestLoadTime: datenTibberLink48h unzureichend (len=${Array.isArray(datenTibberLink48h) ? datenTibberLink48h.length : 'n/a'}`, 'warn');
 			return null;
 		}
-		
+
         // Intervall in Minuten automatisch erkennen (z. B. 15, 30, 60)
         const intervalMin = detectIntervalMinutes(datenTibberLink48h);
         const interval_h = intervalMin / 60;
         const stepsPerHour = 60 / intervalMin;
-
         // Anzahl der Datensätze, die eine Ladezeit abdecken (z. B. 2 h Ladezeit = 8 × 15 min)
         const ladezeitSteps = Math.max(Math.round(nladezeit_h * stepsPerHour), 1);
 
@@ -1221,31 +1221,6 @@ function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h, trace) {
         const lastEntryTime = new Date(datenTibberLink48h[datenTibberLink48h.length - 1].startsAt);
         const lastEndTime = new Date(lastEntryTime.getTime() + intervalMin * 60 * 1000);
 		
-		const minFensterMs = nladezeit_h * 60 * 60 * 1000;
-		if (dateStartTime >= dateEndTime) {
-			log(`function bestLoadTime: Zeitfenster leer nach Clamping (start=${dateStartTime.toISOString()}, end=${dateEndTime.toISOString()}`, 'warn');
-			return null;
-		}
-		
-        if ((dateEndTime.getTime() - dateStartTime.getTime()) < minFensterMs) {
-			const minLadezeitMs = 30 * 60 * 1000; 
-            // min. 30 min Laden sonst nächstes Fenster abwarten
-            if ((dateEndTime.getTime() - dateStartTime.getTime()) < minLadezeitMs) {
-                if ((dateEndTime.getTime() - dateStartTime.getTime()) < minLadezeitMs) {
-                    return null;
-                }else{
-                    const diff = minFensterMs - (dateEndTime.getTime() - dateStartTime.getTime());
-                    dateEndTime = new Date(dateEndTime.getTime() + diff);
-                    log(`Benötigte Ladezeit ${nladezeit_h}h war zu Lang. Ladezeitende wurde auf ${dateEndTime.getHours().toString().padStart(2, '0')}:${dateEndTime.getMinutes().toString().padStart(2, '0')} angepasst.`,'warn')
-                }
-            }
-        }
-        
-		if (!Array.isArray(datenTibberLink48h) || datenTibberLink48h.length < 2) {
-			log(`function bestLoadTime: datenTibberLink48h unzureichend (len=${Array.isArray(datenTibberLink48h) ? datenTibberLink48h.length : 'n/a'}`, 'warn');
-			return null;
-		}
-
 		if (dateStartTime < firstEntryTime) {
             log(`dateStartTime liegt vor dem gültigen Zeitraum. Anpassung auf ${firstEntryTime}`, 'warn');
             dateStartTime = firstEntryTime;
@@ -1255,28 +1230,59 @@ function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h, trace) {
             dateEndTime = lastEndTime;
         }
 
+        const diffMs = dateEndTime.getTime() - dateStartTime.getTime();
+        const fenster_h = diffMs / (1000 * 60 * 60);
+
+        // 1) Zeitfenster ≤ 15 min
+        if (diffMs <= 15 * 60 * 1000) {
+            const aktuellerPreis = await getCurrentPrice();
+            return {
+                zeit: new Date(),
+                preis_d: round(aktuellerPreis, 4),
+                preis: aktuellerPreis,
+                intervall: 15,
+                ladezeitSteps: 1
+            };
+        }
+        
+        // 2) Zeitfenster > 15 min aber < 30 min
+        if (diffMs < 30 * 60 * 1000) {
+            const aktuellerPreis = await getCurrentPrice();
+            return {
+                zeit: new Date(),
+                preis_d: round(aktuellerPreis, 4),
+                preis: aktuellerPreis,
+                intervall: 15,
+                ladezeitSteps: 1
+            };
+        }
+
+        // 3) Zeitfenster >= 30 min aber kleiner als geforderte Ladezeit
+        if (fenster_h < nladezeit_h) {
+            log(`Geforderte Ladezeit ${nladezeit_h}h > Zeitfenster ${fenster_h.toFixed(2)}h. Ladezeit wird reduziert.`, 'warn');
+            nladezeit_h = fenster_h; // Ladezeit auf Fensterlänge begrenzen
+        }
+
+        // Variablen für günstigsten Ladezeitblock initialisieren
+        let billigsterBlockPreis = Infinity;
+        let billigsterPreis = Infinity;
+        let billigsteZeit = null;
+
+        
+
         // Hauptschleife: Alle möglichen Ladezeitblöcke prüfen
         for (let i = 0; i < datenTibberLink48h.length - ladezeitSteps; i++) {
             const startEntry = datenTibberLink48h[i];
-            const startTime = new Date(startEntry.startsAt);
+            const startTime  = new Date(startEntry.startsAt);
 
-            // Nur Blöcke innerhalb des Zeitraums berücksichtigen
             if (startTime >= dateStartTime && startTime < dateEndTime) {
                 let blockPreis = 0;
-
-                // Summiere Preise im Ladeblock
                 for (let j = 0; j < ladezeitSteps; j++) {
                     const entry = datenTibberLink48h[i + j];
                     if (!entry) continue;
                     blockPreis += entry.total;
                 }
-
-                // Kleinster Einzelpreis (z. B. wichtig für Batterie)
-                if (datenTibberLink48h[i].total < billigsterPreis) {
-                    billigsterPreis = datenTibberLink48h[i].total;
-                }
-
-                // Prüfe, ob dieser Block der günstigste ist
+                if (startEntry.total < billigsterPreis) billigsterPreis = startEntry.total;
                 if (blockPreis < billigsterBlockPreis) {
                     billigsterBlockPreis = blockPreis;
                     billigsteZeit = startTime;
@@ -1284,11 +1290,9 @@ function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h, trace) {
             }
         }
 
-        // Durchschnittspreis pro Stunde (über alle 15-min-Werte im Block)
-        const blockDauer_h = ladezeitSteps * interval_h;
-        const durchschnittspreis = billigsterBlockPreis / blockDauer_h;
-
         if (billigsteZeit) {
+            const blockDauer_h = ladezeitSteps * interval_h;
+            const durchschnittspreis = billigsterBlockPreis / blockDauer_h;
             return {
                 zeit: new Date(billigsteZeit),
                 preis_d: round(durchschnittspreis, 4),
@@ -1297,7 +1301,7 @@ function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h, trace) {
                 ladezeitSteps
             };
         } else {
-            log(`function bestLoadTime: Kein Eintrag gefunden dateStartTime=${dateStartTime} dateEndTime=${dateEndTime}`, 'error');
+            log(`Kein Eintrag gefunden`, 'error');
             return null;
         }
     } catch (error) {
