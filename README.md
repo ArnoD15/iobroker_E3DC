@@ -77,6 +77,10 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.6.7  
+- Beim Monatswechsel wird für den ersten Tag des neuen Monats kein Wert gespeichert, um die Daten des aktuellen Monats nicht zu überschreiben.
+Stattdessen wird Index 0 für den ersten Tag des neuen Monats verwendet, während die Indizes 1–31 für die Daten des aktuellen Monats reserviert sind.
+
 ### Version: 1.6.6  
 - Initialisierung der Arrays korrigiert
 - Speicherung der Hausverbrauchs-Werte ← optimiert
