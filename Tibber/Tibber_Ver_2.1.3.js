@@ -16,7 +16,7 @@ const hystereseKapazitaet = 2;                                                  
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
 //------------------------------------------------------------------------------------------------------
 
-const scriptVersion = 'Version 2.1.2'
+const scriptVersion = 'Version 2.1.3'
 log(`-==== Tibber Skript ${scriptVersion} gestartet ====-`);
 
 //******************************************************************************************************
@@ -403,6 +403,11 @@ async function tibberSteuerungHauskraftwerk() {
             let message = `max SOC erreicht. Laden beendet (aktive Phase: ${aktivePhase.type})`;
             statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
             await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
+            if(aktuelleBatterieSoC_Pro >= maxBatterieSoC){
+                LogProgrammablauf += '33,';
+                bBattLaden ? await setStateAsync(sID_BatterieLaden,false): null; 
+                await loescheAlleTimer('Laden');
+            }
             LogProgrammablauf = '';
             return;
         }
@@ -880,7 +885,13 @@ async function pruefePVLeistung(reichweiteStunden) {
 
 		if (Array.isArray(arrayPrognoseAuto_kWh) && arrayPrognoseAuto_kWh.length >= 31) {
 			pvHeute = numberOrZero(arrayPrognoseAuto_kWh[heuteIndex] ?? 0);
-			pvMorgen = numberOrZero(arrayPrognoseAuto_kWh[morgenIndex] ?? 0);
+
+			// Monatswechsel erkennen: wenn morgenIndex <= heuteIndex, dann morgen ist der erste Tag des neuen Monats
+			if (morgenIndex <= heuteIndex) {
+				pvMorgen = numberOrZero(arrayPrognoseAuto_kWh[0] ?? 0);  // Index 0 für den 1. Tag im neuen Monat
+			} else {
+				pvMorgen = numberOrZero(arrayPrognoseAuto_kWh[morgenIndex] ?? 0);
+			}
 		} else {
 			log('PV-Prognose: Monatsarray fehlt oder hat <31 Einträge – setze pvHeute/pvMorgen = 0', 'warn');
 			pvHeute = 0;
@@ -1180,7 +1191,7 @@ async function setStateAtSpecificTime(targetTime, stateID, state) {
 // Unterstützt jetzt auch 15-Minuten-Intervalle statt Stundenwerte.
 async function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h, trace) {
     try {
-        if (DebugAusgabe){log(`function bestLoadTime wurde von Position ${trace} aufgerufen`,'warn');}
+        //if (DebugAusgabe){log(`function bestLoadTime wurde von Position ${trace} aufgerufen`,'warn');}
                 
         // Konvertiere Start- und Endzeit zu Datumsobjekten, falls notwendig
         dateStartTime = new Date(dateStartTime);
@@ -1430,7 +1441,8 @@ async function createDiagramm() {
 // Funktion berechnet den Batteriepreis
 async function berechneBattPrice() {
     try {
-        const batterieLadedaten = JSON.parse((await getStateAsync(sID_BatterieLadedaten)).val);
+        const state = await getStateAsync(sID_BatterieLadedaten);
+		const batterieLadedaten = safeJsonParse(state?.val, []);
 
         if (Array.isArray(batterieLadedaten) && batterieLadedaten.length > 0) {
             LogProgrammablauf += '27,';
@@ -1549,7 +1561,7 @@ async function DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend)
         getStateAsync(sID_eAutoLaden),
         getStateAsync(sID_BatterieEntladesperre)
     ]).then(states => states.map(state => state.val));
-    const _arrayPrognoseAuto_kWh = JSON.parse((await getStateAsync(sID_PrognoseAuto_kWh))?.val || '[]');
+    const _arrayPrognoseAuto_kWh = safeJsonParse (await getStateAsync(sID_PrognoseAuto_kWh), []);
     const tagHeute = new Date().getDate();
     const tagMorgen = new Date(new Date().setDate(new Date().getDate() + 1)).getDate();
     let heuteErwartetePVLeistung_kWh = round(_arrayPrognoseAuto_kWh[tagHeute],2);
@@ -2079,7 +2091,7 @@ async function pruefeAbweichung() {
     try {
         const prognoseState = await getStateAsync(sID_PvSolcastSumme);
         if (!prognoseState?.val) return log("⚠️ Keine Prognosedaten gefunden", "warn");
-        const prognose = JSON.parse(prognoseState.val);
+        const prognose = safeJsonParse(prognoseState.val, {});
 
         const jetzt = new Date();
 
