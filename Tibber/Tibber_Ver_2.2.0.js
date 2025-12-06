@@ -1,4 +1,5 @@
 'use strict';
+let logLevel = 5
 //------------------------------------------------------------------------------------------------------
 //++++++++++++++++++++++++++++++++++++++++++  USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++++
 const instanz = '0_userdata.0';                                                                        	        // Instanz Script
@@ -6,18 +7,19 @@ const PfadEbene1 = 'TibberSkript';                                              
 const PfadEbene2 = ['Anzeige_VIS','OutputSignal','History','USER_ANPASSUNGEN']                		            // Pfad innerhalb PfadEbene1
 
 const instanzE3DC_RSCP = 'e3dc-rscp.0'
-const DebugAusgabeDetail = true;
-const DebugAusgabe = true;
 
 // Hysterese-Schwellen
 const hystereseReichweite_h = 0.5;                                                                              // Hysterese-Schwelle von ±30 Minuten
 const hystereseBatterie_pro = 2;                                                                                // Hysterese-Schwelle von ±2 %
 const hystereseKapazitaet = 2;                                                                                  // Hysterese-Schwelle von ±2 kWh
+const hysteresePreis = 0.05;       																				// Preis-Toleranz in EUR für Phasenwechsel
+const minIntervals = 2;       																					// Mindestanzahl Intervalle mit gleichen Phasen für Phasenwechsel
+
 //++++++++++++++++++++++++++++++++++++++++ ENDE USER ANPASSUNGEN +++++++++++++++++++++++++++++++++++++++
 //------------------------------------------------------------------------------------------------------
 
-const scriptVersion = 'Version 2.1.3'
-log(`-==== Tibber Skript ${scriptVersion} gestartet ====-`);
+const scriptVersion = 'Version 2.2.0'
+logMessage(`-==== Tibber Skript ${scriptVersion} gestartet ====-`,1);
 
 //******************************************************************************************************
 //**************************************** Deklaration Variablen ***************************************
@@ -76,7 +78,7 @@ const sID_BatteriepreisAktiv = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Batter
 const sID_Stromgestehungskosten = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.stromgestehungskosten`
 const sID_TibberLinkID = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.tibberLinkId`
 const sID_ScriptAktiv = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.ScriptAktiv`
-
+const sID_LogLevel = `${instanz}.${PfadEbene1}.${PfadEbene2[3]}.LogLevel`
 
 // IDs des Adapters TibberLink, Zuweisung in Funktion ScriptStart() wegen persönlicher ID
 let tibberLinkId = getState(sID_TibberLinkID).val                                                               // TibberLink ID auslesen
@@ -132,6 +134,7 @@ async function createState(){
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.tibberLinkId`, { 'def': '', 'name': 'Persönliche ID TibberLink Adapter', 'type': 'string' }),
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.stromgestehungskosten`, { 'def': 0.1057, 'name': 'alle Kosten, die innerhalb der vorgesehenen Laufzeit (20 Jahre) entstehen addiert, dividiert durch den Ertrag an Solarstrom', 'type': 'number' }),
         createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.ScriptAktiv`, { 'def': true, 'name': 'Steuerung Tibber Script stoppen', 'type': 'boolean' }),
+        createStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.LogLevel`, { 'def': 0, 'name': 'Log Level 0=aus 1=info 2=warn 3=error 4= debug1 5= debug2', 'type': 'number' }),
     ];
     await Promise.all(createStatePromises);
 }
@@ -142,7 +145,7 @@ async function ScriptStart()
     LogProgrammablauf += '0,';
     // Erstelle die Objekt IDs
     await createState();    
-    log('-==== alle Objekt ID\'s angelegt ====-');
+    logMessage('-==== alle Objekt ID\'s angelegt ====-',1);
     await CheckState();
     // User Anpassungen parallel abrufen
     const results = await Promise.all([
@@ -152,7 +155,8 @@ async function ScriptStart()
         getStateAsync(sID_maxEntladetiefeBatterie),
         getStateAsync(sID_BAT0_Alterungszustand),
         getStateAsync(sID_AbfrageSolcast),
-        getStateAsync(sID_Bat_Charge_Limit)
+        getStateAsync(sID_Bat_Charge_Limit),
+        getStateAsync(sID_LogLevel)
     ]);
     
     batterieLadedaten        = results[0].val;
@@ -162,7 +166,8 @@ async function ScriptStart()
     const aSOC_Bat_Pro       = results[4].val;
     bSolcast                 = results[5].val;
     maxLadeleistungE3DC_W    = results[6].val;
-    
+    logLevel                 = results[7].val;
+
     if (bSolcast){
         const resultsSolcast = await Promise.all([
             getStateAsync(sID_SolcastDachflaechen),
@@ -193,6 +198,16 @@ async function ScriptStart()
     
     datenTibberLink48h = [...datenHeute, ...datenMorgen];
     
+    // ========== Preisdaten validieren ==========
+	const validierung = await validierePreisdaten();
+    if (!validierung.valid) {
+        logMessage(`⚠️ Preisdaten-Validierung fehlgeschlagen: ${validierung.fehlergrund}`, 2);
+        logMessage('-==== Script-Start pausiert - warte auf gültige Preisdaten ====-', 2);
+        // Script läuft weiter, aber tibberSteuerung wird bei jedem Aufruf prüfen
+        bStart = false;
+        return;
+    }
+	
     batterieLadedaten = safeJsonParse(batterieLadedaten, []);
     batterieKapazitaet_kWh = (batterieKapazitaet_kWh * (entladetiefe_Pro/100)) * (aSOC_Bat_Pro/100);
 	batterieKapazitaet_kWh = round(batterieKapazitaet_kWh, 2);
@@ -242,7 +257,7 @@ async function CheckState() {
     for (const obj of objekte) {
         const value = (await getStateAsync(`${idUSER_ANPASSUNGEN}.${obj.id}`)).val;
         if (value === undefined || value === null) {
-            log(`Die Objekt ID = ${idUSER_ANPASSUNGEN}.${obj.id} ${obj.beschreibung} `, 'error');
+            logMessage(`Die Objekt ID = ${idUSER_ANPASSUNGEN}.${obj.id} ${obj.beschreibung} `, 3);
         } else {
             const assign = {
 				maxLadeleistungUser_W: v => maxLadeleistungUser_W = v,
@@ -259,7 +274,7 @@ async function CheckState() {
 			assign[obj.varName]?.(value);
             
 			if (obj.min !== undefined && (value < obj.min || value > obj.max)) {
-                log(obj.errorMsg, 'error');
+                logMessage(obj.errorMsg, 3);
             }
         }
     }
@@ -272,7 +287,7 @@ async function CheckState() {
 
     for (const id of PruefeID) {
         if (!existsObject(id)) {
-            log(`${id} existiert nicht, bitte prüfen`,'error');
+            logMessage(`${id} existiert nicht, bitte prüfen`,3);
         }
     }
 }
@@ -299,7 +314,7 @@ async function setEntladesperreMitCap(startTime, endTime, capMin) {
             segStart = new Date(segEnd.getTime());
         }
     } catch (e) {
-        log(`Fehler in setEntladesperreMitCap: ${e.message}`, 'error');
+        logMessage(`Fehler in setEntladesperreMitCap: ${e.message}`, 3);
     }
 }
 
@@ -308,7 +323,17 @@ async function tibberSteuerungHauskraftwerk() {
     try {    
         if (!bScriptAktiv){return;}
         LogProgrammablauf += '1,';
-        [bBattLaden,statusLadenText,statusEntladesperreText,bBattSperre,peakSchwellwert] = await Promise.all([
+        // ========== Preisdaten validieren ==========
+        const validierung = await validierePreisdaten();
+        if (!validierung.valid) {
+            LogProgrammablauf += '1/1,';
+            // Status wurde bereits in validierePreisdaten() gesetzt
+            await DebugLog();
+            LogProgrammablauf = '';
+            return;
+        }
+		
+		[bBattLaden,statusLadenText,statusEntladesperreText,bBattSperre,peakSchwellwert] = await Promise.all([
             getStateAsync(sID_BatterieLaden),
             getStateAsync(sID_statusLaden),
             getStateAsync(sID_statusEntladesperre),
@@ -330,12 +355,14 @@ async function tibberSteuerungHauskraftwerk() {
         }else{
             reichweite_h = nReichweite_alt
         }
-        const endZeitBatterie = new Date(datejetzt.getTime() + reichweite_h * 3600000);
+        
+		const endZeitBatterie = new Date(datejetzt.getTime() + reichweite_h * 3600000);
         const pvLeistungAusreichend = await pruefePVLeistung(reichweite_h);
         const ergebnis = await findeergebnisphasen(datenTibberLink48h, hoherSchwellwert, niedrigerSchwellwert);
+        //logMessage(`ergebnis = ${JSON.stringify(ergebnis)}`,5)
         const naechsteNiedrigphase = findeNaechstePhase(ergebnis.lowPhases);
-        //log(`ergebnis.lowPhases = ${JSON.stringify(ergebnis.normalPhases)}`,'warn')
-        //log(`naechsteNiedrigphase = ${JSON.stringify(naechsteNiedrigphase)}`,'warn')
+        //logMessage(`ergebnis.lowPhases = ${JSON.stringify(ergebnis.normalPhases)}`,5)
+        //logMessage(`naechsteNiedrigphase = ${JSON.stringify(naechsteNiedrigphase)}`,5)
         
         // Batterieschwankungen +-2% ignorieren
         const diffBatSOC = Math.abs(aktuelleBatterieSoC_Pro - aktuelleBatterieSoC_alt)
@@ -343,7 +370,7 @@ async function tibberSteuerungHauskraftwerk() {
             ladeZeit_h = await berechneLadezeitBatterie(null,aktuelleBatterieSoC_Pro)
         }
         const aktivePhase = ergebnis.aktivePhase;
-        if (!aktivePhase) {log('aktivePhase ist null oder undefined', 'warn');return;}
+        if (!aktivePhase) {logMessage('aktivePhase ist null oder undefined', 2);return;}
         let preisBatterie = 0;
         let spitzenSchwellwert = round(hoherSchwellwert * (1 / (systemwirkungsgrad / 100)), 4);
         
@@ -445,8 +472,9 @@ async function tibberSteuerungHauskraftwerk() {
                         // Nach der Preissteigerung Merker zurücksetzen.
                         const dauerEndePreissteigerung_ms = dauerEndePreissteigerung_h * 1000 * 60 * 60;
                         setTimeout(() => {bNachladenPeak = false;}, dauerEndePreissteigerung_ms);
-                        const startTime = dateBesteStartLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
-                        const endeTime = bisTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
+                        const startTime = `${dateBesteStartLade.zeit.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })} / ${dateBesteStartLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr`;
+                        const endeTime = `${bisTime.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })} / ${bisTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr`;
+                        
                         let message = `Nachladen während Peakphase von ${startTime} bis ${endeTime} (aktive Phase: ${aktivePhase.type})`
                         statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
                         await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
@@ -464,8 +492,9 @@ async function tibberSteuerungHauskraftwerk() {
 						// Nach der Preissteigerung Merker zurücksetzen.
                         const dauerEndePreissteigerung_ms = dauerEndePreissteigerung_h * 1000 * 60 * 60;
                         setTimeout(() => {bNachladenPeak = false;}, dauerEndePreissteigerung_ms);
-                        const startTime = vonTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
-                        const endeTime = bisTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
+                        const startTime = `${vonTime.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })} / ${vonTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr`;
+                        const endeTime = `${bisTime.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })} / ${bisTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr`;
+                                                
                         let message = `Batteriesperre während Peakphase von ${startTime} bis ${endeTime} (aktive Phase: ${aktivePhase.type})`
                         statusEntladesperreText != message ? await setStateAsync(sID_statusEntladesperre,message): null;
                         await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
@@ -507,9 +536,9 @@ async function tibberSteuerungHauskraftwerk() {
                             await setStateAsync(sID_BatterieLaden,false)
                         }
                     }
-                    const hours = dateBesteStartLade.zeit.getHours().toString().padStart(2, '0');
-                    const minutes = dateBesteStartLade.zeit.getMinutes().toString().padStart(2, '0');
-                    let message = `warte auf Niedrigpreisphase. Start laden ${hours}:${minutes} Uhr (aktive Phase: ${aktivePhase.type})`
+                    const startTime = `${dateBesteStartLade.zeit.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })} Uhr`;
+                    
+                    let message = `warte auf Niedrigpreisphase. Start laden ${startTime} (aktive Phase: ${aktivePhase.type})`
                     statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
                     await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
                     LogProgrammablauf = '';
@@ -520,19 +549,24 @@ async function tibberSteuerungHauskraftwerk() {
             // ist innerhalb der Reichweite Batterie eine normal Preisphase
             if (naechsteNormalphase.state){
                 if(naechsteNormalphase.startzeit < endZeitBatterie){
+                    log(`naechsteNormalphase.startzeit = ${JSON.stringify(naechsteNormalphase.startzeit)}`,'warn')
                     // nicht laden
                     LogProgrammablauf += '11/2,';
                     const vonTime = new Date(naechsteNormalphase.startzeit)
                     const bisTime = new Date(naechsteNormalphase.endzeit)
+                    //logMessage(`vonTime = ${vonTime} bisTime=${bisTime} ladeZeit_h=${ladeZeit_h}`,5)
                     // günstigste Startzeit zum Laden suchen
                     const dateBesteStartLade = await bestLoadTime(vonTime,bisTime,ladeZeit_h,3)
+                    
+                    //logMessage(`dateBesteStartLade = ${JSON.stringify(dateBesteStartLade)}`,5)
                     // Prüfen ob der Zeitraum größer ist als die benötigte Zeit 
                     const difference_ms = bisTime.getTime() - vonTime.getTime();
                     let diffZeit_h = Math.min(difference_ms / (1000 * 60 * 60), ladeZeit_h);
                     const dateBesteEndeLadezeit = new Date(dateBesteStartLade.zeit.getTime() + diffZeit_h * 60 * 60 * 1000);
-                    const startTime = dateBesteStartLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
-                    const endeTime = dateBesteEndeLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
-                    let message = `Nächste Lademöglichkeit von ${startTime} bis ${endeTime} (aktive Phase: ${aktivePhase.type})`
+                    const startTime = `${dateBesteStartLade.zeit.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })} / ${dateBesteStartLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr`;
+                    const endeTime = `${dateBesteEndeLadezeit.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })} / ${dateBesteEndeLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr`;
+                    
+                    let message = `Nächste Lademöglichkeit ${startTime} bis ${endeTime} (aktive Phase: ${aktivePhase.type})`
                     statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
                     await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
                     LogProgrammablauf = '';
@@ -548,7 +582,7 @@ async function tibberSteuerungHauskraftwerk() {
                     // Batterie reicht nicht aus 
                     const dauerPeakPhase_h = round((naechstePhase0.end.getTime() - naechstePhase0.start.getTime()) / (1000 * 60 * 60),2)
                     // Kann die Peak Phase überbrückt werden wenn das entladen der Batterie gesperrt wird
-                    //log(`reichweite_h= ${reichweite_h}  - dauerPeakPhase_h= ${dauerPeakPhase_h}  < 0`,'warn')
+                    //logMessag(`reichweite_h= ${reichweite_h}  - dauerPeakPhase_h= ${dauerPeakPhase_h}  < 0`,5)
                     if(reichweite_h - dauerPeakPhase_h >= 0){
                         //Reichweite Batt reicht zum Abfragezeitraum noch aus.
                         LogProgrammablauf += '11/4,';
@@ -620,130 +654,306 @@ async function tibberSteuerungHauskraftwerk() {
             }
         }
         
-        if (aktivePhaseType === 'normal'){
-            LogProgrammablauf += '12,';
-            const vonTime = new Date(aktivePhase.start)
-            const bisTime = new Date(aktivePhase.end)
+        if (aktivePhaseType === 'normal') {
+			LogProgrammablauf += '12,';
+    
+			const vonTime = new Date(aktivePhase.start);
+			const bisTime = new Date(aktivePhase.end);
+			const jetzt = new Date();
+    
+			// ========== Priorität 1: LOW-Phase in Batteriereichweite? ==========
+    
+			if (naechsteNiedrigphase.state && naechsteNiedrigphase.startzeit < endZeitBatterie) {
+				LogProgrammablauf += '12/1,';
+        
+				// LOW-Phase innerhalb Reichweite → Warten und in LOW-Phase laden
+				const vonTimeLow = new Date(naechsteNiedrigphase.startzeit);
+				const bisTimeLow = new Date(naechsteNiedrigphase.endzeit);
+        
+				// Beste Startzeit in LOW-Phase suchen
+				const dateBesteStartLade = await bestLoadTime(vonTimeLow, bisTimeLow, ladeZeit_h, 5);
+        
+				if (!dateBesteStartLade) {
+					logMessage(`⚠️ Fehler: Keine Ladezeit in LOW-Phase gefunden`, 2);
+					LogProgrammablauf += '12/2,';
+					// Weiter zur globalen Suche
+				} else {
+					// Prüfen ob Startzeit low Preisphase bereits erreicht ist
+					if (naechsteNiedrigphase.startzeit.getTime() > jetzt.getTime()) {
+						// LOW-Phase noch nicht erreicht → Laden stoppen falls aktiv
+						if (bBattLaden) {
+							LogProgrammablauf += '12/3,';
+							await loescheAlleTimer('Laden');
+							await setStateAsync(sID_BatterieLaden, false);
+						}
+					}
             
-            // ist innerhalb der Reichweite Batterie eine low Preisphase
-            if (naechsteNiedrigphase.state){
-                if(naechsteNiedrigphase.startzeit < endZeitBatterie){
-                    // nicht laden
-                    LogProgrammablauf += '12/1,';
-                    // dauer bis zur nächsten lowphase
-                    const vonTime = new Date(naechsteNiedrigphase.startzeit)
-                    const bisTime = new Date(naechsteNiedrigphase.endzeit)
-                    // günstigste Startzeit zum Laden suchen
-                    const dateBesteStartLade = await bestLoadTime(vonTime,bisTime,ladeZeit_h,5)
-                    // Prüfen ob der Zeitraum größer ist als die benötigte Zeit 
-                    const difference_ms = bisTime.getTime() - vonTime.getTime();
-                    let diffZeit_h = Math.min(difference_ms / (1000 * 60 * 60), ladeZeit_h);
-                    const dateBesteEndeLadezeit = new Date(dateBesteStartLade.zeit.getTime() + diffZeit_h * 60 * 60 * 1000);
-                    // Prüfen ob Startzeit low Preisphase bereits erreicht ist und wenn nein die Ladefreigabe entfernen
-                    if(naechsteNiedrigphase.startzeit.getTime() > new Date().getTime()){
-                        if(bBattLaden){
-                            LogProgrammablauf += '12/2,';
-                            await loescheAlleTimer('Laden');
-                            await setStateAsync(sID_BatterieLaden,false)
-                        }
-                    }
-                    const startTime = dateBesteStartLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
-                    const endeTime = dateBesteEndeLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
-                    let message = `warte auf Niedrigpreisphase von ${startTime} bis ${endeTime}  (aktive Phase: ${aktivePhase.type})`
-                    statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
-                    await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
-                    LogProgrammablauf = '';
-                    return;
-                }
-            }
+					// Ladezeit berechnen (begrenzt auf verfügbare Zeit in LOW-Phase)
+					const difference_ms = bisTimeLow.getTime() - vonTimeLow.getTime();
+					const diffZeit_h = Math.min(difference_ms / (1000 * 60 * 60), ladeZeit_h);
+					const dateBesteEndeLadezeit = new Date(dateBesteStartLade.zeit.getTime() + diffZeit_h * 60 * 60 * 1000);
+					// Timer setzen
+					await setStateAtSpecificTime(dateBesteStartLade.zeit, sID_BatterieLaden, true);
+					await setStateAtSpecificTime(dateBesteEndeLadezeit, sID_BatterieLaden, false);
             
+					const startTime = dateBesteStartLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+					const endeTime = dateBesteEndeLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
             
-            // günstigste Startzeit suchen um auf max SOC zu laden
-            const dateBestePhaseStartLade = await bestLoadTime(vonTime,bisTime,ladeZeit_h,6)
-            const dateBesteReichweiteLade = await bestLoadTime(new Date(),endZeitBatterie,ladeZeit_h,7)
-            const dateBesteEndeLadezeit = new Date(dateBestePhaseStartLade.zeit.getTime() + ladeZeit_h * 60 * 60 * 1000);
-            // Differenz berechnen und nur wenn > 1 das Laden stoppen. Verhindert ein ständiges ein und ausschalten 
-            const diffBesteLadezeit_h = Math.abs((dateBestePhaseStartLade.zeit.getTime()-dateBesteReichweiteLade.zeit.getTime())/ (1000 * 60 * 60))
+					let message = `Warte auf Niedrigpreisphase: ${startTime}-${endeTime} Uhr (aktive Phase: ${aktivePhase.type})`;
+					if (statusLadenText !== message) {
+						await setStateAsync(sID_statusLaden, message);
+					}
             
-            // Prüfen ob es einen günstigerern Ladezeitraum innerhalb der Batteriereichweite gibt
-            if(dateBestePhaseStartLade.preis > dateBesteReichweiteLade.preis && diffBesteLadezeit_h > 1 && dateBesteReichweiteLade.zeit > new Date()){
-                LogProgrammablauf += '12/4,';
-                // Beste Ladezeit noch nicht erreicht Laden sperren
-                if(bBattLaden){
-                    await loescheAlleTimer('Laden');
-                    await setStateAsync(sID_BatterieLaden,false);
-                }
-                const dateReichweiteEndeLadezeit = new Date(dateBesteReichweiteLade.zeit.getTime() + ladeZeit_h * 60 * 60 * 1000);
-                await setStateAtSpecificTime(dateBesteReichweiteLade.zeit, sID_BatterieLaden, true);
-                await setStateAtSpecificTime(dateReichweiteEndeLadezeit, sID_BatterieLaden, false);
-                const startTime = dateBesteReichweiteLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
-                const endeTime = dateReichweiteEndeLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
-                let message = `Laden von ${startTime} bis ${endeTime} (aktive Phase: ${aktivePhase.type})`    
-                statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
-                await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
-                LogProgrammablauf = '';
-                return;
+					await DebugLog(ergebnis, spitzenSchwellwert, pvLeistungAusreichend.state);
+					LogProgrammablauf = '';
+					return;
+				}
+			}
+    
+			// ========== Priorität 2: Globale beste Zeit (48h-Horizont) ermitteln ==========
+    
+			const suchEnde = validierung.suchEnde;
+    
+			// Beste Zeit im GESAMTEN verfügbaren Horizont (bis zu 48h)
+			const besteZeitGlobal = await bestLoadTime(jetzt, suchEnde, ladeZeit_h, 13);
+    
+			if (!besteZeitGlobal) {
+				LogProgrammablauf += '12/4,';
+				logMessage(`⚠️ Keine günstige Ladezeit im gesamten Horizont gefunden`, 2);
+        
+				// Fallback: Lade in aktueller Phase
+				if (bisTime > jetzt) {
+					LogProgrammablauf += '12/5,';
+					await loescheAlleTimer('Laden');
+					await setStateAsync(sID_BatterieLaden, true);
+					await setStateAtSpecificTime(bisTime, sID_BatterieLaden, false);
             
-            // Prüfen ob der günstigste Ladezeitraum noch nicht abgelaufen ist und Batterie laden bereits aktiv ist
-            }else if(dateBesteEndeLadezeit > new Date() && !bBattLaden){
-                // günstigster Ladezeitraum noch nicht abgelaufen und Laden nicht aktiv  
-                LogProgrammablauf += '12/5,';
-                // setze Timer
-                if(dateBestePhaseStartLade.zeit.getTime() < new Date().getTime() && dateBesteEndeLadezeit.getTime() > new Date().getTime() ){
-                    // Start Zeit bereits abgelaufen und Ende Zeit noch nicht erreicht sofort laden.
-                    LogProgrammablauf += '12/6,';
-                    await setStateAsync(sID_BatterieLaden,true)
-                    await setStateAtSpecificTime(dateBesteEndeLadezeit, sID_BatterieLaden, false);
-                }else{
-                    // Noch mal nachladen
-                    await setStateAtSpecificTime(dateBestePhaseStartLade.zeit, sID_BatterieLaden, true);
-                    await setStateAtSpecificTime(dateBesteEndeLadezeit, sID_BatterieLaden, false);
-                }
-                const startTime = dateBestePhaseStartLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
-                const endeTime = dateBesteEndeLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
-                let message = `Laden von ${startTime} bis ${endeTime} (aktive Phase: ${aktivePhase.type})`    
-                statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
-                await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
-                LogProgrammablauf = '';
-                return;
-            }
+					const endeTimePhase = bisTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+					await setStateAsync(sID_statusLaden, `Nachladen bis ${endeTimePhase} Uhr (keine bessere Zeit gefunden)`);
+				}
+        
+				await DebugLog(ergebnis, spitzenSchwellwert, pvLeistungAusreichend.state);
+				LogProgrammablauf = '';
+				return;
+			}
+    
+			let besteStartzeitGlobal = besteZeitGlobal.zeit;
+			let besteEndzeitGlobal = new Date(besteStartzeitGlobal.getTime() + ladeZeit_h * 60 * 60 * 1000);
+    
+			// Validierung: Liegt Ladeende im Horizont?
+			if (besteEndzeitGlobal > suchEnde) {
+				LogProgrammablauf += '12/6,';
+				const verfuegbareLadezeit_h = (suchEnde.getTime() - besteStartzeitGlobal.getTime()) / (1000 * 60 * 60);
+        
+				if (verfuegbareLadezeit_h < ladeZeit_h * 0.75) {
+					// Zu wenig Zeit verfügbar → Alternative suchen
+					LogProgrammablauf += '12/7,';
+					const alternativeEnde = new Date(suchEnde.getTime() - ladeZeit_h * 60 * 60 * 1000);
             
-            // Prüfen ob der günstigste Ladezeitraum bereits abgelaufen ist aber max SOC noch nicht erreicht wurde
-            // Nur zulassen wenn der SOC um 10% unter max SOC ist, um ein/aus schalten zu verhindern.
-            if(dateBesteEndeLadezeit < new Date() && (aktuelleBatterieSoC_Pro < (maxBatterieSoC - 10) || dateBesteReichweiteLade.zeit > new Date())){
-                LogProgrammablauf += '12/7,';
-                // Beste Ladezeit bereits abgelaufen, es muss aber noch nachgeladen werden
-                if(dateBesteReichweiteLade.zeit > new Date()){
-                    // günstigere Ladezeit innerhalb Batteriereichweite gefunden
-                    LogProgrammablauf += '12/8,';
-                    const dateBesteEndeLadezeit = new Date(dateBesteReichweiteLade.zeit.getTime() + ladeZeit_h * 60 * 60 * 1000);
-                    await setStateAtSpecificTime(dateBesteReichweiteLade.zeit, sID_BatterieLaden, true);
-                    await setStateAtSpecificTime(dateBesteEndeLadezeit, sID_BatterieLaden, false);
-                    const startTime = dateBesteReichweiteLade.zeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
-                    const endeTime = dateBesteEndeLadezeit.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
-                    let message = `Beste Ladezeit abgelaufen. Nachladen von ${startTime} bis ${endeTime} (aktive Phase: ${aktivePhase.type})` 
-                    statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
-                    await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
-                    LogProgrammablauf = '';
-                    return;
-                }
-                await loescheAlleTimer('Laden');
-                // bis zum ende der Normal Phase Laden freigeben
-                await setStateAsync(sID_BatterieLaden,true)
-                await setStateAtSpecificTime(bisTime, sID_BatterieLaden, false);
-                const endeTimePhase = bisTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' Uhr';
-                let message = `Beste Ladezeit abgelaufen. Nachladen bis max. ${endeTimePhase} (aktive Phase: ${aktivePhase.type})`
-                statusLadenText != message ? await setStateAsync(sID_statusLaden,message): null;
-                await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
-                LogProgrammablauf = '';
-                return;
-            }
+					if (alternativeEnde > jetzt) {
+						LogProgrammablauf += '12/8,';
+						const alternativeZeit = await bestLoadTime(jetzt, alternativeEnde, ladeZeit_h, 14);
+                
+						if (alternativeZeit) {
+							besteStartzeitGlobal = alternativeZeit.zeit;
+							besteEndzeitGlobal = new Date(besteStartzeitGlobal.getTime() + ladeZeit_h * 60 * 60 * 1000);
+						} else {
+							// Fallback
+							if (bisTime > jetzt) {
+								LogProgrammablauf += '12/9,';
+								await loescheAlleTimer('Laden');
+								await setStateAsync(sID_BatterieLaden, true);
+								await setStateAtSpecificTime(bisTime, sID_BatterieLaden, false);
+                        
+								const endeTimePhase = bisTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+								await setStateAsync(sID_statusLaden, `Nachladen bis ${endeTimePhase} Uhr`);
+							}
+                    
+							await DebugLog(ergebnis, spitzenSchwellwert, pvLeistungAusreichend.state);
+							LogProgrammablauf = '';
+							return;
+						}
+					} else {
+						// Fallback
+						if (bisTime > jetzt) {
+							LogProgrammablauf += '12/10,';
+							await loescheAlleTimer('Laden');
+							await setStateAsync(sID_BatterieLaden, true);
+							await setStateAtSpecificTime(bisTime, sID_BatterieLaden, false);
+						}
+                
+						await DebugLog(ergebnis, spitzenSchwellwert, pvLeistungAusreichend.state);
+						LogProgrammablauf = '';
+						return;
+					}
+				} else {
+					// 75%+ verfügbar
+					besteEndzeitGlobal = suchEnde;
+				}
+			}
+    
+			// ========== Priorität 3: Ist beste globale Zeit in aktueller Phase? ==========
+    
+			const besteZeitInAktuellerPhase = (
+				besteStartzeitGlobal >= vonTime && 
+				besteStartzeitGlobal < bisTime
+			);
+    
+			if (besteZeitInAktuellerPhase) {
+				LogProgrammablauf += '12/11,';
+        
+				// Beste Zeit ist JETZT in dieser Phase
+				if (besteStartzeitGlobal.getTime() <= jetzt.getTime() && besteEndzeitGlobal.getTime() > jetzt.getTime()) {
+					// Startzeit bereits vorbei → Sofort laden
+					LogProgrammablauf += '12/12,';
             
-            LogProgrammablauf += '12/9,';
-            await DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend.state);
-            LogProgrammablauf = '';
-            return;
-        }
+					if (!bBattLaden) {
+						await loescheAlleTimer('Laden');
+						await setStateAsync(sID_BatterieLaden, true);
+						await setStateAtSpecificTime(besteEndzeitGlobal, sID_BatterieLaden, false);
+					}
+				} else if (besteStartzeitGlobal > jetzt) {
+					// Startzeit noch nicht erreicht → Timer setzen
+					LogProgrammablauf += '12/13,';
+            
+					await loescheAlleTimer('Laden');
+					await setStateAtSpecificTime(besteStartzeitGlobal, sID_BatterieLaden, true);
+					await setStateAtSpecificTime(besteEndzeitGlobal, sID_BatterieLaden, false);
+				}
+        
+				const startTime = besteStartzeitGlobal.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+				const endeTime = besteEndzeitGlobal.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+        
+				let message = `Optimale Zeit (jetzt): ${startTime}-${endeTime} Uhr (Ø ${besteZeitGlobal.preis_d} €/kWh, ca. ${besteZeitGlobal.gesamtkosten} € für ${besteZeitGlobal.energie_kWh} kWh)`;
+				if (statusLadenText !== message) {
+					await setStateAsync(sID_statusLaden, message);
+				}
+        
+				await DebugLog(ergebnis, spitzenSchwellwert, pvLeistungAusreichend.state);
+				LogProgrammablauf = '';
+				return;
+			}
+    
+			// ========== Priorität 4: Beste Zeit liegt in der Zukunft ==========
+    
+			if (besteStartzeitGlobal > bisTime) {
+				LogProgrammablauf += '12/14,';
+        
+				// Beste Zeit liegt NACH der aktuellen Phase
+				// Prüfung: Liegt Peak-Phase zwischen jetzt und bester Zeit?
+        
+				const peakAnalyse = await analysierePeakPhasenBis(jetzt, besteStartzeitGlobal);
+        
+				if (peakAnalyse.hatPeaks) {
+					LogProgrammablauf += '12/15,';
+            
+					// Peak-Phase liegt dazwischen → Kostenvergleich
+					const kostenWarten = await berechneKostenWarten(jetzt, besteStartzeitGlobal, peakAnalyse.peakPhasen);
+					const kostenVorPeak = await berechneKostenLadenVorPeak(jetzt, peakAnalyse.peakPhasen[0], ladeZeit_h);
+            
+					if (kostenVorPeak.moeglich && kostenVorPeak.gesamtkosten < kostenWarten.gesamtkosten) {
+						LogProgrammablauf += '12/16,';
+                
+						// Vor Peak laden ist günstiger
+						await loescheAlleTimer('Laden');
+						await setStateAtSpecificTime(kostenVorPeak.start, sID_BatterieLaden, true);
+						await setStateAtSpecificTime(kostenVorPeak.ende, sID_BatterieLaden, false);
+                
+						const s = kostenVorPeak.start.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+						const e = kostenVorPeak.ende.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+						const ersparnis = round(kostenWarten.gesamtkosten - kostenVorPeak.gesamtkosten, 2);
+                
+						await setStateAsync(sID_statusLaden, `Laden vor Peak: ${s}-${e} Uhr (Ersparnis: ${ersparnis}€)`);
+						await DebugLog(ergebnis, spitzenSchwellwert, pvLeistungAusreichend.state);
+						LogProgrammablauf = '';
+						return;
+					}
+            
+					// Warten ist günstiger → Entladesperren setzen
+					LogProgrammablauf += '12/17,';
+            
+					for (const peak of peakAnalyse.peakPhasen) {
+						await setEntladesperreMitCap(new Date(peak.start), new Date(peak.end), 90);
+					}
+            
+					// Laden stoppen falls aktiv
+					if (bBattLaden) {
+						await loescheAlleTimer('Laden');
+						await setStateAsync(sID_BatterieLaden, false);
+					}
+            
+					// Timer für beste Zeit setzen
+					await setStateAtSpecificTime(besteStartzeitGlobal, sID_BatterieLaden, true);
+					await setStateAtSpecificTime(besteEndzeitGlobal, sID_BatterieLaden, false);
+            
+					const s = besteStartzeitGlobal.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+					const e = besteEndzeitGlobal.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+            
+					await setStateAsync(sID_statusLaden, `Warte auf beste Zeit: ${s}-${e} Uhr (${besteZeitGlobal.preis_d}€, Peak überbrückt)`);
+					await DebugLog(ergebnis, spitzenSchwellwert, pvLeistungAusreichend.state);
+					LogProgrammablauf = '';
+					return;
+				}
+        
+				// Keine Peak-Phase dazwischen
+				LogProgrammablauf += '12/18,';
+                
+				// Laden stoppen falls aktiv
+				if (bBattLaden) {
+					await loescheAlleTimer('Laden');
+					await setStateAsync(sID_BatterieLaden, false);
+				}
+        
+				// Timer für beste Zeit setzen
+				await setStateAtSpecificTime(besteStartzeitGlobal, sID_BatterieLaden, true);
+				await setStateAtSpecificTime(besteEndzeitGlobal, sID_BatterieLaden, false);
+        
+                // Datum + Uhrzeit formatieren
+                const start = `${besteStartzeitGlobal.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })} / ${besteStartzeitGlobal.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
+                const ende = `${besteEndzeitGlobal.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })} / ${besteEndzeitGlobal.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
+
+				await setStateAsync(sID_statusLaden, `Keine Peak-Phase bis zur besten Ladezeit: ${start} Uhr - ${ende} Uhr (${besteZeitGlobal.preis_d}€)`);
+				await DebugLog(ergebnis, spitzenSchwellwert, pvLeistungAusreichend.state);
+				LogProgrammablauf = '';
+				return;
+			}
+    
+			// ========== Priorität 5: Beste Zeit liegt in der Vergangenheit ==========
+    
+			if (besteStartzeitGlobal < jetzt && aktuelleBatterieSoC_Pro < (maxBatterieSoC - 10)) {
+				LogProgrammablauf += '12/19,';
+        
+				// Beste Zeit bereits abgelaufen, aber SOC noch nicht erreicht
+				// → Nachladen in aktueller Phase
+        
+				if (bisTime > jetzt) {
+					LogProgrammablauf += '12/20,';
+					await loescheAlleTimer('Laden');
+					await setStateAsync(sID_BatterieLaden, true);
+					await setStateAtSpecificTime(bisTime, sID_BatterieLaden, false);
+            
+					const endeTimePhase = bisTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+					await setStateAsync(sID_statusLaden, `Beste Zeit abgelaufen. Nachladen bis ${endeTimePhase} Uhr`);
+				} else {
+					if (bBattLaden) {
+						await loescheAlleTimer('Laden');
+						await setStateAsync(sID_BatterieLaden, false);
+					}
+					await setStateAsync(sID_statusLaden, `Beste Zeit abgelaufen, warte auf nächste Phase`);
+				}
+        
+				await DebugLog(ergebnis, spitzenSchwellwert, pvLeistungAusreichend.state);
+				LogProgrammablauf = '';
+				return;
+			}
+    
+			// ========== Priorität 6: Keine Aktion erforderlich ==========
+    
+			LogProgrammablauf += '12/21,';
+			await DebugLog(ergebnis, spitzenSchwellwert, pvLeistungAusreichend.state);
+			LogProgrammablauf = '';
+			return;
+		}
 
         if (aktivePhaseType === 'low'){
             LogProgrammablauf += '13,';
@@ -751,10 +961,10 @@ async function tibberSteuerungHauskraftwerk() {
             // günstigste Ladezeit suchen
             const bisTime = new Date(aktivePhase.end)
             const vonTime = new Date(aktivePhase.start)
-            //log(`Programmablauf 13 vonTime = ${vonTime} bisTime = ${bisTime} ladeZeit_h = ${ladeZeit_h}`)
+            //logMessage(`Programmablauf 13 vonTime = ${vonTime} bisTime = ${bisTime} ladeZeit_h = ${ladeZeit_h}`,5)
             const dateBesteStartLade = await bestLoadTime(vonTime,bisTime,ladeZeit_h,8)
             const dateEndeLadezeit = new Date(dateBesteStartLade.zeit);
-            //log(`dateBesteStartLade = ${dateBesteStartLade} dateEndeLadezeit = ${dateEndeLadezeit}`)
+            //logMessage(`dateBesteStartLade = ${dateBesteStartLade} dateEndeLadezeit = ${dateEndeLadezeit}`,5)
             dateEndeLadezeit.setHours(dateEndeLadezeit.getHours() + ladeZeit_h);
             await setStateAtSpecificTime(new Date(dateBesteStartLade.zeit), sID_BatterieLaden, true);
             await setStateAtSpecificTime(new Date(dateEndeLadezeit), sID_BatterieLaden, false);
@@ -769,7 +979,7 @@ async function tibberSteuerungHauskraftwerk() {
         LogProgrammablauf = '';
         return;
     } catch (error) {
-        log(`Fehler in Funktion tibberSteuerungHauskraftwerk: ${error.message}`, 'error');
+        logMessage(`Fehler in Funktion tibberSteuerungHauskraftwerk: ${error.message}`, 3);
     }
 }
 
@@ -802,7 +1012,7 @@ async function EAutoLaden(naechsteNiedrigphase) {
             }  
         }
     } catch (error) {
-        log(`Fehler in Funktion EAutoLaden(): ${error.message}`, 'error');
+        logMessage(`Fehler in Funktion EAutoLaden(): ${error.message}`, 3);
     }
 }
 
@@ -838,7 +1048,7 @@ function findeNaechstePhase(arrayPhases) {
             endzeitLokal: null
         };
     } catch (error) {
-        log(`Fehler in Funktion findeNaechstePhase(): ${error.message}`, 'error');
+        logMessage(`Fehler in Funktion findeNaechstePhase(): ${error.message}`, 3);
     }
 }
 
@@ -851,7 +1061,7 @@ async function pruefePVLeistung(reichweiteStunden) {
         // Reichweite validieren und auf ganze Stunden abrunden
         let nreichweiteStunden = Math.floor(parseFloat(reichweiteStunden));
         if (isNaN(nreichweiteStunden)) {
-            log(`function pruefePVLeistung(): reichweiteStunden ist keine gültige Zahl`, 'error');
+            logMessage(`function pruefePVLeistung(): reichweiteStunden ist keine gültige Zahl`, 3);
             return { state: false };
         }
         
@@ -893,7 +1103,7 @@ async function pruefePVLeistung(reichweiteStunden) {
 				pvMorgen = numberOrZero(arrayPrognoseAuto_kWh[morgenIndex] ?? 0);
 			}
 		} else {
-			log('PV-Prognose: Monatsarray fehlt oder hat <31 Einträge – setze pvHeute/pvMorgen = 0', 'warn');
+			logMessage('PV-Prognose: Monatsarray fehlt oder hat <31 Einträge – setze pvHeute/pvMorgen = 0', 2);
 			pvHeute = 0;
 			pvMorgen = 0;
 		}
@@ -905,7 +1115,7 @@ async function pruefePVLeistung(reichweiteStunden) {
         let korrekturFaktor = pvAbweichung_kWh || 0;
         if(korrekturFaktor > 0 ){korrekturFaktor = 0}
         const pvHeuteKorr = pvHeute + korrekturFaktor;
-        if (DebugAusgabe){log(`PV Prognose heute: ${pvHeute} kWh, Abweichung: ${pvAbweichung_kWh} kWh, nach Korrektur: ${pvHeuteKorr} kWh`,'warn');}
+        logMessage(`PV Prognose heute: ${pvHeute} kWh, Abweichung: ${pvAbweichung_kWh} kWh, nach Korrektur: ${pvHeuteKorr} kWh`,5);
         
         // Benötigte Kapazität
         const progBattSoC = await prognoseBatterieSOC(nreichweiteStunden);
@@ -980,7 +1190,7 @@ async function pruefePVLeistung(reichweiteStunden) {
         LogProgrammablauf += '18/7,';
         return { state: false };
     } catch (error) {
-        log(`Fehler in Funktion pruefePVLeistung(): ${error.message}`, 'error');
+        logMessage(`Fehler in Funktion pruefePVLeistung(): ${error.message}`, 3);
     }
 }
 
@@ -999,7 +1209,7 @@ async function prognoseBatterieSOC(entladezeitStunden) {
 
         // Prüfen, ob Daten für den Tag vorhanden sind
         if (!hausverbrauch[currentDay] || hausverbrauch[currentDay].day == null || hausverbrauch[currentDay].night == null) {
-            log(`prognoseBatterieSOC: Hausverbrauch für ${currentDay} nicht vorhanden`, 'error');
+            logMessage(`prognoseBatterieSOC: Hausverbrauch für ${currentDay} nicht vorhanden`, 3);
             return { state: false, soc: aktuelleBatterieSoC_Pro };
         }
 
@@ -1026,7 +1236,7 @@ async function prognoseBatterieSOC(entladezeitStunden) {
         };
 
     } catch (error) {
-        log(`Fehler in Funktion prognoseBatterieSOC: ${error.message}`, 'error');
+        logMessage(`Fehler in Funktion prognoseBatterieSOC: ${error.message}`, 3);
         return { state: false, soc: aktuelleBatterieSoC_Pro };
     }
 }
@@ -1051,7 +1261,7 @@ async function berechneLadezeitBatterie(dauer_h = null, startSOC = null) {
         const currentDay = now.toLocaleDateString('de-DE', { weekday: 'long' });
 
         if (!hausverbrauch[currentDay] || hausverbrauch[currentDay].day == null || hausverbrauch[currentDay].night == null) {
-            log(`berechneLadezeitBatterie: Hausverbrauch für ${currentDay} nicht vorhanden`, 'error');
+            logMessage(`berechneLadezeitBatterie: Hausverbrauch für ${currentDay} nicht vorhanden`, 3);
             return 0;
         }
 
@@ -1060,7 +1270,7 @@ async function berechneLadezeitBatterie(dauer_h = null, startSOC = null) {
         const durchschnittlicherVerbrauch_kWh = (hausverbrauch_day_kWh + hausverbrauch_night_kWh) / 2;
 
         if (maxLadeleistung_kW <= 0) {
-            log(`berechneLadezeitBatterie: Ungültige Ladeleistung ${maxLadeleistung_kW} kW`, 'error');
+            logMessage(`berechneLadezeitBatterie: Ungültige Ladeleistung ${maxLadeleistung_kW} kW`, 3);
             return 0;
         }
 
@@ -1084,7 +1294,7 @@ async function berechneLadezeitBatterie(dauer_h = null, startSOC = null) {
         return Math.ceil(ladezeitInStunden);
 
     } catch (error) {
-        log(`Fehler in Funktion berechneLadezeitBatterie: ${error.message}`, 'error');
+        logMessage(`Fehler in Funktion berechneLadezeitBatterie: ${error.message}`, 3);
         return 0;
     }
 }
@@ -1093,7 +1303,7 @@ async function berechneLadezeitBatterie(dauer_h = null, startSOC = null) {
 async function setStateAtSpecificTime(targetTime, stateID, state) {
     try {
         LogProgrammablauf += '29,';
-        //log(`setStateAtSpecificTime: targetTime = ${targetTime} stateID = ${stateID} state = ${state} `);
+        //logMessage(`setStateAtSpecificTime: targetTime = ${targetTime} stateID = ${stateID} state = ${state} `,5);
         const currentTime = new Date();
         const targetDate = new Date(targetTime);
 
@@ -1103,7 +1313,7 @@ async function setStateAtSpecificTime(targetTime, stateID, state) {
 
 		if (!(targetTime instanceof Date) || isNaN(targetDate.getTime())) {
             LogProgrammablauf += '29/2,';
-            log(`Fehler in function setStateAtSpecificTime, targetTime ist kein Date-Objekt / targetTime = ${targetTime} `, 'warn');
+            logMessage(`Fehler in function setStateAtSpecificTime, targetTime ist kein Date-Objekt / targetTime = ${targetTime} `, 2);
             return;
         }
 
@@ -1145,7 +1355,7 @@ async function setStateAtSpecificTime(targetTime, stateID, state) {
         }
 
         let timeDiff = targetDate.getTime() - currentTime.getTime();
-        //log(`timeDiff = ${timeDiff} stateID = ${stateID} objektID = ${objektID} state = ${state}`);
+        //logMessage(`timeDiff = ${timeDiff} stateID = ${stateID} objektID = ${objektID} state = ${state}`,5);
 
         // Wenn Startzeit in der Vergangenheit, ignorieren außer bei Batterie Entladesperre
         if (timeDiff > 0 || (timeDiff <= 0 && stateID === sID_BatterieEntladesperre && state === true)) {
@@ -1155,18 +1365,18 @@ async function setStateAtSpecificTime(targetTime, stateID, state) {
                     const stateAkt = (await getStateAsync(stateID)).val;
                     if (stateAkt != state) {
                         await setStateAsync(stateID, state);
-                        //log(`State ${stateID} wurde durch Timer um ${targetTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} auf ${state} gesetzt.`, 'warn');
+                        //logMessage(`State ${stateID} wurde durch Timer um ${targetTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} auf ${state} gesetzt.`, 5);
                     }
                     if (stateID === sID_BatterieLaden && state === false) {
                         if (stateAkt != state) {
                             await setStateAsync(sID_timerAktiv, false);
-                            //log(`State ${stateID} wurde durch Timer um ${targetTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} auf ${state} gesetzt.`, 'warn');
+                            //logMessage(`State ${stateID} wurde durch Timer um ${targetTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} auf ${state} gesetzt.`, 5);
                         }
                     }
                     if (stateID === sID_BatterieEntladesperre && state === false) { bBattSperrePrio = false; }
                     if (stateID === sID_BatterieEntladesperre && state === true) { bBattSperrePrio = true; }
                 } catch (error) {
-                    log(`Fehler im Timer function setStateAtSpecificTime: ${error.message}`, 'error');
+                    logMessage(`Fehler im Timer function setStateAtSpecificTime: ${error.message}`, 3);
                 }
             }, timeDiff);
 
@@ -1179,11 +1389,11 @@ async function setStateAtSpecificTime(targetTime, stateID, state) {
 
             // Warnung bei zu vielen Timern
             if (timerIds.length > 200) {
-                log(`Warnung: Es sind aktuell ${timerIds.length} Timer aktiv!`, 'warn');
+                logMessage(`Warnung: Es sind aktuell ${timerIds.length} Timer aktiv!`, 2);
             }
         }
     } catch (error) {
-        log(`Fehler in Funktion setStateAtSpecificTime: ${error.message}`, 'error');
+        logMessage(`Fehler in Funktion setStateAtSpecificTime: ${error.message}`, 3);
     }
 }
 
@@ -1191,38 +1401,37 @@ async function setStateAtSpecificTime(targetTime, stateID, state) {
 // Unterstützt jetzt auch 15-Minuten-Intervalle statt Stundenwerte.
 async function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h, trace) {
     try {
-        //if (DebugAusgabe){log(`function bestLoadTime wurde von Position ${trace} aufgerufen`,'warn');}
-                
+        //logMessage(`function bestLoadTime wurde von Position ${trace} aufgerufen`,5);}
+               
         // Konvertiere Start- und Endzeit zu Datumsobjekten, falls notwendig
         dateStartTime = new Date(dateStartTime);
         dateEndTime = new Date(dateEndTime);
         
         // Überprüfe, ob Start- und Endzeiten gültig sind
         if (isNaN(dateStartTime) || isNaN(dateEndTime)) {
-            log(`function bestLoadTime: Ungültiges Start- oder Enddatum`, 'error');
+            logMessage(`function bestLoadTime: Ungültiges Start- oder Enddatum`, 3);
             return null;
         }
 
         // Konvertiere und validiere die Ladezeit
         if (isNaN(nladezeit_h) || nladezeit_h <= 0) {
-			log(`function bestLoadTime: ungültige Ladezeit (nladezeit_h=${nladezeit_h}`,'warn');
+			logMessage(`function bestLoadTime: ungültige Ladezeit (nladezeit_h=${nladezeit_h}`,2);
 			return null;
 		}
 
         // Validierung der globalen Variable datenTibberLink48h
         if (!Array.isArray(datenTibberLink48h) || datenTibberLink48h.length === 0) {
-            log(`function bestLoadTime: datenTibberLink48h ist keine gültiges Array oder enthält keine Werte.`, 'error');
+            logMessage(`function bestLoadTime: datenTibberLink48h ist keine gültiges Array oder enthält keine Werte.`, 3);
             return null;
         }
 
         if (datenTibberLink48h.length < 2) {
-			log(`function bestLoadTime: datenTibberLink48h unzureichend (len=${Array.isArray(datenTibberLink48h) ? datenTibberLink48h.length : 'n/a'}`, 'warn');
+			logMessage(`function bestLoadTime: datenTibberLink48h unzureichend (len=${Array.isArray(datenTibberLink48h) ? datenTibberLink48h.length : 'n/a'}`, 2);
 			return null;
 		}
 
         // Intervall in Minuten automatisch erkennen (z. B. 15, 30, 60)
         const intervalMin = detectIntervalMinutes(datenTibberLink48h);
-        const interval_h = intervalMin / 60;
         const stepsPerHour = 60 / intervalMin;
         // Anzahl der Datensätze, die eine Ladezeit abdecken (z. B. 2 h Ladezeit = 8 × 15 min)
         const ladezeitSteps = Math.max(Math.round(nladezeit_h * stepsPerHour), 1);
@@ -1233,11 +1442,11 @@ async function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h, trace) {
         const lastEndTime = new Date(lastEntryTime.getTime() + intervalMin * 60 * 1000);
 		
 		if (dateStartTime < firstEntryTime) {
-            log(`dateStartTime liegt vor dem gültigen Zeitraum. Anpassung auf ${firstEntryTime}`, 'warn');
+            logMessage(`dateStartTime liegt vor dem gültigen Zeitraum. Anpassung auf ${firstEntryTime}`, 2);
             dateStartTime = firstEntryTime;
         }
         if (dateEndTime > lastEndTime) {
-            log(`dateEndTime liegt nach dem gültigen Zeitraum. Anpassung auf ${lastEndTime}`, 'warn');
+            logMessage(`dateEndTime liegt nach dem gültigen Zeitraum. Anpassung auf ${lastEndTime}`, 2);
             dateEndTime = lastEndTime;
         }
 
@@ -1270,7 +1479,7 @@ async function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h, trace) {
 
         // 3) Zeitfenster >= 30 min aber kleiner als geforderte Ladezeit
         if (fenster_h < nladezeit_h) {
-            log(`Geforderte Ladezeit ${nladezeit_h}h > Zeitfenster ${fenster_h.toFixed(2)}h. Ladezeit wird reduziert.`, 'warn');
+            logMessage(`Geforderte Ladezeit ${nladezeit_h}h > Zeitfenster ${fenster_h.toFixed(2)}h. Ladezeit wird reduziert.`, 2);
             nladezeit_h = fenster_h; // Ladezeit auf Fensterlänge begrenzen
         }
 
@@ -1302,21 +1511,25 @@ async function bestLoadTime(dateStartTime, dateEndTime, nladezeit_h, trace) {
         }
 
         if (billigsteZeit) {
-            const blockDauer_h = ladezeitSteps * interval_h;
-            const durchschnittspreis = billigsterBlockPreis / blockDauer_h;
+            const durchschnittspreis = billigsterBlockPreis / ladezeitSteps;
+            const ladeleistung_kW = Math.min(maxLadeleistungUser_W, maxLadeleistungE3DC_W) / 1000;
+            const energie_kWh = round(ladeleistung_kW * nladezeit_h, 2);
+            const gesamtkosten = round(durchschnittspreis * energie_kWh, 2);
             return {
                 zeit: new Date(billigsteZeit),
-                preis_d: round(durchschnittspreis, 4),
+                preis_d: round(durchschnittspreis, 3),
+                gesamtkosten: gesamtkosten,            // Gesamtkosten für die Ladung
+                energie_kWh: energie_kWh,             // Geplante Energiemenge
                 preis: billigsterPreis,
                 intervall: intervalMin,
                 ladezeitSteps
             };
         } else {
-            log(`Kein Eintrag gefunden`, 'error');
+            logMessage(`Kein Eintrag gefunden`, 3);
             return null;
         }
     } catch (error) {
-        log(`Fehler in function bestLoadTime: ${error.message}`, 'error');
+        logMessage(`Fehler in function bestLoadTime: ${error.message}`, 3);
         return null;
     }
 }
@@ -1328,12 +1541,11 @@ async function createDiagramm() {
         ? value.split(' / ')[1].split(' ')[0].split(':').map(Number)
         : value.split(' ')[0].split(':').map(Number);
 
-    const reichweite_h = round(stunden + (minuten / 60), 0);
+    const reichweite_h = stunden + (minuten / 60);
 
     // Zeitangaben berechnen
     const currentDateTime = new Date();
     const battDateTime = new Date(currentDateTime.getTime() + reichweite_h * 3600000);
-
     // Hilfsfunktion zum Erstellen eines Diagramm-JSONs
     const createChart = (data, label) => {
         const axisLabels = [];
@@ -1477,7 +1689,7 @@ async function berechneBattPrice() {
             await setStateAsync(sID_StrompreisBatterie, null);
         }
     } catch (error) {
-        log(`Fehler in Funktion berechneBattPrice(): ${error.message}`, 'error');
+        logMessage(`Fehler in Funktion berechneBattPrice(): ${error.message}`, 3);
     }
 }
 
@@ -1536,7 +1748,7 @@ async function getCurrentPrice() {
 
         return aktuellerPreisTibber;
     } catch (error) {
-        log(`Fehler in Funktion getCurrentPrice(): ${error.message}`, 'error');
+        logMessage(`Fehler in Funktion getCurrentPrice(): ${error.message}`, 3);
     }
 }
 
@@ -1567,47 +1779,62 @@ async function DebugLog(ergebnis,spitzenSchwellwert,pvLeistungAusreichend)
     let heuteErwartetePVLeistung_kWh = round(_arrayPrognoseAuto_kWh[tagHeute],2);
     let morgenErwartetePVLeistung_kWh = round(_arrayPrognoseAuto_kWh[tagMorgen],2);
     
-    if (DebugAusgabe){log(`************************************************************************************`)}
-    if (DebugAusgabeDetail){log(`** timerTarget = ${JSON.stringify(timerTarget)}`)}
-    if (DebugAusgabeDetail){log(`** timerState = ${JSON.stringify(timerState)}`)}
-    if (DebugAusgabeDetail){log(`** timerObjektID = ${JSON.stringify(timerObjektID)}`)}
-    if (DebugAusgabeDetail){log(`** minStrompreis_48h = ${minStrompreis_48h}`)}
-    if (DebugAusgabeDetail){log(`** batterieKapazitaet_kWh = ${batterieKapazitaet_kWh}`)}
-    if (DebugAusgabeDetail){log(`** Batterie_SOC = ${Batterie_SOC}`)}
-    if (DebugAusgabeDetail){log(`** Power_Bat_W = ${Power_Bat_W}`)}
-    if (DebugAusgabeDetail){log(`** Power_Grid = ${Power_Grid}`)}
-    if (DebugAusgabeDetail){log(`** prognoseLadezeitBatterie = ${prognoseLadezeitBatterie}`)}
-    if (DebugAusgabeDetail){log(`** reichweiteBatterie = ${reichweiteBatterie}`)}
-    if (DebugAusgabeDetail){log(`** Bruttostrompreis Batterie angewählt = ${bBatteriepreisAktiv}`)}
-    if (DebugAusgabeDetail){log(`** Nettostrompreis Batterie = ${strompreisBatterie}`)}
-    if (DebugAusgabeDetail){log(`** Bruttostrompreis Batterie = ${bruttoPreisBatterie}`)}
-    if (DebugAusgabeDetail){log(`** Aktueller Preis Tibber = ${aktuellerPreisTibber}`)}
-    if (DebugAusgabeDetail){log(`** Preis Tibber mit Ladeverluste = ${effektivPreisTibber}`)}
-    if (DebugAusgabeDetail){log(`** naechstePhasen[1].endLocale = ${ergebnis.naechstePhasen[1]?.endLocale}`)}
-    if (DebugAusgabeDetail){log(`** naechstePhasen[1].startLocale = ${ergebnis.naechstePhasen[1]?.startLocale}`)}
-    if (DebugAusgabeDetail){log(`** naechstePhasen[1].Type = ${ergebnis.naechstePhasen[1]?.type}`)}
-    if (DebugAusgabeDetail){log(`** naechstePhasen[0].endLocale = ${ergebnis.naechstePhasen[0]?.endLocale}`)}
-    if (DebugAusgabeDetail){log(`** naechstePhasen[0].startLocale = ${ergebnis.naechstePhasen[0]?.startLocale}`)}
-    if (DebugAusgabeDetail){log(`** naechstePhasen[0].Type = ${ergebnis.naechstePhasen[0]?.type}`)}
-    if (DebugAusgabeDetail){log(`** aktivePhase.endLocale = ${ergebnis.aktivePhase?.endLocale}`)}
-    if (DebugAusgabeDetail){log(`** aktivePhase.startLocale = ${ergebnis.aktivePhase?.startLocale}`)}
-    if (DebugAusgabeDetail){log(`** aktivePhase.Type = ${ergebnis.aktivePhase?.type}`)}
-    if (DebugAusgabeDetail){log(`** Schwellwert Spitzenstrompreis = ${spitzenSchwellwert}`)}
-    if (DebugAusgabeDetail){log(`** Schwellwert hoher Strompreis = ${hoherSchwellwert}`)}
-    if (DebugAusgabeDetail){log(`** Schwellwert niedriger Strompreis = ${niedrigerSchwellwert}`)}
-    if (DebugAusgabeDetail){log(`** schneeBedeckt = ${bSchneeBedeckt}`)}
-    if (DebugAusgabeDetail){log(`** Prognose PV-Leistung heute = ${heuteErwartetePVLeistung_kWh} kWh`)}
-    if (DebugAusgabeDetail){log(`** Prognose PV-Leistung morgen = ${morgenErwartetePVLeistung_kWh} kWh`)}
-    if (DebugAusgabeDetail){log(`** pvLeistungAusreichend = ${pvLeistungAusreichend}`)}
-    if (DebugAusgabeDetail){log(`** bReichweiteSunrise = ${bReichweiteSunrise}`)}
-    if (DebugAusgabeDetail){log(`** eAutoLaden = ${eAutoLaden}`)}
-    if (DebugAusgabeDetail){log(`** BatterieEntladenSperren = ${bEntladenSperren}`)}
-    if (DebugAusgabeDetail){log(`** BatterieLaden = ${BatterieLaden}`)}
-    if (DebugAusgabeDetail){log(`** battSperrePrio = ${bBattSperrePrio}`)}
-    if (DebugAusgabeDetail){log(`** StatusLaden = ${statusLadenText}`)}
-    if (DebugAusgabeDetail){log(`** StatusEntladesperre = ${statusEntladesperreText}`)}
-    if (DebugAusgabe){log(`** ProgrammAblauf = ${LogProgrammablauf} `,'warn')}
-    if (DebugAusgabe){log(`*******************  Debug LOG Tibber Skript ${scriptVersion} *******************`)}
+    logMessage(`************************************************************************************`,4)
+    logMessage(`** timerTarget = ${JSON.stringify(timerTarget)}`,5)
+    logMessage(`** timerState = ${JSON.stringify(timerState)}`,5)
+    logMessage(`** timerObjektID = ${JSON.stringify(timerObjektID)}`,5)
+    logMessage(`** minStrompreis_48h = ${minStrompreis_48h}`,5)
+    logMessage(`** batterieKapazitaet_kWh = ${batterieKapazitaet_kWh}`,5)
+    logMessage(`** Batterie_SOC = ${Batterie_SOC}`,5)
+    logMessage(`** Power_Bat_W = ${Power_Bat_W}`,5)
+    logMessage(`** Power_Grid = ${Power_Grid}`,5)
+    logMessage(`** prognoseLadezeitBatterie = ${prognoseLadezeitBatterie}`,5)
+    logMessage(`** reichweiteBatterie = ${reichweiteBatterie}`,5)
+    logMessage(`** Bruttostrompreis Batterie angewählt = ${bBatteriepreisAktiv}`,5)
+    logMessage(`** Nettostrompreis Batterie = ${strompreisBatterie}`,5)
+    logMessage(`** Bruttostrompreis Batterie = ${bruttoPreisBatterie}`,5)
+    logMessage(`** Aktueller Preis Tibber = ${aktuellerPreisTibber}`,5)
+    logMessage(`** Preis Tibber mit Ladeverluste = ${effektivPreisTibber}`,5)
+    logMessage(`** naechstePhasen[1].endLocale = ${ergebnis.naechstePhasen[1]?.endLocale}`,5)
+    logMessage(`** naechstePhasen[1].startLocale = ${ergebnis.naechstePhasen[1]?.startLocale}`,5)
+    logMessage(`** naechstePhasen[1].Type = ${ergebnis.naechstePhasen[1]?.type}`,5)
+    logMessage(`** naechstePhasen[0].endLocale = ${ergebnis.naechstePhasen[0]?.endLocale}`,5)
+    logMessage(`** naechstePhasen[0].startLocale = ${ergebnis.naechstePhasen[0]?.startLocale}`,5)
+    logMessage(`** naechstePhasen[0].Type = ${ergebnis.naechstePhasen[0]?.type}`,5)
+    logMessage(`** aktivePhase.endLocale = ${ergebnis.aktivePhase?.endLocale}`,5)
+    logMessage(`** aktivePhase.startLocale = ${ergebnis.aktivePhase?.startLocale}`,5)
+    logMessage(`** aktivePhase.Type = ${ergebnis.aktivePhase?.type}`,5)
+    logMessage(`** Schwellwert Spitzenstrompreis = ${spitzenSchwellwert}`,5)
+    logMessage(`** Schwellwert hoher Strompreis = ${hoherSchwellwert}`,5)
+    logMessage(`** Schwellwert niedriger Strompreis = ${niedrigerSchwellwert}`,5)
+    logMessage(`** schneeBedeckt = ${bSchneeBedeckt}`,5)
+    logMessage(`** Prognose PV-Leistung heute = ${heuteErwartetePVLeistung_kWh} kWh`,5)
+    logMessage(`** Prognose PV-Leistung morgen = ${morgenErwartetePVLeistung_kWh} kWh`,5)
+    logMessage(`** pvLeistungAusreichend = ${pvLeistungAusreichend}`,5)
+    logMessage(`** bReichweiteSunrise = ${bReichweiteSunrise}`,5)
+    logMessage(`** eAutoLaden = ${eAutoLaden}`,5)
+    logMessage(`** BatterieEntladenSperren = ${bEntladenSperren}`,5)
+    logMessage(`** BatterieLaden = ${BatterieLaden}`,5)
+    logMessage(`** battSperrePrio = ${bBattSperrePrio}`,5)
+    logMessage(`** StatusLaden = ${statusLadenText}`,5)
+    logMessage(`** StatusEntladesperre = ${statusEntladesperreText}`,5)
+    if (Array.isArray(datenTibberLink48h) && datenTibberLink48h.length > 0) {
+		const ersterEintrag = new Date(datenTibberLink48h[0].startsAt);
+		const letzterEintrag = new Date(datenTibberLink48h[datenTibberLink48h.length - 1].startsAt);
+		const intervalMin = detectIntervalMinutes(datenTibberLink48h);
+		const horizont = new Date(letzterEintrag.getTime() + intervalMin * 60 * 1000);
+		logMessage(`** Preisdaten: ${ersterEintrag.toLocaleString('de-DE', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})} - ${horizont.toLocaleString('de-DE', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})}`,5);
+		logMessage(`** Datenpunkte: ${datenTibberLink48h.length} (${intervalMin} min Intervall)`,5);
+		const jetzt = new Date();
+		if (horizont > jetzt) {
+			const verfuegbareStunden = (horizont.getTime() - jetzt.getTime()) / (1000 * 60 * 60);
+			logMessage(`** Verfügbarer Horizont: ${round(verfuegbareStunden, 1)}h`,5);
+		} else {
+			logMessage(`** ⚠️ WARNUNG: Alle Daten liegen in der Vergangenheit!`,2);
+		}
+	}
+	logMessage(`** ProgrammAblauf = ${LogProgrammablauf} `,4)
+    logMessage(`*******************  Debug LOG Tibber Skript ${scriptVersion} *******************`,4)
 }
 
 
@@ -1623,21 +1850,21 @@ async function findeergebnisphasen(data, highThreshold, lowThreshold) {
     lowThreshold = parseFloat(lowThreshold);
     
     // Berechne den Spitzenschwellwert basierend auf dem hohen Schwellwert und dem Systemwirkungsgrad
-    let spitzenschwellwert = parseFloat((highThreshold * (1 / (systemwirkungsgrad / 100))).toFixed(4));
+    const spitzenschwellwert = parseFloat((highThreshold * (1 / (systemwirkungsgrad / 100))).toFixed(4));
     
-    //log(`highThreshold = ${highThreshold} lowThreshold = ${lowThreshold} systemwirkungsgrad = ${systemwirkungsgrad} spitzenschwellwert= ${spitzenschwellwert}`,'warn')
+    //logMessage(`highThreshold = ${highThreshold} lowThreshold = ${lowThreshold} systemwirkungsgrad = ${systemwirkungsgrad} spitzenschwellwert= ${spitzenschwellwert}`,5)
     if (!Array.isArray(data) || data.length === 0) {
-        log("Fehler: 'data' ist leer oder kein Array", "error");
+        logMessage("Fehler: 'data' ist leer oder kein Array", 3);
         return; // Funktion beenden, wenn `data` leer oder kein Array ist
     }
-    
-    if (isNaN(highThreshold) || isNaN(lowThreshold) || isNaN(spitzenschwellwert) || isNaN(systemwirkungsgrad)) {
-        log(`function findeergebnisphasen highThreshold oder lowThreshold sind keine gültige Zahl`, 'error');
-        return;
+       
+    if ([highThreshold, lowThreshold, spitzenschwellwert, systemwirkungsgrad].some(isNaN)) {
+        logMessage(`Ungültige Schwellwerte oder Systemwirkungsgrad`, 3);
+        return null;
     }
 
     if (highThreshold < lowThreshold) {
-        log(`Schwellwert hoher Strompreis ist niedriger als Schwellwert niedriger Strompreis, Schwellwert hoher Strompreis wurde angepasst`, 'warn');
+        logMessage(`Schwellwert hoher Strompreis ist niedriger als Schwellwert niedriger Strompreis, Schwellwert hoher Strompreis wurde angepasst`, 2);
         highThreshold = lowThreshold + 0.1;
     }
 
@@ -1647,11 +1874,11 @@ async function findeergebnisphasen(data, highThreshold, lowThreshold) {
 
     // Funktion zum Hinzufügen einer Phase in die entsprechende Liste
     function addPhase(phaseList, phase) {
-        //log(`phaseList = ${phaseList}`,'warn')
-        //log(`phase = ${JSON.stringify(phase)}`,'warn')
+        //logMessage(`phaseList = ${phaseList}`,5)
+        //logMessage(`phase = ${JSON.stringify(phase)}`,5)
         if (phase) {
             // Endzeit um ein Intervall verlängern
-            let endTime = new Date(phase.end.getTime() + intervalMs);
+            const endTime = new Date(phase.end.getTime() + intervalMs);
             
             // Füge die Phase zur Liste hinzu
             phaseList.push({
@@ -1664,16 +1891,17 @@ async function findeergebnisphasen(data, highThreshold, lowThreshold) {
             });
         }
     }
-
-    function getPhaseArray(currentPhase) {
-        switch (currentPhase?.type) {
-            case 'peak':   return peakPhases;
-            case 'high':   return highPhases;
+    
+    function getPhaseArray(type) {
+        switch (type) {
+            case 'peak': return peakPhases;
+            case 'high': return highPhases;
+            case 'low': return lowPhases;
             case 'normal': return normalPhases;
-            case 'low':    return lowPhases;
-            default:       return null;
+            default: return null;
         }
     }
+
 
     // --- Hauptlogik: Preise durchlaufen ---
     for (let i = 0; i < data.length; i++) {
@@ -1684,67 +1912,54 @@ async function findeergebnisphasen(data, highThreshold, lowThreshold) {
         if (isNaN(price) || !startTime.getTime()) continue;
 
         // Spitzenpreisphase
-        if (price > spitzenschwellwert) {
-            if (currentPhase && currentPhase.type === 'peak') {
-                currentPhase.end = startTime;
-                currentPhase.total += price;
-                currentPhase.intervals++;
-            } else {
-                addPhase(getPhaseArray(currentPhase), currentPhase);
-                currentPhase = { type: 'peak', start: startTime, end: startTime, total: price, intervals: 1 };
-            }
-        }
+        let newType;
+        if (price > spitzenschwellwert + hysteresePreis) newType = 'peak';
+        else if (price > highThreshold + hysteresePreis) newType = 'high';
+        else if (price < lowThreshold - hysteresePreis) newType = 'low';
+        else newType = 'normal';
 
-        // Hochpreisphase
-        else if (price > highThreshold && price <= spitzenschwellwert) {
-            if (currentPhase && currentPhase.type === 'high') {
+        if (currentPhase && currentPhase.type === newType) {
+            // Gleiche Phase fortsetzen
+            currentPhase.end = startTime;
+            currentPhase.total += price;
+            currentPhase.intervals++;
+        } else {
+            // Wechsel nur, wenn Mindestdauer erfüllt oder Phase leer
+            if (!currentPhase || currentPhase.intervals >= minIntervals) {
+                if (currentPhase) {
+                    const avgPrice = (currentPhase.total / currentPhase.intervals).toFixed(4);
+                    //logMessage(`Phasenwechsel: ${currentPhase.type} → ${newType} | Dauer: ${currentPhase.intervals} Intervalle | Durchschnittspreis: ${avgPrice} | Grund: Preis=${price.toFixed(4)} EUR`,4);
+                } else {
+                    //logMessage(`Startphase: ${newType} bei Preis=${price.toFixed(4)} EUR`, 4);
+                }
+                addPhase(getPhaseArray(currentPhase?.type), currentPhase);
+                currentPhase = { type: newType, start: startTime, end: startTime, total: price, intervals: 1 };
+            } else {
+                // Mindestdauer nicht erfüllt → Phase bleibt bestehen
                 currentPhase.end = startTime;
                 currentPhase.total += price;
                 currentPhase.intervals++;
-            } else {
-                addPhase(getPhaseArray(currentPhase), currentPhase);
-                currentPhase = { type: 'high', start: startTime, end: startTime, total: price, intervals: 1 };
-            }
-        }
-
-        // Niedrigpreisphase
-        else if (price <= lowThreshold) {
-            if (currentPhase && currentPhase.type === 'low') {
-                currentPhase.end = startTime;
-                currentPhase.total += price;
-                currentPhase.intervals++;
-            } else {
-                addPhase(getPhaseArray(currentPhase), currentPhase);
-                currentPhase = { type: 'low', start: startTime, end: startTime, total: price, intervals: 1 };
-            }
-        }
-
-        // Normalpreisphase
-        else {
-            if (currentPhase && currentPhase.type === 'normal') {
-                currentPhase.end = startTime;
-                currentPhase.total += price;
-                currentPhase.intervals++;
-            } else {
-                addPhase(getPhaseArray(currentPhase), currentPhase);
-                currentPhase = { type: 'normal', start: startTime, end: startTime, total: price, intervals: 1 };
+                //logMessage(`Phasenwechsel verhindert (Mindestdauer nicht erreicht): Bleibe in ${currentPhase.type} | Preis=${price.toFixed(4)} EUR`,5);
             }
         }
     }
 
     // Letzte Phase hinzufügen
-    addPhase(getPhaseArray(currentPhase), currentPhase);
-    
-    // Alle Phasen zusammenführen und sortieren
+    addPhase(getPhaseArray(currentPhase?.type), currentPhase);
+
+    // Alle Phasen sortieren
     const allePhasen = [...peakPhases, ...highPhases, ...normalPhases, ...lowPhases]
         .sort((a, b) => a.start - b.start);
 
+
     // Aktuelle Phase und nächste Phasen bestimmen
+    
     const jetzt = new Date();
     const aktivePhase = allePhasen.find(p => p.start <= jetzt && p.end > jetzt) || null;
     const naechstePhasen = allePhasen.filter(p => p.start > jetzt);
 
     return { peakPhases, highPhases, normalPhases, lowPhases, aktivePhase, naechstePhasen };
+
 }
 
 // Funktion prüft alle Daten im Array datenTibberLink48h, beginnend mit der aktuellen Uhrzeit bis zu der übergebenen Zeit,
@@ -1755,7 +1970,7 @@ async function preisUnterschiedPruefen(bisZeit, preisDiff) {
         LogProgrammablauf += '15,';
 
         if (!Array.isArray(datenTibberLink48h) || datenTibberLink48h.length === 0) {
-            log(`function preisUnterschiedPruefen: datenTibberLink48h ist leer oder kein Array`, 'error');
+            logMessage(`function preisUnterschiedPruefen: datenTibberLink48h ist leer oder kein Array`, 3);
             return { state: false, peakZeit: null, dauerInStunden: null };
         }
 
@@ -1769,7 +1984,7 @@ async function preisUnterschiedPruefen(bisZeit, preisDiff) {
         // preisDiff validieren
         preisDiff = parseFloat(preisDiff);
         if (isNaN(preisDiff)) {
-            log(`function preisUnterschiedPruefen: preisDiff ist keine gültige Zahl`, 'error');
+            logMessage(`function preisUnterschiedPruefen: preisDiff ist keine gültige Zahl`, 3);
             return { state: false, peakZeit: null, dauerInStunden: null };
         }
         preisDiff = parseFloat(preisDiff.toFixed(4));
@@ -1867,7 +2082,7 @@ async function preisUnterschiedPruefen(bisZeit, preisDiff) {
         return { state: false, peakZeit: null, dauerInStunden: null };
 
     } catch (error) {
-        log(`Fehler in Funktion preisUnterschiedPruefen(): ${error.message}`, 'error');
+        logMessage(`Fehler in Funktion preisUnterschiedPruefen(): ${error.message}`, 3);
         return { state: false, peakZeit: null, dauerInStunden: null };
     }
 }
@@ -1914,10 +2129,10 @@ async function loescheAlleTimer(timerID) {
         if (alleTimer || timerID === 'Auto') {
             LogProgrammablauf += '32,';
         }
-        //log(`Timer${alleTimer ? ' alle' : ` '${timerID}'`} gelöscht`, 'warn');
+        //logMessage(`Timer${alleTimer ? ' alle' : ` '${timerID}'`} gelöscht`, 5);
     
     } catch (error) {
-        log(`Fehler in loescheAlleTimer: ${error.message}`, 'error');
+        logMessage(`Fehler in loescheAlleTimer: ${error.message}`, 3);
     }
 }
 
@@ -1925,13 +2140,13 @@ async function loescheAlleTimer(timerID) {
 async function autoPreisanpassung(strompreis) {
     let strompreisNum = parseFloat(strompreis);
     
-    if (round(strompreisNum, 2) !== round(strompreisNum, 4)) {
-        hoherSchwellwert = round(Math.ceil(strompreisNum * 100) / 100 + 0.04, 2);
+    if (round(strompreisNum, 3) !== round(strompreisNum, 3)) {
+        hoherSchwellwert = round(Math.ceil(strompreisNum * 100) / 100 + 0.04, 3);
     } else {
-        hoherSchwellwert = round(strompreisNum + 0.05, 2);
+        hoherSchwellwert = round(strompreisNum + 0.05, 3);
     }
 
-    niedrigerSchwellwert = round(parseFloat(stromgestehungskosten), 2);
+    niedrigerSchwellwert = round(parseFloat(stromgestehungskosten), 3);
     
     bLock = true;
     await setStateAsync(sID_niedrigerSchwellwertStrompreis, niedrigerSchwellwert);
@@ -1951,13 +2166,13 @@ async function getParsedStateWithRetry(id, retries = 3, delayMs = 5000) {
                 try {
                     return JSON.parse(val);
                 } catch (parseErr) {
-                    log(`JSON-Fehler bei ${id} (Versuch ${attempt}): ${parseErr.message}`, 'warn');
+                    logMessage(`JSON-Fehler bei ${id} (Versuch ${attempt}): ${parseErr.message}`, 2);
                 }
             } else {
-                log(`Ungültiger oder leerer Wert bei ${id} (Versuch ${attempt}): ${val}`, 'warn');
+                logMessage(`Ungültiger oder leerer Wert bei ${id} (Versuch ${attempt}): ${val}`, 2);
             }
         } catch (err) {
-            log(`Fehler beim Abrufen von ${id} (Versuch ${attempt}): ${err.message}`, 'error');
+            logMessage(`Fehler beim Abrufen von ${id} (Versuch ${attempt}): ${err.message}`, 3);
         }
 
         if (attempt < retries) {
@@ -2016,7 +2231,7 @@ const InterrogateSolcast = async (DachFl) => {
     try {
         const response = await axios.get(url);
         if (response.status >= 200 && response.status <= 206) {
-            if (DebugAusgabe) log(`✅ Solcast-Antwort für Dach ${DachFl}: ${response.status}`, "info");
+            logMessage(`✅ Solcast-Antwort für Dach ${DachFl}: ${response.status}`, 4);
             return response.data;
         } else {
             throw new Error(`HTTP Status = ${response.status}`);
@@ -2042,7 +2257,7 @@ function kombiniereSolcastDaten(dach1, dach2) {
         const hourLocal = periodEnd.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 
         if (d1.period_end !== d2.period_end) {
-            log(`⚠️ Zeitabweichung bei Index ${i}: ${d1.period_end} ≠ ${d2.period_end}`, "warn");
+            logMessage(`⚠️ Zeitabweichung bei Index ${i}: ${d1.period_end} ≠ ${d2.period_end}`, 2);
         }
 
         summenArray.push({
@@ -2060,7 +2275,7 @@ function kombiniereSolcastDaten(dach1, dach2) {
 // Prognose Solcast abrufen.
 async function SheduleSolcast() { 
     try {
-        if (DebugAusgabe){log("🌅 TibberSkript Starte täglichen Solcast-Abruf...", "warn");}
+        logMessage("🌅 TibberSkript Starte täglichen Solcast-Abruf...", 3);
         let gesamtPrognose = [];
 
         if (SolcastDachflaechen === 1) {
@@ -2073,16 +2288,16 @@ async function SheduleSolcast() {
             const [res1, res2] = await Promise.all([InterrogateSolcast(1), InterrogateSolcast(2)]);
             gesamtPrognose = kombiniereSolcastDaten(res1.forecasts, res2.forecasts);
         } else {
-            log(`❌ Ungültige Dachflächenzahl: ${SolcastDachflaechen}`, "warn");
+            logMessage(`❌ Ungültige Dachflächenzahl: ${SolcastDachflaechen}`, 2);
             return;
         }
         
         // Prognose speichern
         await setStateAsync(sID_PvSolcastSumme, JSON.stringify(gesamtPrognose), true);
-        log(`✅ Solcast-Prognose gespeichert (${gesamtPrognose.length} Einträge)`, "info");
+        logMessage(`✅ Solcast-Prognose gespeichert (${gesamtPrognose.length} Einträge)`, 1);
 
     } catch (err) {
-        log(`❌ Fehler in SheduleSolcast(): ${err.message}`, "warn");
+        logMessage(`❌ Fehler in SheduleSolcast(): ${err.message}`, 2);
     }
 }
 
@@ -2090,7 +2305,7 @@ async function SheduleSolcast() {
 async function pruefeAbweichung() {
     try {
         const prognoseState = await getStateAsync(sID_PvSolcastSumme);
-        if (!prognoseState?.val) return log("⚠️ Keine Prognosedaten gefunden", "warn");
+        if (!prognoseState?.val) return logMessage("⚠️ Keine Prognosedaten gefunden", 2);
         const prognose = safeJsonParse(prognoseState.val, {});
 
         const jetzt = new Date();
@@ -2104,12 +2319,461 @@ async function pruefeAbweichung() {
         const istSumme_kWh = istState?.val || 0;
         
         pvAbweichung_kWh = istSumme_kWh - prognoseSumme_kWh;
-        if (DebugAusgabe){log(`🔍 Prognose bis jetzt: ${prognoseSumme_kWh.toFixed(2)} kWh | Ist: ${istSumme_kWh.toFixed(2)} kWh | Δ=${pvAbweichung_kWh.toFixed(2)} kWh`, "warn");}
+        logMessage(`🔍 Prognose bis jetzt: ${prognoseSumme_kWh.toFixed(2)} kWh | Ist: ${istSumme_kWh.toFixed(2)} kWh | Δ=${pvAbweichung_kWh.toFixed(2)} kWh`, 5);
                 
     } catch (err) {
-        log(`❌ Fehler in pruefeAbweichung(): ${err.message}`, "warn");
+        logMessage(`❌ Fehler in pruefeAbweichung(): ${err.message}`, 2);
     }
 }
+
+
+/*
+ * Validiert Preisdaten und berechnet Such-Horizont
+ * 
+ * @returns {Object} - {valid: boolean, suchEnde: Date|null, verfuegbareStunden: number, fehlergrund: string|null}
+ */
+async function validierePreisdaten() {
+    try {
+        // Prüfung 1: Array vorhanden?
+        if (!Array.isArray(datenTibberLink48h) || datenTibberLink48h.length === 0) {
+            logMessage(`❌ Keine Preisdaten verfügbar - Script pausiert`, 3);
+            // Laden stoppen
+            if (bBattLaden) {
+                await loescheAlleTimer('Laden');
+                await setStateAsync(sID_BatterieLaden, false);
+            }
+            await setStateAsync(sID_statusLaden, `⚠️ Keine Preisdaten - Script pausiert`);
+            return {
+                valid: false,
+                suchEnde: null,
+                verfuegbareStunden: 0,
+                fehlergrund: 'keine_daten'
+            };
+        }
+        // Prüfung 2: Such-Horizont berechnen
+        const jetzt = new Date();
+        const letzterEintrag = datenTibberLink48h[datenTibberLink48h.length - 1];
+        const intervalMin = detectIntervalMinutes(datenTibberLink48h);
+        const suchEnde = new Date(new Date(letzterEintrag.startsAt).getTime() + intervalMin * 60 * 1000);
+        
+        // Prüfung 3: Daten aktuell?
+        if (suchEnde <= jetzt) {
+            logMessage(`⚠️ Alle Preisdaten liegen in der Vergangenheit (letzter Eintrag: ${suchEnde.toLocaleString('de-DE')})`, 2);
+            
+            // Laden stoppen
+            if (bBattLaden) {
+                await loescheAlleTimer('Laden');
+                await setStateAsync(sID_BatterieLaden, false);
+            }
+            await setStateAsync(sID_statusLaden, `⚠️ Preisdaten veraltet - warte auf Update`);
+            return {
+                valid: false,
+                suchEnde: null,
+                verfuegbareStunden: 0,
+                fehlergrund: 'daten_veraltet'
+            };
+        }
+        
+        // Alles OK
+        const verfuegbareStunden = round((suchEnde.getTime() - jetzt.getTime()) / (1000 * 60 * 60), 1);
+        return {
+            valid: true,
+            suchEnde: suchEnde,
+            verfuegbareStunden: verfuegbareStunden,
+            fehlergrund: null
+        };
+        
+    } catch (error) {
+        logMessage(`Fehler in validierePreisdaten(): ${error.message}`, 3);
+        
+        return {
+            valid: false,
+            suchEnde: null,
+            verfuegbareStunden: 0,
+            fehlergrund: 'fehler'
+        };
+    }
+}
+
+/**
+ * Berechnet die exakten Ladekosten über mehrere Preisintervalle
+ * 
+ * @param {Date} startzeit - Ladebeginn
+ * @param {number} ladezeit_h - Ladezeit in Stunden
+ * @param {number} energie_kWh - Zu ladende Energie in kWh
+ * @returns {Object} - {kosten: number, durchschnittspreis: number, geladen_kWh: number, intervalle: Array}
+ */
+function berechneLadekosten(startzeit, ladezeit_h, energie_kWh) {
+    try {
+        if (!Array.isArray(datenTibberLink48h) || datenTibberLink48h.length === 0) {
+            logMessage('berechneLadekosten: Keine Preisdaten verfügbar', 3);
+            return { kosten: 999, durchschnittspreis: 0, geladen_kWh: 0, intervalle: [] };
+        }
+        
+        const startMs = startzeit.getTime();
+        const endeMs = startMs + (ladezeit_h * 60 * 60 * 1000);
+        const intervalMin = detectIntervalMinutes(datenTibberLink48h);
+        const intervalMs = intervalMin * 60 * 1000;
+        
+        // Ladeleistung in kW
+        const ladeleistung_kW = Math.min(maxLadeleistungUser_W, maxLadeleistungE3DC_W) / 1000;
+        
+        let gesamtkosten = 0;
+        let geladen_kWh = 0;
+        let gewichtetePreissumme = 0;
+        const intervalle = [];
+        
+        // Durch alle Preisintervalle iterieren
+        for (const eintrag of datenTibberLink48h) {
+            const intervallStart = new Date(eintrag.startsAt).getTime();
+            const intervallEnde = intervallStart + intervalMs;
+            
+            // Prüfen ob Intervall im Ladezeitraum liegt
+            if (intervallEnde <= startMs || intervallStart >= endeMs) {
+                continue;
+            }
+            
+            // Überschneidung berechnen
+            const effectiveStart = Math.max(intervallStart, startMs);
+            const effectiveEnd = Math.min(intervallEnde, endeMs);
+            const effectiveDauer_ms = effectiveEnd - effectiveStart;
+            const effectiveDauer_h = effectiveDauer_ms / (1000 * 60 * 60);
+            
+            // Geladene Energie in diesem Intervall
+            const energieIntervall_kWh = Math.min(
+                ladeleistung_kW * effectiveDauer_h,
+                energie_kWh - geladen_kWh
+            );
+            
+            if (energieIntervall_kWh <= 0) {
+                break;
+            }
+            
+            // Kosten für dieses Intervall
+            const preis = eintrag.total;
+            const kostenIntervall = energieIntervall_kWh * preis;
+            
+            gesamtkosten += kostenIntervall;
+            geladen_kWh += energieIntervall_kWh;
+            gewichtetePreissumme += preis * energieIntervall_kWh;
+            
+            intervalle.push({
+                start: new Date(effectiveStart),
+                ende: new Date(effectiveEnd),
+                preis: preis,
+                energie_kWh: round(energieIntervall_kWh, 2),
+                kosten: round(kostenIntervall, 2)
+            });
+            
+            // Prüfen ob genug geladen wurde
+            if (geladen_kWh >= energie_kWh - 0.01) {
+                break;
+            }
+        }
+        
+        const durchschnittspreis = geladen_kWh > 0 ? gewichtetePreissumme / geladen_kWh : 0;
+        
+        return {
+            kosten: round(gesamtkosten, 2),
+            durchschnittspreis: round(durchschnittspreis, 4),
+            geladen_kWh: round(geladen_kWh, 2),
+            intervalle: intervalle
+        };
+        
+    } catch (error) {
+        logMessage(`Fehler in berechneLadekosten(): ${error.message}`, 3);
+        return { kosten: 999, durchschnittspreis: 0, geladen_kWh: 0, intervalle: [] };
+    }
+}
+
+/**
+ * Berechnet Netzstromkosten intervallweise
+ * 
+ * @param {Date} vonZeit - Startzeit
+ * @param {Date} bisZeit - Endzeit
+ * @param {number} verbrauch_kW - Durchschnittlicher Verbrauch in kW
+ * @returns {Object} - {kosten: number, verbrauch_kWh: number, intervalle: Array}
+ */
+function berechneNetzstromkosten(vonZeit, bisZeit, verbrauch_kW) {
+    try {
+        if (!Array.isArray(datenTibberLink48h) || datenTibberLink48h.length === 0) {
+            return { kosten: 0, verbrauch_kWh: 0, intervalle: [] };
+        }
+        
+        const startMs = vonZeit.getTime();
+        const endeMs = bisZeit.getTime();
+        const intervalMin = detectIntervalMinutes(datenTibberLink48h);
+        const intervalMs = intervalMin * 60 * 1000;
+        
+        let gesamtkosten = 0;
+        let gesamtVerbrauch_kWh = 0;
+        const intervalle = [];
+        
+        for (const eintrag of datenTibberLink48h) {
+            const intervallStart = new Date(eintrag.startsAt).getTime();
+            const intervallEnde = intervallStart + intervalMs;
+            
+            if (intervallEnde <= startMs || intervallStart >= endeMs) {
+                continue;
+            }
+            
+            const effectiveStart = Math.max(intervallStart, startMs);
+            const effectiveEnd = Math.min(intervallEnde, endeMs);
+            const effectiveDauer_h = (effectiveEnd - effectiveStart) / (1000 * 60 * 60);
+            
+            const verbrauch_kWh = verbrauch_kW * effectiveDauer_h;
+            const preis = eintrag.total;
+            const kosten = verbrauch_kWh * preis;
+            
+            gesamtkosten += kosten;
+            gesamtVerbrauch_kWh += verbrauch_kWh;
+            
+            intervalle.push({
+                start: new Date(effectiveStart),
+                ende: new Date(effectiveEnd),
+                preis: preis,
+                verbrauch_kWh: round(verbrauch_kWh, 2),
+                kosten: round(kosten, 2)
+            });
+        }
+        
+        return {
+            kosten: round(gesamtkosten, 2),
+            verbrauch_kWh: round(gesamtVerbrauch_kWh, 2),
+            intervalle: intervalle
+        };
+        
+    } catch (error) {
+        logMessage(`Fehler in berechneNetzstromkosten(): ${error.message}`, 3);
+        return { kosten: 0, verbrauch_kWh: 0, intervalle: [] };
+    }
+}
+
+/**
+ * Analysiert ob Peak-Phasen zwischen zwei Zeitpunkten liegen
+ * 
+ * @param {Date} vonZeit - Startzeitpunkt
+ * @param {Date} bisZeit - Endzeitpunkt
+ * @returns //{Object} - {hatPeaks: boolean, peakPhasen: Array, gesamtDauer_h: number}
+ */
+async function analysierePeakPhasenBis(vonZeit, bisZeit) {
+    try {
+        const ergebnisPhasen = await findeergebnisphasen(
+            datenTibberLink48h, 
+            hoherSchwellwert, 
+            niedrigerSchwellwert
+        );
+        
+        const peakPhasen = ergebnisPhasen.peakPhases.filter(phase => {
+            const phaseStart = new Date(phase.start);
+            const phaseEnd = new Date(phase.end);
+            return (phaseStart < bisZeit && phaseEnd > vonZeit);
+        }).sort((a, b) => 
+            new Date(a.start).getTime() - new Date(b.start).getTime()
+        );
+        
+        let gesamtDauer_h = 0;
+        for (const peak of peakPhasen) {
+            const start = new Date(peak.start);
+            const end = new Date(peak.end);
+            gesamtDauer_h += (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+        }
+        
+        return {
+            hatPeaks: peakPhasen.length > 0,
+            peakPhasen: peakPhasen,
+            gesamtDauer_h: round(gesamtDauer_h, 2)
+        };
+        
+    } catch (error) {
+        logMessage(`Fehler in analysierePeakPhasenBis(): ${error.message}`, 3);
+        return {
+            hatPeaks: false,
+            peakPhasen: [],
+            gesamtDauer_h: 0
+        };
+    }
+}
+
+/**
+ * Berechnet Gesamtkosten wenn bis zur besten Zeit gewartet wird
+ * 
+ * @param {Date} vonZeit - Jetzt
+ * @param {Date} bisZeit - Beste Ladezeit
+ * @param {Array} peakPhasen - Peak-Phasen dazwischen
+ * @returns //{Objekt} - {gesamtkosten: number, netzstromKosten: number, ladeKosten: number, details: string}
+ */
+async function berechneKostenWarten(vonZeit, bisZeit, peakPhasen) {
+    try {
+        const benoetigteEnergie_kWh = (maxBatterieSoC - aktuelleBatterieSoC_Pro) / 100 * batterieKapazitaet_kWh;
+        
+        // Exakte Ladekosten ab bester Zeit berechnen
+        const ladekosten = berechneLadekosten(bisZeit, ladeZeit_h, benoetigteEnergie_kWh);
+        
+        
+        logMessage(`📊 Ladekosten-Details (Warten bis ${bisZeit.toLocaleTimeString('de-DE')}):`, 4);
+        logMessage(`   Gesamt: ${ladekosten.kosten}€ (Ø ${ladekosten.durchschnittspreis}€/kWh)`, 4);
+        ladekosten.intervalle.slice(0, 5).forEach((iv, idx) => {
+            logMessage(`   [${idx+1}] ${iv.start.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'})} ` +
+            `${iv.energie_kWh}kWh × ${iv.preis}€ = ${iv.kosten}€`, 4);
+            });
+        if (ladekosten.intervalle.length > 5) {
+            logMessage(`   ... (${ladekosten.intervalle.length - 5} weitere)`, 4);
+        }
+        
+        
+        // Kosten für Netzstrom
+        let netzstromKosten = 0;
+        
+        const hausverbrauch = safeJsonParse((await getStateAsync(sID_arrayHausverbrauch)).val, {});
+        const now = new Date();
+        const currentDay = now.toLocaleDateString('de-DE', { weekday: 'long' });
+        const durchschnittVerbrauch_kW = hausverbrauch[currentDay] 
+            ? (hausverbrauch[currentDay].day + hausverbrauch[currentDay].night) / 2 / 1000
+            : 2;
+        
+        const dauerBisBeste_h = (bisZeit.getTime() - vonZeit.getTime()) / (1000 * 60 * 60);
+        const progBattSoC = await prognoseBatterieSOC(dauerBisBeste_h);
+        
+        if (progBattSoC.soc <= 0) {
+            const aktuelleKapazitaet_kWh = aktuelleBatterieSoC_Pro / 100 * batterieKapazitaet_kWh;
+            const stundenBisLeer = aktuelleKapazitaet_kWh / durchschnittVerbrauch_kW;
+            const zeitpunktLeer = new Date(vonZeit.getTime() + stundenBisLeer * 60 * 60 * 1000);
+            
+            const netzstrom = berechneNetzstromkosten(zeitpunktLeer, bisZeit, durchschnittVerbrauch_kW);
+            netzstromKosten = netzstrom.kosten;
+            
+            
+            logMessage(`⚡ Netzstrom-Details (${zeitpunktLeer.toLocaleTimeString('de-DE')} - ${bisZeit.toLocaleTimeString('de-DE')}):`, 4);
+            logMessage(`   Gesamt: ${netzstrom.kosten}€ (${netzstrom.verbrauch_kWh}kWh)`, 4);
+            
+        }
+        
+        const gesamtkosten = ladekosten.kosten + netzstromKosten;
+        
+        return {
+            gesamtkosten: round(gesamtkosten, 2),
+            netzstromKosten: round(netzstromKosten, 2),
+            ladeKosten: ladekosten.kosten,
+            durchschnittspreis: ladekosten.durchschnittspreis,
+            details: `Laden: ${ladekosten.kosten}€ (Ø ${ladekosten.durchschnittspreis}€/kWh), Netzstrom: ${round(netzstromKosten, 2)}€`
+        };
+        
+    } catch (error) {
+        logMessage(`Fehler in berechneKostenWarten(): ${error.message}`, 3);
+        return {
+            gesamtkosten: 999,
+            netzstromKosten: 0,
+            ladeKosten: 0,
+            details: 'Fehler bei Berechnung'
+        };
+    }
+}
+
+/**
+ * Berechnet Kosten wenn VOR der Peak-Phase geladen wird
+ * 
+ * @param {Date} vonZeit - Jetzt
+ * @param {Object} erstePeakPhase - Erste Peak-Phase
+ * @param {number} ladezeit_h - Benötigte Ladezeit
+ * @returns //{Object} - {moeglich: boolean, gesamtkosten: number, start: Date, ende: Date, details: string}
+ */
+async function berechneKostenLadenVorPeak(vonZeit, erstePeakPhase, ladezeit_h) {
+    try {
+        const peakStart = new Date(erstePeakPhase.start);
+        const PUFFER_MIN = 15;
+        const bisZeit = new Date(peakStart.getTime() - PUFFER_MIN * 60 * 1000);
+        
+        const verfuegbareZeit_h = (bisZeit.getTime() - vonZeit.getTime()) / (1000 * 60 * 60);
+        
+        if (verfuegbareZeit_h < ladezeit_h) {
+            return {
+                moeglich: false,
+                gesamtkosten: 999,
+                grund: 'zeit_zu_kurz',
+                details: 'Nicht genug Zeit vor Peak'
+            };
+        }
+        
+        const besteZeit = await bestLoadTime(vonZeit, bisZeit, ladezeit_h, 16);
+        
+        if (!besteZeit) {
+            return {
+                moeglich: false,
+                gesamtkosten: 999,
+                grund: 'keine_guenstige_zeit',
+                details: 'Keine Ladezeit vor Peak gefunden'
+            };
+        }
+        
+        const ende = new Date(besteZeit.zeit.getTime() + ladezeit_h * 60 * 60 * 1000);
+        const benoetigteEnergie_kWh = (maxBatterieSoC - aktuelleBatterieSoC_Pro) / 100 * batterieKapazitaet_kWh;
+        
+        const ladekosten = berechneLadekosten(besteZeit.zeit, ladezeit_h, benoetigteEnergie_kWh);
+        
+        
+        logMessage(`📊 Ladekosten-Details (Vor Peak ${besteZeit.zeit.toLocaleTimeString('de-DE')}):`, 4);
+        logMessage(`   Gesamt: ${ladekosten.kosten}€ (Ø ${ladekosten.durchschnittspreis}€/kWh)`, 4);
+        
+        
+        const gesamtkosten = ladekosten.kosten;
+        
+        return {
+            moeglich: true,
+            gesamtkosten: round(gesamtkosten, 2),
+            ladekosten: ladekosten.kosten,
+            netzstromKosten: 0,
+            start: besteZeit.zeit,
+            ende: ende,
+            durchschnittspreis: ladekosten.durchschnittspreis,
+            details: `Laden: ${ladekosten.kosten}€ (Ø ${ladekosten.durchschnittspreis}€/kWh), Netzstrom: 0€`
+        };
+        
+    } catch (error) {
+        logMessage(`Fehler in berechneKostenLadenVorPeak(): ${error.message}`, 3);
+        return {
+            moeglich: false,
+            gesamtkosten: 999,
+            grund: 'fehler',
+            details: 'Fehler bei Berechnung'
+        };
+    }
+}
+
+
+/**
+ * Zentrale Logging-Funktion für Tibber-Skript
+ * @param {string} message - Die Log-Nachricht
+ * @param {number} level - Level der Nachricht (0=aus, 1=info, 2=warn, 3=error, 4=debug)
+ */
+function logMessage(message, level = 1) {
+    try {
+        // Globale Variable logLevel wird aus ioBroker State gelesen
+        if (typeof logLevel !== 'number') {
+            logLevel = 0; // Fallback, falls noch nicht gesetzt
+        }
+
+        // Wenn globales LogLevel = 0 → keine Ausgabe
+        if (logLevel === 0) return;
+
+        // Nur ausgeben, wenn Nachricht-Level <= globales LogLevel
+        if (level <= logLevel) {
+            let type = 'info';
+            switch (level) {
+                case 1: type = 'info'; break;
+                case 2: type = 'warn'; break;
+                case 3: type = 'error'; break;
+                case 4: type = 'warn'; break; // Debug 1
+				case 5: type = 'info'; break; // Debug 2 bleibt info, um nicht alles als Warnung zu markieren
+            }
+            // @ts-ignore
+            log(message, type);
+        }
+    } catch (err) {
+        log(`Fehler in logMessage(): ${err.message}`, 'error');
+    }
+}
+
 
 //***************************************************************************************************
 //********************************** Schedules und Trigger Bereich **********************************
@@ -2128,7 +2792,7 @@ on({ id: regexPatternTibber, change: "ne" }, async function (obj) {
     const param = obj.id.split('.')[4];
     const val = obj.state.val;
 
-    log(`-==== User Parameter ${param} wurde in ${val} geändert ====-`, 'warn');
+    logMessage(`-==== User Parameter ${param} wurde in ${val} geändert ====-`, 2);
 
     // Mapping: State ID → Variable aktualisieren
     const idMapping = {
@@ -2157,8 +2821,8 @@ on({ id: regexPatternTibber, change: "ne" }, async function (obj) {
 
     // Parallele Funktionen ausführen, Fehler einzelner Funktionen loggen
     await Promise.all([
-        tibberSteuerungHauskraftwerk().catch(e => log(`Fehler in tibberSteuerungHauskraftwerk: ${e.message}`, 'error')),
-        createDiagramm().catch(e => log(`Fehler in createDiagramm: ${e.message}`, 'error'))
+        tibberSteuerungHauskraftwerk().catch(e => logMessage(`Fehler in tibberSteuerungHauskraftwerk: ${e.message}`, 3)),
+        createDiagramm().catch(e => logMessage(`Fehler in createDiagramm: ${e.message}`, 3))
     ]);
 });
 
@@ -2180,6 +2844,13 @@ on({id: arrayID_TibberPrices, change: "ne"}, async function (obj){
 on({id: sID_Notrom_Status, change: "ne"}, async function (obj){
     if(obj.state.val == 4 || obj.state.val == 1){bNotstromAktiv = true}
 });
+
+// Triggern wenn LogLevel sich ändert
+on({id: sID_LogLevel, change: 'any', valGt: 0, valLt: 5}, async function (obj){
+    logLevel = obj.state.val
+    logMessage(`-==== User Parameter LogLevel wurde in ${obj.state.val} geändert ====-`, 2);
+});
+
 
 // Triggern wenn Batterie SoC e3dc-rscp sich ändert
 on({id: sID_Batterie_SOC, change: "ne"}, async function (obj){	
@@ -2242,7 +2913,7 @@ on({id: sID_Batterie_SOC, change: "ne"}, async function (obj){
         }
         batterieSOC_alt = aktuelleBatterieSoC_Pro
     } catch (error) {
-        log(`Fehler in der Triggerfunktion Batterie: ${error.message}`, 'error');
+        logMessage(`Fehler in der Triggerfunktion Batterie: ${error.message}`, 3);
     }
 });
 
@@ -2254,7 +2925,7 @@ let scheduleTibber = schedule("*/10 * * * *", async function() {
         await createDiagramm();
         
     }else{
-        log(`Es wurde auf Notstrom umgeschaltet Script Tibber wurde angehalten und muss neu gestartet werden`,'error')
+        logMessage(`Es wurde auf Notstrom umgeschaltet Script Tibber wurde angehalten und muss neu gestartet werden`,3)
         await Promise.all([
             setStateAsync(sID_BatterieLaden, false),
             setStateAsync(sID_statusLaden, ``).catch(()=>{}),
@@ -2271,7 +2942,7 @@ onStop(async function () {
     loescheAlleTimer('all')
     await setStateAsync(sID_statusLaden, ``).catch(()=>{})
     await setStateAsync(sID_statusEntladesperre, ``).catch(()=>{})
-    log(`-==== Alle Timer beendet ====-`)
+    logMessage(`-==== Alle Timer beendet ====-`,2)
 }, 100);
 
 // ========== ZEITSTEUERUNG ==========
@@ -2285,7 +2956,7 @@ schedule("0 10-17 * * *", async () => { // stündlich 10:00–17:00
 
 // Bei Sonnenaufgang Merker zurücksetzen
 schedule('{"time":{"exactTime":true,"start":"sunrise"},"period":{"days":1}}', function () { 
-    log(`Merker bReichweiteSunrise wurde auf false gesetzt`)
+    logMessage(`Merker bReichweiteSunrise wurde auf false gesetzt`,1)
     bReichweiteSunrise = false
 });
 
