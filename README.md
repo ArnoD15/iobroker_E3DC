@@ -71,6 +71,14 @@ verbunden sein.
 <p>View Import Datei für iobroker VIS</p>
 <p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/VIS_View_E3DC_SOH_Diagramm.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/VIS_View_E3DC_SOH_Diagramm.png" alt="VIS View E3DC SOH Diagramm" style="max-width:100%;"></a></p>
 
+<h3>iobroker_VIS_View_Tibber.js</h3>
+<p>View Import Datei für iobroker VIS</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/Tibber.gif"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/Tibber.gif" alt="VIS View Tibber" style="max-width:100%;"></a></p>
+
+<h3>iobroker_VIS_View_Tibber2.js</h3>
+<p>View Import Datei für iobroker VIS</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/ArnoD15/iobroker_E3DC/blob/master/images/Tibber2.png"><img src="https://github.com/ArnoD15/iobroker_E3DC/raw/master/images/Tibber2.png" alt="VIS View Tibber2" style="max-width:100%;"></a></p>
+
 
 <br><br>
 <a name="log"></a>
