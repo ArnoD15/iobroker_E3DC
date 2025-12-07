@@ -1618,7 +1618,7 @@ async function createDiagramm() {
                     "data": barDataPoints,
                     "type": "bar",
                     "color": "#140CF2",
-                    "yAxis_min": 0.0,
+                    "yAxis_min": 0,
                     "yAxis_max": 1,
                     "datalabel_show": false
                 },
@@ -2846,7 +2846,7 @@ on({id: sID_Notrom_Status, change: "ne"}, async function (obj){
 });
 
 // Triggern wenn LogLevel sich ändert
-on({id: sID_LogLevel, change: 'any', valGt: 0, valLt: 5}, async function (obj){
+on({id: sID_LogLevel, change: 'any', valGt: 0, valLt: 6}, async function (obj){
     logLevel = obj.state.val
     logMessage(`-==== User Parameter LogLevel wurde in ${obj.state.val} geändert ====-`, 2);
 });
