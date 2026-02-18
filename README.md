@@ -81,6 +81,10 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.6.9  
+- Prüfung, ob die Zeitangaben (hour, minute) aus dem State .NaesteAktualisierung gültige Zahlen sind, bevor ein neuer Timer mit schedule() gesetzt wird.
+Bei ungültigen Werten (z.B. "NaN", null, leer) wird ein Fallback-Timer auf 3:00 Uhr gesetzt und ein Warnhinweis ins Log geschrieben.
+
 ### Version: 1.6.8  
 - Fehler in der Funktion Prognosen_Berechnen() behoben.
 - Hysteresewert für Batterie SOC Schwankungen auf 4% angepasst und neue, frei konfigurierbare Variable am Skriptanfang hinzugefügt.

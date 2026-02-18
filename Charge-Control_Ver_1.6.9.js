@@ -22,7 +22,7 @@ const HystereseBattSoc = 4;                                                     
 // ======================= ENDE USER ANPASSUNGEN ==============================
 // ============================================================================
 
-logChargeControl(`-==== Charge-Control Version 1.6.8 ====-`);
+logChargeControl(`-==== Charge-Control Version 1.6.9 ====-`);
 
 //*************************************** ID's Adapter e3dc.rscp ***************************************
 const sID_Power_Home_W =`${instanzE3DC_RSCP}.EMS.POWER_HOME`;                                           // aktueller Hausverbrauch E3DC                                         // Pfad ist abhängig von Variable ScriptHausverbrauch siehe function CheckState()
@@ -1732,8 +1732,15 @@ async function SheduleProplanta() {
     let StartZeit = (await getStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.NaesteAktualisierung`)).val;
     if (StartZeit != null) {
         StartZeit = addMinutes(StartZeit, 10);
-        const [hour, minute] = StartZeit.split(':');
-        TimerProplanta = schedule({ hour, minute }, SheduleProplanta);
+        const [hourStr, minuteStr] = StartZeit.split(':');
+        const hour = Number(hourStr);
+        const minute = Number(minuteStr);
+        if (!isNaN(hour) && !isNaN(minute)) {
+            TimerProplanta = schedule({ hour, minute }, SheduleProplanta);
+        } else {
+            TimerProplanta = schedule({ hour: 3, minute: 0 }, SheduleProplanta);
+            logChargeControl(`-==== Ungültige Zeit für Wetterdaten, Fallback auf 3:00 Uhr ====-`,"warn");
+        }
     } else {
         TimerProplanta = schedule({ hour: 3, minute: 0 }, SheduleProplanta);
         logChargeControl(`-==== Nächste Aktualisierung Wetterdaten 3:00 Uhr ====-`,"info");
