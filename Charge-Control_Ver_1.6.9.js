@@ -142,7 +142,7 @@ let sID_Path_evcc_loadpoint1_charging,sID_Path_evcc_loadpoint2_charging,sID_Path
 
 //******************************* Globale Variable Time Counter *******************************
 let lastDebugLogTime = 0, lastExecutionTime = 0, count0 = 0, count1 = 0, count2 = 0, count3 = 0;
-let Timer0 = null, Timer1 = null,Timer2 = null,TimerProplanta= null;
+let Timer0 = null, Timer1 = null,Timer2 = null,TimerProplanta= null,TimerSolcast= null;
 let RE_AstroSolarNoon,LE_AstroSunset,RB_AstroSolarNoon,RE_AstroSolarNoon_alt_milisek,RB_AstroSolarNoon_alt_milisek,Zeit_alt_milisek=0,ZeitE3DC_SetPowerAlt_ms=0;
 
 //******************************* Globale Variable Boolean *******************************
@@ -500,9 +500,9 @@ async function CheckState() {
                 console.error(obj.errorMsg);
             }
         }
-
+        if (TimerSolcast) clearSchedule(TimerSolcast);
         // Daten von Solcast immer zwischen 04:01 und 04:59 Uhr abholen wenn const Solcast = true
-        schedule(`${Math.floor(Math.random() * (59 - 1 + 1)) + 1} 4 * * *`, function () {
+        TimerSolcast = schedule(`${Math.floor(Math.random() * (59 - 1 + 1)) + 1} 4 * * *`, function () {
             SheduleSolcast(SolcastDachflaechen);
         });
     }
