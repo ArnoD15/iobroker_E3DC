@@ -81,6 +81,9 @@ verbunden sein.
 
 <h3>Changelog Charge-Control</h3>
 
+### Version: 1.6.10  
+- Fehler bei der Speicherung der Zeit behoben durch Optimierung der Filterfunktion HTML_CleanUp()
+
 ### Version: 1.6.9  
 - Prüfung, ob die Zeitangaben (hour, minute) aus dem State .NaesteAktualisierung gültige Zahlen sind, bevor ein neuer Timer mit schedule() gesetzt wird.
 Bei ungültigen Werten (z.B. "NaN", null, leer) wird ein Fallback-Timer auf 3:00 Uhr gesetzt und ein Warnhinweis ins Log geschrieben.
