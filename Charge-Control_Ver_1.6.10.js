@@ -22,7 +22,7 @@ const HystereseBattSoc = 4;                                                     
 // ======================= ENDE USER ANPASSUNGEN ==============================
 // ============================================================================
 
-logChargeControl(`-==== Charge-Control Version 1.6.9 ====-`);
+logChargeControl(`-==== Charge-Control Version 1.6.10 ====-`);
 
 //*************************************** ID's Adapter e3dc.rscp ***************************************
 const sID_Power_Home_W =`${instanzE3DC_RSCP}.EMS.POWER_HOME`;                                           // aktueller Hausverbrauch E3DC                                         // Pfad ist abhängig von Variable ScriptHausverbrauch siehe function CheckState()
@@ -1600,15 +1600,16 @@ async function SheduleProplanta() {
             GlobalstrahlungTag0 = 0;
             //xhr.abort
             let d = new Date();
-            let uhrzeit = addMinutes(d.getHours() + ":" + d.getMinutes(), 60)
+            d.setMinutes(d.getMinutes() + 60); // +1 Stunde
+            let uhrzeit = `${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
             await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.NaesteAktualisierung`,uhrzeit);
             if (bLogAusgabe){logChargeControl(`Näste Aktualisierung Wetterdaten =${uhrzeit} Uhr `,"info");}
         }else{
             let Tag0 = nextDay(0), Tag1 = nextDay(1),Tag2 = nextDay(2), Tag3 =nextDay(3);
             // Prüfen ob Werte in eine Zahl umgewandelt werden können,wenn nicht 0 zuweisen     
+            const statePromises = [];   
             for (let i=0; i < ArrayBereinig.length; i++) {
                 //if (LogAusgabe){log(`i =${i} Wert ab Tag 0=${ArrayBereinig[i]}`);}
-                    
                 if (ArrayBereinig[i] == 'Globalstrahlung'){
                     if (isNaN(parseFloat(ArrayBereinig[i+1]))){GlobalstrahlungTag0 = 0;}else{GlobalstrahlungTag0 = parseFloat(ArrayBereinig[i+1]);}      
                     if (isNaN(parseFloat(ArrayBereinig[i+2]))){GlobalstrahlungTag1 = 0;}else{GlobalstrahlungTag1 = parseFloat(ArrayBereinig[i+2]);}      
@@ -1616,30 +1617,31 @@ async function SheduleProplanta() {
                     if (isNaN(parseFloat(ArrayBereinig[i+4]))){GlobalstrahlungTag3 = 0;}else{GlobalstrahlungTag3 = parseFloat(ArrayBereinig[i+4]);}      
                 }
                 if (ArrayBereinig[i] == 'Datum'){
-                    if (/^\d{2}([./-])\d{2}\1\d{4}$/.test(ArrayBereinig[i+1] )){setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Datum_Tag_0`, ArrayBereinig[i+1]);}
-                    if (/^\d{2}([./-])\d{2}\1\d{4}$/.test(ArrayBereinig[i+3] )){setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Datum_Tag_1`, ArrayBereinig[i+3]);}
-                    if (/^\d{2}([./-])\d{2}\1\d{4}$/.test(ArrayBereinig[i+5] )){setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Datum_Tag_2`, ArrayBereinig[i+5]);}
-                    if (/^\d{2}([./-])\d{2}\1\d{4}$/.test(ArrayBereinig[i+7] )){setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Datum_Tag_3`, ArrayBereinig[i+7]);}
+                    if (/^\d{2}([./-])\d{2}\1\d{4}$/.test(ArrayBereinig[i+1] ))statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Datum_Tag_0`, ArrayBereinig[i+1]));
+                    if (/^\d{2}([./-])\d{2}\1\d{4}$/.test(ArrayBereinig[i+3] ))statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Datum_Tag_1`, ArrayBereinig[i+3]));
+                    if (/^\d{2}([./-])\d{2}\1\d{4}$/.test(ArrayBereinig[i+5] ))statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Datum_Tag_2`, ArrayBereinig[i+5]));
+                    if (/^\d{2}([./-])\d{2}\1\d{4}$/.test(ArrayBereinig[i+7] ))statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Datum_Tag_3`, ArrayBereinig[i+7]));
                 }
                 if (ArrayBereinig[i] == 'Bedeckungsgrad'){
-                    if (isNaN(parseFloat(ArrayBereinig[i+2]))){setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Bewoelkungsgrad_12`, NaN);}else{setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Bewoelkungsgrad_12`, parseFloat(ArrayBereinig[i+2]));}      
-                    if (isNaN(parseFloat(ArrayBereinig[i+7]))){setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Bewoelkungsgrad_15`, NaN);}else{setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Bewoelkungsgrad_15`, parseFloat(ArrayBereinig[i+7]));}
+                    if (isNaN(parseFloat(ArrayBereinig[i+2]))){statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Bewoelkungsgrad_12`, NaN));}else {statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Bewoelkungsgrad_12`, parseFloat(ArrayBereinig[i+2])));}      
+                    if (isNaN(parseFloat(ArrayBereinig[i+7]))){statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Bewoelkungsgrad_15`, NaN));}else {statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Bewoelkungsgrad_15`, parseFloat(ArrayBereinig[i+7])));}
                 }
                 if (ArrayBereinig[i] == 'max. Temperatur'){
-                    if (isNaN(parseFloat(ArrayBereinig[i+1]))){setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_0`, NaN);}else{setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_0`, parseFloat(ArrayBereinig[i+1]));}      
-                    if (isNaN(parseFloat(ArrayBereinig[i+2]))){setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_1`, NaN);}else{setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_1`, parseFloat(ArrayBereinig[i+2]));}      
-                    if (isNaN(parseFloat(ArrayBereinig[i+3]))){setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_2`, NaN);}else{setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_2`, parseFloat(ArrayBereinig[i+3]));}      
-                    if (isNaN(parseFloat(ArrayBereinig[i+4]))){setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_3`, NaN);}else{setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_3`, parseFloat(ArrayBereinig[i+4]));}      
+                    if (isNaN(parseFloat(ArrayBereinig[i+1]))){statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_0`, NaN));}else{statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_0`, parseFloat(ArrayBereinig[i+1])));}      
+                    if (isNaN(parseFloat(ArrayBereinig[i+2]))){statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_1`, NaN));}else{statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_1`, parseFloat(ArrayBereinig[i+2])));}      
+                    if (isNaN(parseFloat(ArrayBereinig[i+3]))){statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_2`, NaN));}else{statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_2`, parseFloat(ArrayBereinig[i+3])));}      
+                    if (isNaN(parseFloat(ArrayBereinig[i+4]))){statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_3`, NaN));}else{statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Max_Temperatur_Tag_3`, parseFloat(ArrayBereinig[i+4])));}      
                 } 
                 if (ArrayBereinig[i] == 'min. Temperatur'){
-                    if (isNaN(parseFloat(ArrayBereinig[i+1]))){setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_0`, NaN);}else{setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_0`, parseFloat(ArrayBereinig[i+1]));}      
-                    if (isNaN(parseFloat(ArrayBereinig[i+2]))){setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_1`, NaN);}else{setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_1`, parseFloat(ArrayBereinig[i+2]));}      
-                    if (isNaN(parseFloat(ArrayBereinig[i+3]))){setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_2`, NaN);}else{setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_2`, parseFloat(ArrayBereinig[i+3]));}      
-                    if (isNaN(parseFloat(ArrayBereinig[i+4]))){setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_3`, NaN);}else{setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_3`, parseFloat(ArrayBereinig[i+4]));}      
+                    if (isNaN(parseFloat(ArrayBereinig[i+1]))){statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_0`, NaN));}else{statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_0`, parseFloat(ArrayBereinig[i+1])));}      
+                    if (isNaN(parseFloat(ArrayBereinig[i+2]))){statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_1`, NaN));}else{statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_1`, parseFloat(ArrayBereinig[i+2])));}      
+                    if (isNaN(parseFloat(ArrayBereinig[i+3]))){statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_2`, NaN));}else{statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_2`, parseFloat(ArrayBereinig[i+3])));}      
+                    if (isNaN(parseFloat(ArrayBereinig[i+4]))){statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_3`, NaN));}else{statePromises.push(setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.Min_Temperatur_Tag_3`, parseFloat(ArrayBereinig[i+4])));}      
                 }
                 
             }
-                      
+            await Promise.all(statePromises);          
+            
             // Proplanta Globalstrahlung in kWh umrechnen und in History speichern *********************************************************  
             if (bLogAusgabe){logChargeControl(` Globalstrahlung Tag0 =${GlobalstrahlungTag0}  Globalstrahlung Tag1 =${GlobalstrahlungTag1}  Globalstrahlung Tag2 =${GlobalstrahlungTag2}  Globalstrahlung Tag3 =${GlobalstrahlungTag3}`,"info");}
             let PrognoseProplanta_kWh_Tag0 = round((GlobalstrahlungTag0 * nModulFlaeche) * (nWirkungsgradModule/100),2);
@@ -1657,12 +1659,19 @@ async function SheduleProplanta() {
                 }
             }
             
-            if (typeof ArrayBereinig[35] !== 'undefined') {
-                await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.NaesteAktualisierung`,ArrayBereinig[35].replace(".",":"));
-                if (bLogAusgabe){logChargeControl(` Näste Aktualisierung Wetterdaten =${ArrayBereinig[35].replace(".",":")} Uhr `,"info");}
-            } else {
-                await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.NaesteAktualisierung`,"6:00");
-                if (bLogAusgabe){logChargeControl(` Näste Aktualisierung Wetterdaten = konnte nicht abgerufen werden. Standard 6:00 Uhr wurde gesetzt `,"info");}
+            let foundTime = false
+            for (let i = 0; i < ArrayBereinig.length; i++) {
+                if (ArrayBereinig[i] === "NaechsteAktualisierung") {
+                    let zeit = ArrayBereinig[i+1].replace(".",":");
+                    await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.NaesteAktualisierung`, zeit);
+                    if (bLogAusgabe){logChargeControl(` Näste Aktualisierung Wetterdaten =${zeit} Uhr `,"info");}
+                    foundTime = true
+                }
+            }
+            
+            if (!foundTime) {                
+                await setStateAsync(`${instanz}.${PfadEbene1}.${PfadEbene2[3]}.NaesteAktualisierung`,"3:00");
+                if (bLogAusgabe){logChargeControl(` Näste Aktualisierung Wetterdaten = konnte nicht abgerufen werden. Standard 3:00 Uhr wurde gesetzt `,"info");}
             }
             await setStateAsync(sID_PrognoseProp_kWh,JSON.stringify(arrayPrognoseProp_kWh))   
             
@@ -1756,7 +1765,12 @@ function HTML_CleanUp(data) {
     let Bedeckungsgrad = extractData(data, '<tr id="BD_12" class="BEDECKUNGSGRAD">', '<tr id="BD_18" class="BEDECKUNGSGRAD">');
     Bedeckungsgrad = 'Bedeckungsgrad' + Bedeckungsgrad;
     const Datum = extractData(data, '<b>Datum</b', '<style>');
-    const nextAktZeit = extractData(data, 'n&auml;chste Aktualisierung', '', 29, 5);
+    let nextAktZeit = '';
+    // explizit nur "nächste Aktualisierung"
+    let nextMatch = data.match(/n.*?chste\s+Aktualisierung[^0-9]*(\d{1,2}\.\d{2})/i);
+    if (nextMatch && nextMatch[1]) {
+        nextAktZeit = '|NaechsteAktualisierung|' + nextMatch[1] + '|';
+    }
 
     // Zusammenfügen der Datenabschnitte
     let StringProplanta = maxTemperatur + minTemperatur + Globalstrahlung + Bedeckungsgrad + Datum + nextAktZeit;
@@ -1793,6 +1807,7 @@ function extractData(data, startPattern, endPattern, offsetStart = 0, offsetEnd 
     const endIndex = data.indexOf(endPattern, startIndex) + offsetEnd;
     return data.slice(startIndex, endIndex);
 }
+
 
 const InterrogateSolcast = async (DachFl) => {
     if (DachFl !== 1 && DachFl !== 2) {
